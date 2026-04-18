@@ -32,6 +32,7 @@ import {
   getDaysUntilDue,
   calculateAvailableCredit,
 } from '../credit-engine';
+import { createTranslator } from './i18n';
 
 // ============================================
 // MESSAGE HANDLER — Main routing
@@ -54,16 +55,18 @@ export async function handleZaloMessage(
   // Auto-detect language from message
   if (text.toLowerCase().includes('switch to english') || text === 'en') {
     updateSession(zaloUserId, { language: 'en' });
+    const tEn = createTranslator('en');
     return createResponse(
-      'Language switched to English. How can I help you today?\n\nSend a product name to search, or type "menu" to see categories.',
+      tEn('zaloBot.langSwitchedEn'),
       ['menu', 'popular', 'help'],
       session.state
     );
   }
   if (text.includes('chuyển sang tiếng việt') || text === 'vi') {
     updateSession(zaloUserId, { language: 'vi' });
+    const tVi = createTranslator('vi');
     return createResponse(
-      'Đã chuyển sang tiếng Việt. Aladin có thể giúp gì cho bạn?\n\nGõ tên sản phẩm để tìm kiếm, hoặc nhấn "menu" để xem danh mục.',
+      tVi('zaloBot.langSwitched'),
       ['menu', 'phổ biến', 'giúp đỡ'],
       session.state
     );
@@ -104,32 +107,23 @@ export async function handleZaloMessage(
 // ============================================
 
 async function handleIdleState(session: ConversationSession, text: string, zaloUserId: string): Promise<BotResponse> {
+  const t = createTranslator(session.language);
   const vi = session.language === 'vi';
 
   // Help command
   if (text === 'help' || text === 'giúp đỡ' || text === 'hỗ trợ') {
+    const helpBody = '\n\n' +
+      '• ' + t('zaloBot.helpMenu') + '\n' +
+      '• ' + t('zaloBot.helpCategories') + '\n' +
+      '• ' + t('zaloBot.helpPopular') + '\n' +
+      '• ' + t('zaloBot.helpOrders') + '\n' +
+      '• ' + t('zaloBot.helpCredit') + '\n' +
+      '• ' + t('zaloBot.helpRepay') + '\n' +
+      '• ' + t('zaloBot.helpCancel') + '\n' +
+      '• ' + t('zaloBot.helpLanguage') + '\n\n' +
+      '💡 ' + t('zaloBot.helpTip');
     return createResponse(
-      vi
-        ? '🧞 ALADIN — AI Đặt hàng Thông minh\n\n' +
-          '• Gõ tên sản phẩm để tìm kiếm\n' +
-          '• "menu" — Xem danh mục sản phẩm\n' +
-          '• "phổ biến" — Xem sản phẩm bán chạy\n' +
-          '• "đơn hàng" — Xem đơn gần đây\n' +
-          '• "tín dụng" — Xem tài khoản tín dụng\n' +
-          '• "trả nợ" — Thanh toán nợ\n' +
-          '• "hủy" — Xóa giỏ hàng\n' +
-          '• "vi" / "en" — Đổi ngôn ngữ\n\n' +
-          '💡 Mẹo: Gõ "gạo" để tìm tất cả sản phẩm gạo!'
-        : '🧞 ALADIN — AI Smart Ordering\n\n' +
-          '• Type a product name to search\n' +
-          '• "menu" — Browse product categories\n' +
-          '• "popular" — View trending products\n' +
-          '• "orders" — View recent orders\n' +
-          '• "credit" — View credit account\n' +
-          '• "repay" — Make a repayment\n' +
-          '• "cancel" — Clear your cart\n' +
-          '• "vi" / "en" — Change language\n\n' +
-          '💡 Tip: Type "rice" to find all rice products!',
+      '🧞 ' + t('zaloBot.helpTitle') + helpBody,
       ['menu', vi ? 'phổ biến' : 'popular', vi ? 'đơn hàng' : 'orders'],
       session.state
     );
@@ -139,7 +133,7 @@ async function handleIdleState(session: ConversationSession, text: string, zaloU
   if (text === 'menu' || text === 'danh mục') {
     const categories = await getCategoryList();
     if (categories.length === 0) {
-      return createResponse(vi ? 'Chưa có danh mục nào.' : 'No categories available yet.', [], session.state);
+      return createResponse(t('zaloBot.noCategories'), [], session.state);
     }
 
     const catList = categories
@@ -149,11 +143,9 @@ async function handleIdleState(session: ConversationSession, text: string, zaloU
     updateSession(zaloUserId, { state: 'AWAITING_PRODUCT_SEARCH' });
 
     return createResponse(
-      (vi ? '📋 Danh mục sản phẩm:\n\n' : '📋 Product Categories:\n\n') +
+      t('zaloBot.categoriesTitle') +
       catList + '\n\n' +
-      (vi
-        ? 'Gõ tên danh mục hoặc tên sản phẩm để tìm kiếm:'
-        : 'Type a category name or product name to search:'),
+      t('zaloBot.categoriesHint'),
       categories.map((c) => c.name),
       'AWAITING_PRODUCT_SEARCH'
     );
@@ -163,16 +155,16 @@ async function handleIdleState(session: ConversationSession, text: string, zaloU
   if (text === 'popular' || text === 'phổ biến' || text === 'bán chạy') {
     const products = await getPopularProducts(5);
     if (products.length === 0) {
-      return createResponse(vi ? 'Chưa có sản phẩm nào.' : 'No products available yet.', [], session.state);
+      return createResponse(t('zaloBot.noProducts'), [], session.state);
     }
 
     const productLines = products.map((p, i) => formatProductLine(p, i + 1)).join('\n\n');
     updateSession(zaloUserId, { state: 'SHOWING_PRODUCTS', searchResults: products });
 
     return createResponse(
-      (vi ? '🔥 Sản phẩm bán chạy:\n\n' : '🔥 Trending Products:\n\n') +
+      t('zaloBot.popularTitle') +
       productLines + '\n\n' +
-      (vi ? 'Nhấn số thứ tự để chọn sản phẩm:' : 'Press the number to select a product:'),
+      t('zaloBot.popularHint'),
       products.map((_, i) => `${i + 1}`),
       'SHOWING_PRODUCTS'
     );
@@ -198,13 +190,13 @@ async function handleIdleState(session: ConversationSession, text: string, zaloU
     if (session.orderItems.length > 0) {
       resetSession(zaloUserId);
       return createResponse(
-        vi ? '🗑️ Đã xóa giỏ hàng. Bạn muốn đặt gì tiếp?' : '🗑️ Cart cleared. What would you like to order?',
+        t('zaloBot.cartClearedContinue'),
         ['menu', vi ? 'phổ biến' : 'popular'],
         'IDLE'
       );
     }
     return createResponse(
-      vi ? 'Giỏ hàng trống. Gõ tên sản phẩm để bắt đầu!' : 'Cart is empty. Type a product name to start!',
+      t('zaloBot.cartEmptyStart'),
       ['menu', vi ? 'phổ biến' : 'popular'],
       session.state
     );
@@ -217,9 +209,7 @@ async function handleIdleState(session: ConversationSession, text: string, zaloU
 
   // Default greeting
   return createResponse(
-    vi
-      ? 'Xin chào! 👋 Tôi là AI Aladin.\nGõ tên sản phẩm để tìm kiếm, hoặc "menu" để xem danh mục.'
-      : 'Hello! 👋 I\'m Aladin AI.\nType a product name to search, or "menu" to browse categories.',
+    t('zaloBot.greeting'),
     ['menu', 'help'],
     session.state
   );
@@ -230,6 +220,7 @@ async function handleIdleState(session: ConversationSession, text: string, zaloU
 // ============================================
 
 async function handleSearchState(session: ConversationSession, text: string, zaloUserId: string): Promise<BotResponse> {
+  const t = createTranslator(session.language);
   const vi = session.language === 'vi';
 
   // Check if user selected a number from search results
@@ -239,7 +230,7 @@ async function handleSearchState(session: ConversationSession, text: string, zal
       const product = session.searchResults[idx];
       if (product.stockQuantity === 0) {
         return createResponse(
-          vi ? `❌ ${product.name} hiện hết hàng.\nChọn sản phẩm khác hoặc gõ "menu" để xem thêm.` : `❌ ${product.name} is out of stock.\nChoose another product or type "menu" for more.`,
+          t('zaloBot.outOfStockMsg', { name: product.name }),
           session.searchResults.map((_, i) => i === idx ? 'skip' : `${i + 1}`),
           'SHOWING_PRODUCTS'
         );
@@ -251,13 +242,11 @@ async function handleSearchState(session: ConversationSession, text: string, zal
       });
 
       return createResponse(
-        (vi ? '📦 Đã chọn: ' : '📦 Selected: ') + product.name + '\n\n' +
-        (vi ? 'Giá: ' : 'Price: ') + formatVND(product.basePrice) + '/' + product.unit +
-        (product.groupBuyPrice ? `\n${vi ? 'Giá mua chung: ' : 'Group buy: '}${formatVND(product.groupBuyPrice)}` : '') +
-        '\n' + (vi ? `Còn lại: ${product.stockQuantity} ${product.unit}` : `Available: ${product.stockQuantity} ${product.unit}`) + '\n\n' +
-        (vi
-          ? `Nhập số lượng (tối thiểu: 1, tối đa: ${product.stockQuantity}):`
-          : `Enter quantity (min: 1, max: ${product.stockQuantity}):`),
+        t('zaloBot.productSelected', { name: product.name }) + '\n\n' +
+        t('zaloBot.priceLabel', { price: formatVND(product.basePrice) }) + '/' + product.unit +
+        (product.groupBuyPrice ? '\n' + t('zaloBot.groupBuyPriceLabel', { price: formatVND(product.groupBuyPrice) }) : '') +
+        '\n' + t('zaloBot.availableLabel', { qty: product.stockQuantity, unit: product.unit }) + '\n\n' +
+        t('zaloBot.enterQtyHint', { max: product.stockQuantity }),
         ['1', '2', '5', '10', (vi ? 'hủy' : 'cancel')],
         'AWAITING_ORDER_QTY'
       );
@@ -269,9 +258,7 @@ async function handleSearchState(session: ConversationSession, text: string, zal
 
   if (results.length === 0) {
     return createResponse(
-      vi
-        ? `🔍 Không tìm thấy "${text}"\n\nThử:\n• Gõ tên khác\n• "menu" để xem danh mục\n• "phổ biến" để xem bán chạy`
-        : `🔍 No results for "${text}"\n\nTry:\n• Type a different name\n• "menu" for categories\n• "popular" for trending`,
+      t('zaloBot.searchEmptyMsg', { query: text }),
       ['menu', vi ? 'phổ biến' : 'popular'],
       'AWAITING_PRODUCT_SEARCH'
     );
@@ -286,11 +273,9 @@ async function handleSearchState(session: ConversationSession, text: string, zal
   });
 
   return createResponse(
-    (vi ? `🔍 Kết quả tìm kiếm "${text}":\n\n` : `🔍 Search results for "${text}":\n\n`) +
+    t('zaloBot.searchResultsTitle', { query: text }) +
     productLines + '\n\n' +
-    (vi
-      ? 'Nhấn số để chọn, hoặc gõ tên khác để tìm tiếp:'
-      : 'Press number to select, or type another name to search:'),
+    t('zaloBot.searchSelectHint'),
     [...results.map((_, i) => `${i + 1}`), vi ? 'menu' : 'back'],
     'SHOWING_PRODUCTS'
   );
@@ -301,13 +286,14 @@ async function handleSearchState(session: ConversationSession, text: string, zal
 // ============================================
 
 async function handleOrderQtyState(session: ConversationSession, text: string, zaloUserId: string): Promise<BotResponse> {
+  const t = createTranslator(session.language);
   const vi = session.language === 'vi';
 
   // Cancel
   if (text === 'cancel' || text === 'hủy' || text === 'back' || text === 'quay lại') {
     updateSession(zaloUserId, { state: 'AWAITING_PRODUCT_SEARCH' });
     return createResponse(
-      vi ? '🔙 Quay lại tìm kiếm. Gõ tên sản phẩm hoặc "menu".' : '🔙 Back to search. Type a product name or "menu".',
+      t('zaloBot.backToSearch'),
       ['menu', vi ? 'phổ biến' : 'popular'],
       'AWAITING_PRODUCT_SEARCH'
     );
@@ -318,9 +304,7 @@ async function handleOrderQtyState(session: ConversationSession, text: string, z
   if (isNaN(qty) || qty < 1) {
     session.errorCount++;
     return createResponse(
-      vi
-        ? '❌ Vui lòng nhập số lượng hợp lệ (số nguyên > 0).\nVí dụ: 5'
-        : '❌ Please enter a valid quantity (whole number > 0).\nExample: 5',
+      t('zaloBot.qtyInvalidMsg'),
       ['1', '2', '5', '10', (vi ? 'hủy' : 'cancel')],
       'AWAITING_ORDER_QTY'
     );
@@ -338,9 +322,7 @@ async function handleOrderQtyState(session: ConversationSession, text: string, z
 
   if (qty > maxQty) {
     return createResponse(
-      vi
-        ? `❌ Chỉ còn ${maxQty} ${selectedProduct.unit} trong kho.\nNhập lại số lượng:`
-        : `❌ Only ${maxQty} ${selectedProduct.unit} available.\nEnter quantity again:`,
+      t('zaloBot.stockRemainingMsg', { qty: maxQty, unit: selectedProduct.unit }),
       [String(maxQty), String(Math.min(5, maxQty)), (vi ? 'hủy' : 'cancel')],
       'AWAITING_ORDER_QTY'
     );
@@ -375,10 +357,10 @@ async function handleOrderQtyState(session: ConversationSession, text: string, z
     .join('\n');
 
   return createResponse(
-    (vi ? '🛒 Giỏ hàng của bạn:\n\n' : '🛒 Your Cart:\n\n') +
+    t('zaloBot.cartTitle') +
     orderSummary + '\n\n' +
-    (vi ? `Tổng: ${formatVND(session.orderTotal)}` : `Total: ${formatVND(session.orderTotal)}`) + '\n\n' +
-    (vi ? '• "thêm" — Thêm sản phẩm khác\n• "đặt hàng" — Xác nhận đặt\n• "xóa" — Xóa giỏ hàng' : '• "add" — Add more items\n• "order" — Confirm order\n• "clear" — Clear cart'),
+    t('zaloBot.cartTotal', { total: formatVND(session.orderTotal) }) + '\n\n' +
+    t('zaloBot.cartOptionsHint'),
     [vi ? 'thêm' : 'add', vi ? 'đặt hàng' : 'order', vi ? 'xóa' : 'clear'],
     'REVIEWING_ORDER'
   );
@@ -389,13 +371,14 @@ async function handleOrderQtyState(session: ConversationSession, text: string, z
 // ============================================
 
 async function handleReviewState(session: ConversationSession, text: string, zaloUserId: string): Promise<BotResponse> {
+  const t = createTranslator(session.language);
   const vi = session.language === 'vi';
 
   // Add more items
   if (text === 'add' || text === 'thêm' || text === 'them') {
     updateSession(zaloUserId, { state: 'AWAITING_PRODUCT_SEARCH' });
     return createResponse(
-      vi ? '🔍 Gõ tên sản phẩm muốn thêm:' : '🔍 Type the product name to add:',
+      t('zaloBot.cartAddSearchHint'),
       ['menu', vi ? 'phổ biến' : 'popular'],
       'AWAITING_PRODUCT_SEARCH'
     );
@@ -405,7 +388,7 @@ async function handleReviewState(session: ConversationSession, text: string, zal
   if (text === 'clear' || text === 'xóa' || text === 'hủy') {
     resetSession(zaloUserId);
     return createResponse(
-      vi ? '🗑️ Đã xóa giỏ hàng.' : '🗑️ Cart cleared.',
+      t('zaloBot.cartCleared'),
       ['menu'],
       'IDLE'
     );
@@ -415,7 +398,7 @@ async function handleReviewState(session: ConversationSession, text: string, zal
   if (text === 'order' || text === 'đặt hàng' || text === 'dat hang' || text === 'ok' || text === 'đồng ý') {
     if (session.orderItems.length === 0) {
       return createResponse(
-        vi ? '🛒 Giỏ hàng trống. Gõ tên sản phẩm để đặt hàng!' : '🛒 Cart is empty. Type a product name to order!',
+        t('zaloBot.cartEmpty'),
         ['menu', vi ? 'phổ biến' : 'popular'],
         'IDLE'
       );
@@ -426,9 +409,7 @@ async function handleReviewState(session: ConversationSession, text: string, zal
 
   // Unknown command
   return createResponse(
-    vi
-      ? 'Gõ "thêm" để mua thêm, "đặt hàng" để xác nhận, hoặc "xóa" để hủy.'
-      : 'Type "add" for more items, "order" to confirm, or "clear" to cancel.',
+    t('zaloBot.cartUnknown'),
     [vi ? 'thêm' : 'add', vi ? 'đặt hàng' : 'order', vi ? 'xóa' : 'clear'],
     'REVIEWING_ORDER'
   );
@@ -439,6 +420,7 @@ async function handleReviewState(session: ConversationSession, text: string, zal
 // ============================================
 
 async function handleShowPaymentOptions(session: ConversationSession, zaloUserId: string): Promise<BotResponse> {
+  const t = createTranslator(session.language);
   const vi = session.language === 'vi';
 
   updateSession(zaloUserId, { state: 'AWAITING_PAYMENT_METHOD' });
@@ -462,22 +444,16 @@ async function handleShowPaymentOptions(session: ConversationSession, zaloUserId
 
     if (shopWithCredit) {
       const available = calculateAvailableCredit(shopWithCredit);
-      creditAvailableInfo = (vi ? 'Còn lại: ' : 'Available: ') + formatVND(available);
+      creditAvailableInfo = t('zaloBot.creditAvailableInfo', { amount: formatVND(available) });
 
       if (shopWithCredit.creditStatus === 'LOCKED') {
-        creditWarning = (vi
-          ? '⚠️ Tín dụng đã bị khóa. Vui lòng trả nợ để mở khóa.'
-          : '⚠️ Credit is locked. Please repay to unlock.');
+        creditWarning = t('zaloBot.creditLockedWarning');
         creditDisabled = true;
       } else if (shopWithCredit.creditStatus === 'OVERDUE') {
-        creditWarning = (vi
-          ? '🔴 Tín dụng đã quá hạn! Vui lòng trả nợ ngay.'
-          : '🔴 Credit is overdue! Please repay immediately.');
+        creditWarning = t('zaloBot.creditOverdueWarning');
         creditDisabled = true;
       } else if (available < session.orderTotal) {
-        creditWarning = (vi
-          ? `⚠️ Hạn mức tín dụng không đủ. ${vi ? 'Còn lại' : 'Available'}: ${formatVND(available)}`
-          : `⚠️ Insufficient credit. Available: ${formatVND(available)}`);
+        creditWarning = t('zaloBot.creditInsufficientWarning', { available: formatVND(available) });
         creditDisabled = true;
       }
     }
@@ -486,24 +462,24 @@ async function handleShowPaymentOptions(session: ConversationSession, zaloUserId
   }
 
   let paymentText =
-    (vi ? '💰 Chọn phương thức thanh toán:\n\n' : '💰 Choose payment method:\n\n') +
-    `1. ${vi ? 'Trả ngay (MoMo/ZaloPay)' : 'Pay Now (MoMo/ZaloPay)'}\n` +
-    `   ${vi ? `Giảm ${CREDIT_CONFIG.PAY_NOW_DISCOUNT * 100}% → ` : `Save ${CREDIT_CONFIG.PAY_NOW_DISCOUNT * 100}% → `}${discountedTotal}\n\n`;
+    t('zaloBot.paymentTitle') +
+    `1. ${t('zaloBot.payNowLabel')}\n` +
+    `   ${t('zaloBot.payNowDiscountHint', { percent: CREDIT_CONFIG.PAY_NOW_DISCOUNT * 100 })}${discountedTotal}\n\n`;
 
   if (creditDisabled) {
-    paymentText += `2. ${vi ? 'Nợ 7 ngày (Tín dụng Aladin) — 🔒 KHÔNG HOẠT ĐỘNG' : '7-Day Credit (Aladin Credit) — 🔒 DISABLED'}\n`;
+    paymentText += `2. ${t('zaloBot.creditDisabled')}\n`;
     if (creditWarning) paymentText += `   ${creditWarning}\n`;
     paymentText += '\n';
   } else {
-    paymentText += `2. ${vi ? 'Nợ 7 ngày (Tín dụng Aladin)' : '7-Day Credit (Aladin Credit)'}\n`;
-    paymentText += `   ${vi ? 'Thanh toán trong 7 ngày' : 'Pay within 7 days'} → ${creditTotal}`;
+    paymentText += `2. ${t('zaloBot.creditLabel')}\n`;
+    paymentText += `   ${t('zaloBot.creditPayWithin')} → ${creditTotal}`;
     if (creditAvailableInfo) paymentText += ` (${creditAvailableInfo})`;
     paymentText += '\n\n';
   }
 
   paymentText +=
     `3. COD\n` +
-    `   ${vi ? 'Trả tiền khi nhận hàng (+15.000d phí)' : 'Pay on delivery (+15,000d fee)'} → ${codTotal}`;
+    `   ${t('zaloBot.codFeeHint')} → ${codTotal}`;
 
   const quickReplies = ['1', '3', (vi ? 'quay lại' : 'back')];
   if (!creditDisabled) quickReplies.splice(1, 0, '2');
@@ -516,6 +492,7 @@ async function handleShowPaymentOptions(session: ConversationSession, zaloUserId
 // ============================================
 
 async function handlePaymentState(session: ConversationSession, text: string, zaloUserId: string): Promise<BotResponse> {
+  const t = createTranslator(session.language);
   const vi = session.language === 'vi';
 
   // Back
@@ -525,9 +502,9 @@ async function handlePaymentState(session: ConversationSession, text: string, za
       .map((item, i) => `${i + 1}. ${item.productName} × ${item.quantity} = ${formatVND(item.totalPrice)}`)
       .join('\n');
     return createResponse(
-      (vi ? '🛒 Giỏ hàng:\n\n' : '🛒 Your Cart:\n\n') +
+      t('zaloBot.cartBackTitle') +
       orderSummary + '\n\n' +
-      (vi ? '"đặt hàng" để tiếp tục, "thêm" để mua thêm' : '"order" to proceed, "add" for more items'),
+      t('zaloBot.cartBackHint'),
       [vi ? 'đặt hàng' : 'order', vi ? 'thêm' : 'add'],
       'REVIEWING_ORDER'
     );
@@ -555,7 +532,7 @@ async function handlePaymentState(session: ConversationSession, text: string, za
 
   if (!paymentMethod) {
     return createResponse(
-      vi ? '❌ Vui lòng chọn 1 (Trả ngay), 2 (Nợ 7 ngày), hoặc 3 (COD):' : '❌ Please choose 1 (Pay Now), 2 (7-Day Credit), or 3 (COD):',
+      t('zaloBot.paymentSelectHint'),
       ['1', '2', '3'],
       'AWAITING_PAYMENT_METHOD'
     );
@@ -586,10 +563,9 @@ async function handlePaymentState(session: ConversationSession, text: string, za
     // Credit validation
     if (paymentMethod === 'CREDIT') {
       if (shop.creditStatus === 'LOCKED' || shop.creditStatus === 'OVERDUE') {
+        const status = shop.creditStatus === 'OVERDUE' ? t('zaloBot.creditOverdueLabel') : t('zaloBot.creditLockedLabel');
         return createResponse(
-          vi
-            ? `❌ Tín dụng đã ${shop.creditStatus === 'OVERDUE' ? 'quá hạn' : 'bị khóa'}. Không thể đặt hàng nợ.\nVui lòng "trả nợ" hoặc chọn phương thức khác.`
-            : `❌ Credit is ${shop.creditStatus.toLowerCase()}. Cannot place credit order.\nPlease "repay" or choose another method.`,
+          t('zaloBot.creditLockedError', { status }),
           ['1', '3', (vi ? 'quay lại' : 'back')],
           'AWAITING_PAYMENT_METHOD'
         );
@@ -598,9 +574,7 @@ async function handlePaymentState(session: ConversationSession, text: string, za
       const available = shop.creditLimit - shop.creditBalance;
       if (available < grandTotal) {
         return createResponse(
-          vi
-            ? `❌ Hạn mức tín dụng không đủ.\nCòn lại: ${formatVND(available)}\nCần: ${formatVND(grandTotal)}\n\nChọn phương thức khác hoặc "trả nợ".`
-            : `❌ Insufficient credit.\nAvailable: ${formatVND(available)}\nRequired: ${formatVND(grandTotal)}\n\nChoose another method or "repay".`,
+          t('zaloBot.creditInsufficientDetail', { available: formatVND(available), required: formatVND(grandTotal) }),
           ['1', '3', (vi ? 'trả nợ' : 'repay')],
           'AWAITING_PAYMENT_METHOD'
         );
@@ -649,9 +623,7 @@ async function handlePaymentState(session: ConversationSession, text: string, za
         const product = await tx.product.findUnique({ where: { id: item.productId } });
         if (!product || product.stockQuantity < item.quantity) {
           throw new Error(
-            vi
-              ? `Sản phẩm "${item.productName}" không đủ hàng`
-              : `Product "${item.productName}" out of stock`
+            t('zaloBot.stockErrorMsg', { name: item.productName })
           );
         }
       }
@@ -671,7 +643,7 @@ async function handlePaymentState(session: ConversationSession, text: string, za
           totalAmount: grandTotal,
           creditUsed: paymentMethod === 'CREDIT' ? grandTotal : 0,
           idempotencyKey,
-          customerNotes: vi ? 'Đặt qua Zalo AI Bot' : 'Ordered via Zalo AI Bot',
+          customerNotes: t('zaloBot.orderNote'),
         },
       });
 
@@ -750,19 +722,19 @@ async function handlePaymentState(session: ConversationSession, text: string, za
     resetSession(zaloUserId);
 
     const paymentLabels: Record<string, string> = {
-      DIGITAL: vi ? 'Trả ngay (MoMo/ZaloPay)' : 'Pay Now (MoMo/ZaloPay)',
-      CREDIT: vi ? 'Nợ 7 ngày' : '7-Day Credit',
+      DIGITAL: t('zaloBot.payNowLabel'),
+      CREDIT: t('zaloBot.creditLabel'),
       COD: 'COD',
     };
 
     return createResponse(
-      (vi ? '✅ Đặt hàng thành công!\n\n' : '✅ Order confirmed!\n\n') +
-      (vi ? '📌 Mã đơn: ' : '📌 Order: ') + orderNumber + '\n' +
-      `${orderItems.length} ${vi ? 'sản phẩm' : 'items'} | ${formatVND(grandTotal)}\n` +
-      (vi ? '💳 Thanh toán: ' : '💳 Payment: ') + paymentLabels[paymentMethod] +
-      (discountAmount > 0 ? ` ${vi ? '(Đã giảm' : '(Saved'} ${formatVND(discountAmount)})` : '') +
-      (deliveryFee > 0 ? ` ${vi ? '(+ phí ship' : '(+ delivery fee'} ${formatVND(deliveryFee)})` : '') + '\n\n' +
-      (vi ? '⏱ Đơn hàng đang được xử lý. Bạn sẽ nhận thông báo khi giao hàng!' : '⏱ Your order is being processed. You\'ll be notified on delivery!'),
+      t('zaloBot.orderSuccess') +
+      t('zaloBot.orderNumberLabel') + orderNumber + '\n' +
+      `${orderItems.length} ${t('zaloBot.orderItemsLabel')} | ${formatVND(grandTotal)}\n` +
+      t('zaloBot.orderPaymentLabel') + paymentLabels[paymentMethod] +
+      (discountAmount > 0 ? t('zaloBot.orderSaved', { amount: formatVND(discountAmount) }) : '') +
+      (deliveryFee > 0 ? t('zaloBot.orderDeliveryFee', { fee: formatVND(deliveryFee) }) : '') + '\n\n' +
+      t('zaloBot.orderProcessing'),
       [vi ? 'đơn hàng' : 'orders', 'menu'],
       'ORDER_CONFIRMED'
     );
@@ -771,9 +743,7 @@ async function handlePaymentState(session: ConversationSession, text: string, za
     const errorMsg = error instanceof Error ? error.message : '';
     resetSession(zaloUserId);
     return createResponse(
-      vi
-        ? `❌ Có lỗi xảy ra khi tạo đơn hàng. Vui lòng thử lại.${errorMsg ? '\n' + errorMsg : ''}\nGõ "help" để xem hướng dẫn.`
-        : `❌ An error occurred while creating your order. Please try again.${errorMsg ? '\n' + errorMsg : ''}\nType "help" for instructions.`,
+      t('zaloBot.orderErrorMsg') + (errorMsg ? '\n' + errorMsg : '') + t('zaloBot.orderErrorHint'),
       ['help', 'menu'],
       'IDLE'
     );
@@ -812,6 +782,7 @@ async function handleConfirmedState(session: ConversationSession, text: string, 
 // ============================================
 
 async function handleOrdersCommand(session: ConversationSession, zaloUserId: string): Promise<BotResponse> {
+  const t = createTranslator(session.language);
   const vi = session.language === 'vi';
 
   try {
@@ -833,9 +804,7 @@ async function handleOrdersCommand(session: ConversationSession, zaloUserId: str
 
     if (orders.length === 0) {
       return createResponse(
-        vi
-          ? '📋 Bạn chưa có đơn hàng nào.\nGõ tên sản phẩm để đặt hàng!'
-          : '📋 You have no orders yet.\nType a product name to order!',
+        t('zaloBot.ordersEmpty'),
         ['menu', vi ? 'phổ biến' : 'popular'],
         'IDLE'
       );
@@ -867,34 +836,34 @@ async function handleOrdersCommand(session: ConversationSession, zaloUserId: str
     };
 
     const paymentLabels: Record<string, string> = {
-      DIGITAL: vi ? 'Trả ngay' : 'Pay Now',
-      CREDIT: vi ? 'Nợ 7 ngày' : '7-Day Credit',
+      DIGITAL: t('zaloBot.payNowShort'),
+      CREDIT: t('zaloBot.creditLabelShort'),
       COD: 'COD',
     };
 
     const orderList = orders
       .map((o, i) => {
         const icon = statusIcons[o.status] || '📋';
-        const statusLabel = vi ? getStatusLabelVi(o.status) : o.status;
+        const statusLabel = vi ? getStatusLabelVi(o.status) : t('zaloBot.' + statusToKey(o.status));
         const payLabel = paymentLabels[o.paymentMethod] || o.paymentMethod;
         return (
           `${i + 1}. ${o.orderNumber} | ${icon} ${statusLabel}\n` +
-          `   ${o.items.length} ${vi ? 'SP' : 'items'} | ${formatVND(o.totalAmount)} | ${payLabel}`
+          `   ${o.items.length} ${t('zaloBot.ordersItemsUnit')} | ${formatVND(o.totalAmount)} | ${payLabel}`
         );
       })
       .join('\n\n');
 
     return createResponse(
-      (vi ? '📋 Đơn hàng gần đây:\n\n' : '📋 Recent Orders:\n\n') +
+      t('zaloBot.ordersTitle') +
       orderList + '\n\n' +
-      (vi ? 'Nhấn số để xem chi tiết:' : 'Press a number to view details:'),
+      t('zaloBot.ordersPressNumber'),
       orders.map((_, i) => `${i + 1}`),
       'SHOWING_ORDERS'
     );
   } catch (error) {
     console.error('[ZALO ORDERS LOOKUP ERROR]', error);
     return createResponse(
-      vi ? '❌ Có lỗi khi tải đơn hàng. Thử lại sau.' : '❌ Error loading orders. Try again later.',
+      t('zaloBot.ordersError'),
       ['help', 'menu'],
       'IDLE'
     );
@@ -906,13 +875,14 @@ async function handleOrdersCommand(session: ConversationSession, zaloUserId: str
 // ============================================
 
 async function handleOrderLookupState(session: ConversationSession, text: string, zaloUserId: string): Promise<BotResponse> {
+  const t = createTranslator(session.language);
   const vi = session.language === 'vi';
 
   // Back / cancel
   if (text === 'back' || text === 'quay lại' || text === 'hủy' || text === 'cancel') {
     resetSession(zaloUserId);
     return createResponse(
-      vi ? '🔙 Đã quay lại.' : '🔙 Back to main menu.',
+      t('zaloBot.backToMenu'),
       ['menu', 'help'],
       'IDLE'
     );
@@ -935,27 +905,27 @@ async function handleOrderLookupState(session: ConversationSession, text: string
       CANCELLED: '❌', REFUNDED: '🔄',
     };
     const paymentLabels: Record<string, string> = {
-      DIGITAL: vi ? 'Trả ngay' : 'Pay Now',
-      CREDIT: vi ? 'Nợ 7 ngày' : '7-Day Credit',
+      DIGITAL: t('zaloBot.payNowShort'),
+      CREDIT: t('zaloBot.creditLabelShort'),
       COD: 'COD',
     };
 
     const orderList = session.recentOrders
       .map((o, i) => {
         const icon = statusIcons[o.status] || '📋';
-        const statusLabel = vi ? getStatusLabelVi(o.status) : o.status;
+        const statusLabel = vi ? getStatusLabelVi(o.status) : t('zaloBot.' + statusToKey(o.status));
         const payLabel = paymentLabels[o.paymentMethod] || o.paymentMethod;
         return (
           `${i + 1}. ${o.orderNumber} | ${icon} ${statusLabel}\n` +
-          `   ${o.itemCount} ${vi ? 'SP' : 'items'} | ${formatVND(o.totalAmount)} | ${payLabel}`
+          `   ${o.itemCount} ${t('zaloBot.ordersItemsUnit')} | ${formatVND(o.totalAmount)} | ${payLabel}`
         );
       })
       .join('\n\n');
 
     return createResponse(
-      (vi ? '📋 Đơn hàng gần đây:\n\n' : '📋 Recent Orders:\n\n') +
+      t('zaloBot.ordersTitle') +
       orderList + '\n\n' +
-      (vi ? 'Nhấn số để xem chi tiết, hoặc "quay lại":' : 'Press a number to view details, or "back":'),
+      t('zaloBot.ordersBackHint'),
       [...session.recentOrders.map((_, i) => `${i + 1}`), vi ? 'quay lại' : 'back'],
       'SHOWING_ORDERS'
     );
@@ -971,6 +941,7 @@ async function handleOrderLookupState(session: ConversationSession, text: string
 // ============================================
 
 async function showOrderDetail(orderId: string, session: ConversationSession): Promise<BotResponse> {
+  const t = createTranslator(session.language);
   const vi = session.language === 'vi';
 
   const order = await db.order.findUnique({
@@ -986,7 +957,7 @@ async function showOrderDetail(orderId: string, session: ConversationSession): P
 
   if (!order) {
     return createResponse(
-      vi ? '❌ Không tìm thấy đơn hàng.' : '❌ Order not found.',
+      t('zaloBot.orderNotFound'),
       [vi ? 'quay lại' : 'back'],
       'SHOWING_ORDERS'
     );
@@ -997,12 +968,12 @@ async function showOrderDetail(orderId: string, session: ConversationSession): P
     PACKED: '📦', OUT_FOR_DELIVERY: '🚚', DELIVERED: '✅',
     CANCELLED: '❌', REFUNDED: '🔄',
   };
-  const statusLabel = vi ? getStatusLabelVi(order.status) : order.status;
+  const statusLabel = vi ? getStatusLabelVi(order.status) : t('zaloBot.' + statusToKey(order.status));
   const icon = statusIcons[order.status] || '📋';
 
   const paymentLabels: Record<string, string> = {
-    DIGITAL: vi ? 'Trả ngay (MoMo/ZaloPay)' : 'Pay Now (MoMo/ZaloPay)',
-    CREDIT: vi ? 'Nợ 7 ngày' : '7-Day Credit',
+    DIGITAL: t('zaloBot.payNowLabel'),
+    CREDIT: t('zaloBot.creditLabel'),
     COD: 'COD',
   };
 
@@ -1012,35 +983,35 @@ async function showOrderDetail(orderId: string, session: ConversationSession): P
 
   let detail =
     `📌 ${order.orderNumber} | ${icon} ${statusLabel}\n\n` +
-    (vi ? '📦 Sản phẩm:\n' : '📦 Items:\n') +
+    t('zaloBot.orderDetailItems') +
     itemsList + '\n\n' +
-    (vi ? '💰 Chi tiết:\n' : '💰 Details:\n') +
-    `  ${vi ? 'Tạm tính' : 'Subtotal'}: ${formatVND(order.subtotalAmount)}\n`;
+    t('zaloBot.orderDetailPrices') +
+    `  ${t('zaloBot.orderDetailSubtotal')}: ${formatVND(order.subtotalAmount)}\n`;
 
   if (order.discountAmount > 0) {
-    detail += `  ${vi ? 'Giảm giá' : 'Discount'}: -${formatVND(order.discountAmount)}\n`;
+    detail += `  ${t('zaloBot.orderDetailDiscount')}: -${formatVND(order.discountAmount)}\n`;
   }
   if (order.deliveryFee > 0) {
-    detail += `  ${vi ? 'Phí giao' : 'Delivery'}: ${formatVND(order.deliveryFee)}\n`;
+    detail += `  ${t('zaloBot.orderDetailDelivery')}: ${formatVND(order.deliveryFee)}\n`;
   }
 
-  detail += `  ${vi ? 'Tổng cộng' : 'Total'}: ${formatVND(order.totalAmount)}\n`;
-  detail += `  ${vi ? 'Thanh toán' : 'Payment'}: ${paymentLabels[order.paymentMethod] || order.paymentMethod}\n`;
+  detail += `  ${t('zaloBot.orderDetailTotal')}: ${formatVND(order.totalAmount)}\n`;
+  detail += `  ${t('zaloBot.orderDetailPayment')}: ${paymentLabels[order.paymentMethod] || order.paymentMethod}\n`;
 
   if (order.creditUsed > 0) {
     const repaid = order.transactions
-      .filter((t) => t.type === TRANSACTION_TYPES.REPAYMENT)
-      .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+      .filter((tr) => tr.type === TRANSACTION_TYPES.REPAYMENT)
+      .reduce((sum, tr) => sum + Math.abs(tr.amount), 0);
     const remaining = order.creditUsed - repaid;
-    detail += `  ${vi ? 'Nợ' : 'Credit'}: ${formatVND(order.creditUsed)}`;
+    detail += `  ${t('zaloBot.orderDetailCredit')}: ${formatVND(order.creditUsed)}`;
     if (remaining > 0) {
-      detail += ` (${vi ? 'còn nợ' : 'remaining'}: ${formatVND(remaining)})`;
+      detail += ` (${t('zaloBot.orderDetailCreditRemaining')}: ${formatVND(remaining)})`;
     }
     detail += '\n';
   }
 
   detail += '\n' +
-    (vi ? `📅 Ngày đặt: ${formatDate(order.createdAt)}` : `📅 Ordered: ${formatDate(order.createdAt)}`);
+    t('zaloBot.orderDetailDate', { date: formatDate(order.createdAt) });
 
   return createResponse(
     detail,
@@ -1054,6 +1025,7 @@ async function showOrderDetail(orderId: string, session: ConversationSession): P
 // ============================================
 
 async function handleCreditCommand(session: ConversationSession, zaloUserId: string): Promise<BotResponse> {
+  const t = createTranslator(session.language);
   const vi = session.language === 'vi';
 
   try {
@@ -1078,44 +1050,37 @@ async function handleCreditCommand(session: ConversationSession, zaloUserId: str
       ? (statusLabelsVi[creditInfo.credit.status] || creditInfo.credit.status)
       : creditInfo.credit.status;
 
+    const statusLabelKey = 'creditStatus' + creditInfo.credit.status.charAt(0) + creditInfo.credit.status.slice(1).toLowerCase();
+
     let detail =
-      '💳 ' + (vi ? 'Tài khoản tín dụng:\n' : 'Credit Account:\n') + '\n' +
-      `  ${vi ? 'Hạn mức' : 'Limit'}: ${formatVND(creditInfo.credit.limit)}\n` +
-      `  ${vi ? 'Đã sử dụng' : 'Used'}: ${formatVND(creditInfo.credit.used)}\n` +
-      `  ${vi ? 'Còn lại' : 'Available'}: ${formatVND(creditInfo.credit.available)}\n` +
-      `  ${vi ? 'Trạng thái' : 'Status'}: ${statusIcons[creditInfo.credit.status] || '⚪'} ${statusLabel}`;
+      t('zaloBot.creditTitle') + '\n' +
+      `  ${t('zaloBot.creditLimit')}: ${formatVND(creditInfo.credit.limit)}\n` +
+      `  ${t('zaloBot.creditUsed')}: ${formatVND(creditInfo.credit.used)}\n` +
+      `  ${t('zaloBot.creditAvailable')}: ${formatVND(creditInfo.credit.available)}\n` +
+      `  ${t('zaloBot.creditStatus')}: ${statusIcons[creditInfo.credit.status] || '⚪'} ${statusLabel}`;
 
     // Days until due
     const daysUntilDue = creditInfo.credit.daysUntilDue;
     if (daysUntilDue !== null && creditInfo.credit.used > 0) {
       if (creditInfo.credit.status === 'OVERDUE') {
-        detail += '\n  🔴 ' + (vi ? 'Đã quá hạn!' : 'Overdue!');
+        detail += '\n  ' + t('zaloBot.creditOverdueBadge');
       } else if (daysUntilDue <= 2) {
-        detail += '\n  ⚠️ ' + (vi ? `Hạn trả: ${daysUntilDue === 0 ? (vi ? 'Hôm nay!' : 'Today!') : daysUntilDue + (vi ? ' ngày nữa' : ' days')}`
-          : `Due: ${daysUntilDue === 0 ? 'Today!' : daysUntilDue + ' days'}`);
+        const label = daysUntilDue === 0 ? t('zaloBot.creditDueToday') : daysUntilDue + ' ' + t('zaloBot.creditDaysLeft');
+        detail += '\n  ' + t('zaloBot.creditDueSoon', { label });
       } else {
-        detail += '\n  ' + (vi ? `📅 Hạn trả: ${daysUntilDue} ngày nữa`
-          : `📅 Due in: ${daysUntilDue} days`);
+        detail += '\n  ' + t('zaloBot.creditDueDays', { days: daysUntilDue });
       }
     }
 
     // Overdue warning
     if (creditInfo.credit.status === 'OVERDUE') {
-      detail += '\n\n' + (vi
-        ? '❗ Tín dụng đã quá hạn. Vui lòng trả nợ ngay để tránh bị khóa vĩnh viễn.\n💡 Gõ "trả nợ" để thanh toán.'
-        : '❗ Credit is overdue. Please repay immediately to avoid permanent lock.\n💡 Type "repay" to make a payment.');
+      detail += '\n\n' + t('zaloBot.creditOverdueAlert');
     } else if (creditInfo.credit.status === 'LOCKED') {
-      detail += '\n\n' + (vi
-        ? '❗ Tài khoản tín dụng đã bị khóa. Trả nợ để mở khóa tự động.\n💡 Gõ "trả nợ" để thanh toán.'
-        : '❗ Credit account is locked. Repay to auto-unlock.\n💡 Type "repay" to make a payment.');
+      detail += '\n\n' + t('zaloBot.creditLockedAlert');
     } else if (creditInfo.credit.used === 0) {
-      detail += '\n\n' + (vi
-        ? '✨ Bạn chưa sử dụng tín dụng. Đặt hàng bằng "Nợ 7 ngày" để tận dụng!'
-        : '✨ You haven\'t used credit yet. Place an order with "7-Day Credit" to get started!');
+      detail += '\n\n' + t('zaloBot.creditNoUsage');
     } else {
-      detail += '\n\n' + (vi
-        ? '💡 Gõ "trả nợ" để thanh toán'
-        : '💡 Type "repay" to make a payment');
+      detail += '\n\n' + t('zaloBot.creditRepayHint');
     }
 
     return createResponse(
@@ -1126,7 +1091,7 @@ async function handleCreditCommand(session: ConversationSession, zaloUserId: str
   } catch (error) {
     console.error('[ZALO CREDIT INFO ERROR]', error);
     return createResponse(
-      vi ? '❌ Có lỗi khi tải thông tin tín dụng.' : '❌ Error loading credit info.',
+      t('zaloBot.creditError'),
       ['help', 'menu'],
       'IDLE'
     );
@@ -1160,6 +1125,7 @@ async function handleCreditInfoState(session: ConversationSession, text: string,
 // ============================================
 
 async function handleRepayCommand(session: ConversationSession, zaloUserId: string): Promise<BotResponse> {
+  const t = createTranslator(session.language);
   const vi = session.language === 'vi';
 
   try {
@@ -1168,9 +1134,7 @@ async function handleRepayCommand(session: ConversationSession, zaloUserId: stri
     // Check credit balance
     if (shop.creditBalance <= 0) {
       return createResponse(
-        vi
-          ? '✅ Bạn không có khoản nợ nào.\nTài khoản tín dụng sạch!\n\nGõ tên sản phẩm để đặt hàng.'
-          : '✅ You have no outstanding debt.\nCredit account is clear!\n\nType a product name to order.',
+        t('zaloBot.repayNoDebt'),
         ['menu', vi ? 'phổ biến' : 'popular'],
         'IDLE'
       );
@@ -1246,9 +1210,7 @@ async function handleRepayCommand(session: ConversationSession, zaloUserId: stri
 
     if (creditOrders.length === 0) {
       return createResponse(
-        vi
-          ? '✅ Bạn không có khoản nợ nào.\nTài khoản tín dụng sạch!'
-          : '✅ You have no outstanding debt.\nCredit account is clear!',
+        t('zaloBot.repayNoDebtShort'),
         ['menu', vi ? 'phổ biến' : 'popular'],
         'IDLE'
       );
@@ -1270,22 +1232,22 @@ async function handleRepayCommand(session: ConversationSession, zaloUserId: stri
     const orderList = creditOrders
       .map((co, i) => (
         `${i + 1}. ${co.orderNumber} | ${formatVND(co.creditUsed)}\n` +
-        `   ${vi ? 'Hẹn trả' : 'Due'}: ${co.dueDate}`
+        `   ${t('zaloBot.repayDueDate')}: ${co.dueDate}`
       ))
       .join('\n\n');
 
     return createResponse(
-      (vi ? '💰 Khoản nợ cần trả:\n\n' : '💰 Outstanding Debt:\n\n') +
+      t('zaloBot.repayTitle') +
       orderList + '\n\n' +
-      (vi ? `Tổng nợ: ${formatVND(totalDebt)}\n\n` : `Total: ${formatVND(totalDebt)}\n\n`) +
-      (vi ? 'Nhấn số đơn để trả:' : 'Press order number to repay:'),
+      t('zaloBot.repayTotal', { total: formatVND(totalDebt) }) + '\n\n' +
+      t('zaloBot.repaySelectOrder'),
       creditOrders.map((_, i) => `${i + 1}`),
       'AWAITING_REPAY_ORDER'
     );
   } catch (error) {
     console.error('[ZALO REPAY LOOKUP ERROR]', error);
     return createResponse(
-      vi ? '❌ Có lỗi khi tải thông tin nợ.' : '❌ Error loading debt info.',
+      t('zaloBot.repayListError'),
       ['help', 'menu'],
       'IDLE'
     );
@@ -1297,13 +1259,14 @@ async function handleRepayCommand(session: ConversationSession, zaloUserId: stri
 // ============================================
 
 async function handleRepayOrderState(session: ConversationSession, text: string, zaloUserId: string): Promise<BotResponse> {
+  const t = createTranslator(session.language);
   const vi = session.language === 'vi';
 
   // Back / cancel
   if (text === 'back' || text === 'quay lại' || text === 'hủy' || text === 'cancel') {
     resetSession(zaloUserId);
     return createResponse(
-      vi ? '🔙 Đã quay lại.' : '🔙 Back to main menu.',
+      t('zaloBot.backToMenu'),
       ['menu', 'help'],
       'IDLE'
     );
@@ -1320,9 +1283,9 @@ async function handleRepayOrderState(session: ConversationSession, text: string,
       });
 
       return createResponse(
-        (vi ? '💳 Trả nợ đơn ' : '💳 Repay order ') + selectedOrder.orderNumber + '\n\n' +
-        (vi ? 'Số tiền nợ: ' : 'Debt amount: ') + formatVND(selectedOrder.creditUsed) + '\n\n' +
-        (vi ? 'Nhập số tiền muốn trả (hoặc "tất cả" để trả hết):' : 'Enter amount to repay (or "all" to pay in full):'),
+        t('zaloBot.repayForOrder', { order: selectedOrder.orderNumber }) + '\n\n' +
+        t('zaloBot.repayDebtAmount', { amount: formatVND(selectedOrder.creditUsed) }) + '\n\n' +
+        t('zaloBot.repayEnterAmount'),
         ['tất cả', (vi ? 'quay lại' : 'back')],
         'AWAITING_REPAY_AMOUNT'
       );
@@ -1334,17 +1297,17 @@ async function handleRepayOrderState(session: ConversationSession, text: string,
     const orderList = session.creditOrders
       .map((co, i) => (
         `${i + 1}. ${co.orderNumber} | ${formatVND(co.creditUsed)}\n` +
-        `   ${vi ? 'Hẹn trả' : 'Due'}: ${co.dueDate}`
+        `   ${t('zaloBot.repayDueDate')}: ${co.dueDate}`
       ))
       .join('\n\n');
 
     const totalDebt = session.creditOrders.reduce((sum, co) => sum + co.creditUsed, 0);
 
     return createResponse(
-      (vi ? '💰 Khoản nợ cần trả:\n\n' : '💰 Outstanding Debt:\n\n') +
+      t('zaloBot.repayTitle') +
       orderList + '\n\n' +
-      (vi ? `Tổng nợ: ${formatVND(totalDebt)}\n\n` : `Total: ${formatVND(totalDebt)}\n\n`) +
-      (vi ? 'Nhấn số đơn để trả, hoặc "quay lại":' : 'Press order number to repay, or "back":'),
+      t('zaloBot.repayTotal', { total: formatVND(totalDebt) }) + '\n\n' +
+      t('zaloBot.repayBackHint'),
       [...session.creditOrders.map((_, i) => `${i + 1}`), vi ? 'quay lại' : 'back'],
       'AWAITING_REPAY_ORDER'
     );
@@ -1359,6 +1322,7 @@ async function handleRepayOrderState(session: ConversationSession, text: string,
 // ============================================
 
 async function handleRepayAmountState(session: ConversationSession, text: string, zaloUserId: string): Promise<BotResponse> {
+  const t = createTranslator(session.language);
   const vi = session.language === 'vi';
 
   // Back / cancel
@@ -1369,21 +1333,21 @@ async function handleRepayAmountState(session: ConversationSession, text: string
       const orderList = session.creditOrders
         .map((co, i) => (
           `${i + 1}. ${co.orderNumber} | ${formatVND(co.creditUsed)}\n` +
-          `   ${vi ? 'Hẹn trả' : 'Due'}: ${co.dueDate}`
+          `   ${t('zaloBot.repayDueDate')}: ${co.dueDate}`
         ))
         .join('\n\n');
 
       return createResponse(
-        (vi ? '💰 Khoản nợ cần trả:\n\n' : '💰 Outstanding Debt:\n\n') +
+        t('zaloBot.repayTitle') +
         orderList + '\n\n' +
-        (vi ? 'Nhấn số đơn để trả:' : 'Press order number to repay:'),
+        t('zaloBot.repaySelectOrder'),
         session.creditOrders.map((_, i) => `${i + 1}`),
         'AWAITING_REPAY_ORDER'
       );
     }
     resetSession(zaloUserId);
     return createResponse(
-      vi ? '🔙 Đã quay lại.' : '🔙 Back to main menu.',
+      t('zaloBot.backToMenu'),
       ['menu'],
       'IDLE'
     );
@@ -1406,9 +1370,7 @@ async function handleRepayAmountState(session: ConversationSession, text: string
     const parsed = parseInt(cleanText);
     if (isNaN(parsed) || parsed <= 0) {
       return createResponse(
-        vi
-          ? '❌ Vui lòng nhập số tiền hợp lệ.\nVí dụ: 100000 hoặc "tất cả"'
-          : '❌ Please enter a valid amount.\nExample: 100000 or "all"',
+        t('zaloBot.repayAmountInvalid'),
         ['tất cả', 'all', (vi ? 'quay lại' : 'back')],
         'AWAITING_REPAY_AMOUNT'
       );
@@ -1469,14 +1431,12 @@ async function handleRepayAmountState(session: ConversationSession, text: string
     resetSession(zaloUserId);
 
     let successMsg =
-      (vi ? '✅ Đã ghi nhận thanh toán!\n\n' : '✅ Payment recorded!\n\n') +
-      (vi ? 'Đã trả: ' : 'Paid: ') + formatVND(result.actualRepay) + '\n' +
-      (vi ? 'Số dư nợ còn: ' : 'Remaining debt: ') + formatVND(result.newBalance);
+      t('zaloBot.repaySuccess') +
+      t('zaloBot.repayPaid', { amount: formatVND(result.actualRepay) }) + '\n' +
+      t('zaloBot.repayRemaining', { amount: formatVND(result.newBalance) });
 
     if (result.isFullRepayment) {
-      successMsg += '\n\n' + (vi
-        ? '🎉 Đã trả hết nợ! Tài khoản tín dụng đã được kích hoạt lại.'
-        : '🎉 Debt fully cleared! Credit account has been reactivated.');
+      successMsg += t('zaloBot.repayFullClear');
     }
 
     return createResponse(
@@ -1488,9 +1448,7 @@ async function handleRepayAmountState(session: ConversationSession, text: string
     console.error('[ZALO REPAY ERROR]', error);
     resetSession(zaloUserId);
     return createResponse(
-      vi
-        ? '❌ Có lỗi khi ghi nhận thanh toán. Vui lòng thử lại.'
-        : '❌ Error recording payment. Please try again.',
+      t('zaloBot.repayError'),
       ['help', 'menu'],
       'IDLE'
     );
@@ -1563,6 +1521,10 @@ function getStatusLabelVi(status: string): string {
     REFUNDED: 'ĐÃ HOÀN TIỀN',
   };
   return labels[status] || status;
+}
+
+function statusToKey(status: string): string {
+  return 'status' + status.charAt(0) + status.slice(1).toLowerCase();
 }
 
 function formatDate(date: Date): string {

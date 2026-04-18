@@ -125,7 +125,7 @@
 
 ---
 
-## Endpoint Details
+### Endpoint Details
 
 ### 1. GET /api/orders — List Orders
 - **Auth**: Any authenticated user
@@ -425,24 +425,7 @@ Task: Enhance Zalo Conversation Engine with Orders, Credit, and Payment Flow
 Work Log:
 - Updated config.ts with new ConversationState types (AWAITING_ORDER_LOOKUP, SHOWING_ORDERS, AWAITING_CREDIT_INFO, AWAITING_REPAY_ORDER, AWAITING_REPAY_AMOUNT)
 - Added recentOrders, creditOrders, selectedRepayOrderId to ConversationSession
-- Rewrote conversation-engine.ts with:
-  - Atomic order creation (db.$transaction) matching admin API pattern
-  - Proper ALD-YYYYMMDD-XXX order numbers with per-day auto-increment
-  - Idempotency keys on order creation via generateIdempotencyKey()
-  - Stock deduction inside transaction
-  - CREDIT_USED transaction record for credit payment
-  - Shop stats update (totalOrders, totalGmv, avgOrderValue)
-  - Shop snapshot JSON with full address info
-  - 2% PAY_NOW_DISCOUNT for DIGITAL payment
-  - 15,000 VND delivery fee for COD
-  - Dynamic payment method selection with credit health checks (LOCKED/OVERDUE warnings, available credit display)
-  - "orders" / "đơn hàng" command: view 5 recent orders with status icons, select by number for detail view
-  - "credit" / "tín dụng" command: credit dashboard showing limit, used, available, status, days until due
-  - "repay" / "trả nợ" command: list unpaid credit orders, select order, enter amount or "all", process repayment via db.$transaction
-  - Full bilingual support (vi/en) for all new features
-  - Updated help text with new commands
-  - Updated state machine router with all new state cases
-  - Enhanced ORDER_CONFIRMED state to handle orders/credit/repay commands
+- Rewrote conversation-engine.ts with atomic order creation, dynamic payment options, orders/credit/repay commands
 - Build result: ✅ Zero errors, zero lint warnings
 
 Stage Summary:
@@ -450,3 +433,28 @@ Stage Summary:
 - Shop owners can view orders, check credit, and repay via Zalo
 - All payment flows are atomic and idempotent
 - Credit health checks prevent over-limit credit orders
+
+---
+Task ID: 3F
+Agent: main
+Task: Sprint 3F — i18n Expansion + Seed Data Verification + Build Verification
+
+Work Log:
+- Created `/home/z/my-project/src/lib/zalo/i18n.ts` — translation utility with `t(key, locale, params?)` and `createTranslator(locale)` functions
+- Updated `src/messages/vi.json` zaloBot section: expanded from 126 to 135 keys with proper Vietnamese diacritics (source of truth)
+- Updated `src/messages/en.json` zaloBot section: expanded from 126 to 135 keys matching vi.json structure
+- Rewrote `src/lib/zalo/conversation-engine.ts`:
+  - Added `import { createTranslator } from './i18n'`
+  - Added `const t = createTranslator(session.language)` in all 14 handler functions
+  - Replaced 72 inline `vi ? '...' : '...'` display string ternaries with `t('zaloBot.keyName')` calls
+  - Added `statusToKey()` helper for English status label resolution
+  - 29 remaining inline ternaries are quick reply button labels (intentionally kept — dual purpose: display + input matching)
+  - All business logic, state transitions, database queries preserved unchanged
+- Verified seed data: 9 orders, 11+ transactions, 5 shops with all payment/credit states present in `prisma/seed.ts`
+- Build verification: `npx next build` — ✓ Compiled successfully in 6.4s, 25 pages, 0 errors, 0 warnings
+
+Stage Summary:
+- Conversation engine now consumes centralized i18n message files instead of hardcoded strings
+- All Sprint 3 order/credit/repay/payment strings externalized and maintainable
+- Quick reply labels remain inline for input matching purposes
+- Build passes clean — Sprint 3F complete
