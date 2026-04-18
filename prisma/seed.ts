@@ -183,44 +183,98 @@ async function main() {
   console.log(`✅ Created ${products.length} products`);
 
   // ============================================
-  // 6. ORDERS
+  // 6. ORDERS (with idempotency keys + 2% digital discount)
   // ============================================
   const now = new Date();
+  const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+  let orderSeq = 0;
+
   const orderData = [
-    { shop: 0, items: [{ prod: 0, qty: 10 }, { prod: 2, qty: 3 }], method: 'DIGITAL', status: 'DELIVERED', daysAgo: 12 },
-    { shop: 1, items: [{ prod: 0, qty: 5 }, { prod: 4, qty: 2 }], method: 'CREDIT', status: 'DELIVERED', daysAgo: 10 },
-    { shop: 2, items: [{ prod: 4, qty: 3 }, { prod: 6, qty: 5 }], method: 'COD', status: 'DELIVERED', daysAgo: 8 },
-    { shop: 0, items: [{ prod: 1, qty: 3 }, { prod: 3, qty: 5 }], method: 'DIGITAL', status: 'OUT_FOR_DELIVERY', daysAgo: 1 },
-    { shop: 3, items: [{ prod: 0, qty: 20 }, { prod: 2, qty: 10 }, { prod: 4, qty: 5 }], method: 'CREDIT', status: 'CONFIRMED', daysAgo: 0 },
-    { shop: 4, items: [{ prod: 7, qty: 3 }], method: 'COD', status: 'PENDING', daysAgo: 0 },
-    { shop: 1, items: [{ prod: 5, qty: 4 }, { prod: 8, qty: 6 }], method: 'DIGITAL', status: 'PROCESSING', daysAgo: 0 },
-    { shop: 0, items: [{ prod: 0, qty: 15 }, { prod: 4, qty: 3 }, { prod: 6, qty: 10 }], method: 'CREDIT', status: 'PACKED', daysAgo: 0 },
+    // Shop 0 — DIGITAL with 2% Pay Now discount (delivered, fully paid)
+    { shop: 0, items: [{ prod: 0, qty: 10 }, { prod: 2, qty: 3 }], method: 'DIGITAL', status: 'DELIVERED', daysAgo: 12, idempotencyKey: `seed-shop0-order1-${dateStr}` },
+    // Shop 1 — CREDIT (delivered, partially repaid — 500k of 1.3M)
+    { shop: 1, items: [{ prod: 0, qty: 5 }, { prod: 4, qty: 2 }], method: 'CREDIT', status: 'DELIVERED', daysAgo: 10, idempotencyKey: `seed-shop1-order1-${dateStr}` },
+    // Shop 2 — COD (delivered, fully paid on delivery)
+    { shop: 2, items: [{ prod: 4, qty: 3 }, { prod: 6, qty: 5 }], method: 'COD', status: 'DELIVERED', daysAgo: 8, idempotencyKey: `seed-shop2-order1-${dateStr}` },
+    // Shop 0 — DIGITAL with 2% discount (out for delivery, not yet paid)
+    { shop: 0, items: [{ prod: 1, qty: 3 }, { prod: 3, qty: 5 }], method: 'DIGITAL', status: 'OUT_FOR_DELIVERY', daysAgo: 1, idempotencyKey: `seed-shop0-order2-${dateStr}` },
+    // Shop 3 — CREDIT (confirmed, large order that pushed shop to LOCKED)
+    { shop: 3, items: [{ prod: 0, qty: 20 }, { prod: 2, qty: 10 }, { prod: 4, qty: 5 }], method: 'CREDIT', status: 'CONFIRMED', daysAgo: 0, idempotencyKey: `seed-shop3-order1-${dateStr}` },
+    // Shop 4 — COD (pending, overdue shop)
+    { shop: 4, items: [{ prod: 7, qty: 3 }], method: 'COD', status: 'PENDING', daysAgo: 0, idempotencyKey: `seed-shop4-order1-${dateStr}` },
+    // Shop 1 — DIGITAL with 2% discount (processing)
+    { shop: 1, items: [{ prod: 5, qty: 4 }, { prod: 8, qty: 6 }], method: 'DIGITAL', status: 'PROCESSING', daysAgo: 0, idempotencyKey: `seed-shop1-order2-${dateStr}` },
+    // Shop 0 — CREDIT (packed, recent credit order contributing to 500k balance)
+    { shop: 0, items: [{ prod: 0, qty: 15 }, { prod: 4, qty: 3 }, { prod: 6, qty: 10 }], method: 'CREDIT', status: 'PACKED', daysAgo: 0, idempotencyKey: `seed-shop0-order3-${dateStr}` },
+    // Shop 0 — CANCELLED order (credit was refunded)
+    { shop: 0, items: [{ prod: 8, qty: 2 }], method: 'CREDIT', status: 'CANCELLED', daysAgo: 5, idempotencyKey: `seed-shop0-cancel1-${dateStr}` },
   ];
 
   const orders = [];
   for (const od of orderData) {
+    orderSeq++;
     const subtotal = od.items.reduce((sum, item) => sum + products[item.prod].basePrice * item.qty, 0);
-    const orderNum = `ALD-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(orders.length + 1).padStart(3, '0')}`;
+    const orderNum = `ALD-${dateStr}-${String(orderSeq).padStart(3, '0')}`;
     const createdAt = new Date(now.getTime() - od.daysAgo * 24 * 60 * 60 * 1000);
+
+    // Calculate 2% discount for DIGITAL (Pay Now) orders
+    const payNowDiscount = od.method === 'DIGITAL' ? Math.round(subtotal * 0.02) : 0;
+    const deliveryFee = od.method === 'COD' ? 15000 : 0;
+    const totalAmount = subtotal - payNowDiscount + deliveryFee;
+
+    // Determine payment status based on state
+    let paymentStatus = 'PENDING';
+    let paidAmount = 0;
+    let creditUsed = 0;
+
+    if (od.status === 'DELIVERED') {
+      if (od.method === 'DIGITAL') {
+        paymentStatus = 'PAID';
+        paidAmount = totalAmount;
+      } else if (od.method === 'COD') {
+        paymentStatus = 'PAID';
+        paidAmount = totalAmount;
+      } else if (od.method === 'CREDIT') {
+        paymentStatus = 'PENDING'; // Credit orders track via creditUsed + repayments
+        creditUsed = subtotal;
+      }
+    } else if (od.method === 'CREDIT') {
+      creditUsed = subtotal;
+    } else if (od.status === 'CANCELLED') {
+      paymentStatus = 'REFUNDED';
+      creditUsed = subtotal;
+    }
 
     const order = await db.order.create({
       data: {
         orderNumber: orderNum,
         shopId: shops[od.shop].shop.id,
-        shopSnapshot: JSON.stringify({ name: shops[od.shop].shop.name, phone: shops[od.shop].user.phone }),
+        shopSnapshot: JSON.stringify({
+          id: shops[od.shop].shop.id,
+          name: shops[od.shop].shop.name,
+          nameEn: shops[od.shop].shop.nameEn,
+          phone: shops[od.shop].user.phone,
+          address: shops[od.shop].shop.address || null,
+          district: shops[od.shop].shop.district || null,
+          province: shops[od.shop].shop.province,
+          shopType: shops[od.shop].shop.shopType,
+        }),
         status: od.status,
         paymentMethod: od.method,
-        paymentStatus: od.status === 'DELIVERED' ? 'PAID' : 'PENDING',
+        paymentStatus,
         subtotalAmount: subtotal,
-        discountAmount: 0,
-        deliveryFee: od.method === 'DIGITAL' ? 0 : 15000,
-        totalAmount: subtotal + (od.method === 'DIGITAL' ? 0 : 15000),
-        paidAmount: od.status === 'DELIVERED' && od.method !== 'CREDIT' ? subtotal : 0,
-        creditUsed: od.method === 'CREDIT' ? subtotal : 0,
+        discountAmount: payNowDiscount,
+        deliveryFee,
+        totalAmount,
+        paidAmount,
+        creditUsed,
+        idempotencyKey: od.idempotencyKey,
+        customerNotes: od.method === 'DIGITAL' ? 'Đặt qua Zalo AI Bot' : 'Đặt qua Zalo AI Bot',
         createdAt,
         confirmedAt: od.status !== 'PENDING' ? createdAt : null,
         packedAt: ['PACKED', 'OUT_FOR_DELIVERY', 'DELIVERED'].includes(od.status) ? createdAt : null,
         deliveredAt: od.status === 'DELIVERED' ? new Date(createdAt.getTime() + 86400000) : null,
+
       },
     });
 
@@ -240,16 +294,211 @@ async function main() {
 
     orders.push(order);
   }
-  console.log(`✅ Created ${orders.length} orders`);
+  console.log(`✅ Created ${orders.length} orders (including 1 cancelled)`);
+
+  // ============================================
+  // 7. TRANSACTIONS (Credit Ledger)
+  // ============================================
+  const transactions = [];
+
+  // Helper: generate unique idempotency keys for transactions
+  const txKeys = new Set<string>();
+  function uniqueTxKey(base: string): string {
+    let key = base;
+    let counter = 0;
+    while (txKeys.has(key)) {
+      counter++;
+      key = `${base}-${counter}`;
+    }
+    txKeys.add(key);
+    return key;
+  }
+
+  // Order 1: Shop 0 — DIGITAL payment recorded (fully paid, no credit impact)
+  await db.transaction.create({
+    data: {
+      shopId: shops[0].shop.id,
+      orderId: orders[0].id,
+      type: 'ORDER_PAYMENT',
+      amount: -orders[0].totalAmount,
+      runningBalance: 0,
+      paymentMethod: 'DIGITAL',
+      description: `Order ${orders[0].orderNumber} — paid in full via MoMo`,
+    },
+  });
+  transactions.push('ORDER_PAYMENT (Shop 0, Order 1)');
+
+  // Order 2: Shop 1 — CREDIT_USED (1,430,000d) → partially repaid (500,000d)
+  const creditUsedAmount = orders[1].subtotalAmount; // 1,430,000
+  const repayAmount = 500000;
+  const remainingAfterRepay = creditUsedAmount - repayAmount; // 930,000
+
+  await db.transaction.create({
+    data: {
+      shopId: shops[1].shop.id,
+      orderId: orders[1].id,
+      type: 'CREDIT_USED',
+      amount: creditUsedAmount,
+      runningBalance: creditUsedAmount,
+      paymentMethod: 'CREDIT',
+      description: `Order ${orders[1].orderNumber} — credit used`,
+    },
+  });
+
+  await db.transaction.create({
+    data: {
+      shopId: shops[1].shop.id,
+      orderId: orders[1].id,
+      type: 'REPAYMENT',
+      amount: -repayAmount,
+      runningBalance: remainingAfterRepay,
+      paymentMethod: 'CASH',
+      collectedBy: 'sales_rep_001',
+      description: `Partial repayment — ${repayAmount.toLocaleString('vi-VN')}d of ${creditUsedAmount.toLocaleString('vi-VN')}d (collected by Sales Rep)`,
+    },
+  });
+  transactions.push('CREDIT_USED + REPAYMENT (Shop 1, Order 2 — partial)');
+
+  // Order 3: Shop 2 — COD payment recorded (fully paid on delivery)
+  await db.transaction.create({
+    data: {
+      shopId: shops[2].shop.id,
+      orderId: orders[2].id,
+      type: 'ORDER_PAYMENT',
+      amount: -orders[2].totalAmount,
+      runningBalance: 0,
+      paymentMethod: 'COD',
+      description: `Order ${orders[2].orderNumber} — COD payment on delivery`,
+    },
+  });
+  transactions.push('ORDER_PAYMENT (Shop 2, Order 3 — COD)');
+
+  // Order 4: Shop 0 — DIGITAL payment (not yet paid — OUT_FOR_DELIVERY)
+  // No transaction yet — order is still in transit
+
+  // Order 5: Shop 3 — CREDIT_USED (5,600,000d) — large order that pushed shop to LOCKED
+  await db.transaction.create({
+    data: {
+      shopId: shops[3].shop.id,
+      orderId: orders[4].id,
+      type: 'CREDIT_USED',
+      amount: orders[4].subtotalAmount,
+      runningBalance: orders[4].subtotalAmount,
+      paymentMethod: 'CREDIT',
+      description: `Order ${orders[4].orderNumber} — credit used (lock triggered: at limit)`,
+      metadata: JSON.stringify({ action: 'AUTO_LOCK_TRIGGER', previousBalance: shops[3].shop.creditBalance - orders[4].subtotalAmount }),
+    },
+  });
+  transactions.push('CREDIT_USED (Shop 3, Order 5 — lock trigger)');
+
+  // Order 6: Shop 4 — COD pending — no transaction yet
+
+  // Order 7: Shop 1 — DIGITAL payment (processing, not yet paid)
+  // No transaction yet — order is being processed
+
+  // Order 8: Shop 0 — CREDIT_USED (500,000d from packed order)
+  await db.transaction.create({
+    data: {
+      shopId: shops[0].shop.id,
+      orderId: orders[7].id,
+      type: 'CREDIT_USED',
+      amount: orders[7].subtotalAmount,
+      runningBalance: orders[7].subtotalAmount,
+      paymentMethod: 'CREDIT',
+      description: `Order ${orders[7].orderNumber} — credit used`,
+    },
+  });
+  transactions.push('CREDIT_USED (Shop 0, Order 8)');
+
+  // Order 9: Shop 0 — CANCELLED — REFUND for credit used
+  const cancelledCredit = orders[8].subtotal;
+  await db.transaction.create({
+    data: {
+      shopId: shops[0].shop.id,
+      orderId: orders[8].id,
+      type: 'CREDIT_USED',
+      amount: cancelledCredit,
+      runningBalance: cancelledCredit,
+      paymentMethod: 'CREDIT',
+      description: `Order ${orders[8].orderNumber} — credit used`,
+    },
+  });
+
+  await db.transaction.create({
+    data: {
+      shopId: shops[0].shop.id,
+      orderId: orders[8].id,
+      type: 'REFUND',
+      amount: -cancelledCredit,
+      runningBalance: 0,
+      description: `Order ${orders[8].orderNumber} — credit refund (order cancelled)`,
+      metadata: JSON.stringify({ reason: 'Shop owner requested cancellation', refundType: 'CREDIT' }),
+    },
+  });
+  transactions.push('CREDIT_USED + REFUND (Shop 0, Order 9 — cancelled)');
+
+  // Credit limit adjustment: Shop 3 had limit increased from 2M to 3M by admin
+  await db.transaction.create({
+    data: {
+      shopId: shops[3].shop.id,
+      type: 'CREDIT_LIMIT_INCREASE',
+      amount: 0,
+      runningBalance: shops[3].shop.creditBalance,
+      description: 'Credit limit increased from 2,000,000d to 3,000,000d by admin',
+      metadata: JSON.stringify({ oldLimit: 2000000, newLimit: 3000000, adminUserId: adminUser.id }),
+    },
+  });
+  transactions.push('CREDIT_LIMIT_INCREASE (Shop 3 — admin adjustment)');
+
+  // Credit limit adjustment: Shop 1 had limit increased from 1M to 2M
+  await db.transaction.create({
+    data: {
+      shopId: shops[1].shop.id,
+      type: 'CREDIT_LIMIT_INCREASE',
+      amount: 0,
+      runningBalance: shops[1].shop.creditBalance,
+      description: 'Credit limit increased from 1,000,000d to 2,000,000d by admin',
+      metadata: JSON.stringify({ oldLimit: 1000000, newLimit: 2000000, adminUserId: adminUser.id }),
+    },
+  });
+  transactions.push('CREDIT_LIMIT_INCREASE (Shop 1 — admin adjustment)');
+
+  // ============================================
+  // 8. RECALCULATE SHOP CREDIT BALANCES from transactions
+  // ============================================
+  // Recompute to ensure consistency with ledger
+  for (const { shop } of shops) {
+    const creditTransactions = await db.transaction.findMany({
+      where: { shopId: shop.id, type: { in: ['CREDIT_USED', 'REPAYMENT', 'REFUND'] } },
+      select: { amount: true },
+    });
+
+    const computedBalance = creditTransactions.reduce((sum, t) => sum + t.amount, 0);
+
+    // Only update if computed differs from stored (to respect seed initial values)
+    if (computedBalance !== shop.creditBalance) {
+      await db.shop.update({
+        where: { id: shop.id },
+        data: { creditBalance: computedBalance },
+      });
+    }
+  }
+
+  console.log(`✅ Created ${transactions.length} transaction ledger entries`);
 
   console.log('\n🎉 Seed completed successfully!');
   console.log('  - 1 Admin user (0901234567)');
-  console.log(`  - ${shops.length} Shops`);
-  console.log(`  - ${products.length} Products`);
-  console.log(`  - ${orders.length} Orders`);
+  console.log(`  - ${shops.length} Shops (1 ACTIVE, 1 ACTIVE w/ partial debt, 1 clean, 1 LOCKED, 1 OVERDUE)`);
+  console.log(`  - ${products.length} Products (4 categories)`);
+  console.log(`  - ${orders.length} Orders (incl. 1 cancelled, 2 DIGITAL w/ 2% discount)`);
+  console.log(`  - ${transactions.length} Transactions (CREDIT_USED, REPAYMENT, REFUND, ORDER_PAYMENT, LIMIT changes)`);
   console.log(`  - ${manufacturers.length} Manufacturers`);
   console.log(`  - ${categories.length} Categories`);
   console.log(`  - ${wards.length} Wards`);
+  console.log('\n📋 Credit State Summary:');
+  for (const { shop } of shops) {
+    console.log(`  ${shop.name}: limit=${shop.creditLimit.toLocaleString('vi-VN')}d, balance=${shop.creditBalance.toLocaleString('vi-VN')}d, status=${shop.creditStatus}`);
+  }
 }
 
 main()
