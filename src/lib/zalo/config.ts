@@ -44,7 +44,9 @@ export type ConversationState =
   | 'AWAITING_SHOP_NAME'
   | 'AWAITING_SHOP_ADDRESS'
   | 'AWAITING_SHOP_DISTRICT'
-  | 'AWAITING_SHOP_TYPE';
+  | 'AWAITING_SHOP_TYPE'
+  | 'AWAITING_SEARCH_QUERY'
+  | 'SHOWING_PRODUCT_DETAIL';
 
 export type PaymentOption = 'DIGITAL' | 'CREDIT' | 'COD';
 
@@ -99,6 +101,10 @@ export interface ConversationSession {
     district: string;
     shopType: string;
   };
+
+  // Category browse & product detail context
+  selectedProductIndex?: number;
+  browsingCategoryId?: string;
 }
 
 export interface ZaloProductResult {
@@ -189,6 +195,8 @@ export function resetSession(zaloUserId: string): ConversationSession {
   session.creditOrders = undefined;
   session.selectedRepayOrderId = undefined;
   session.registrationData = undefined;
+  session.selectedProductIndex = undefined;
+  session.browsingCategoryId = undefined;
   return session;
 }
 

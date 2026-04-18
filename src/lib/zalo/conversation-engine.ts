@@ -117,6 +117,10 @@ export async function handleZaloMessage(
       return handleRepayOrderState(session, text, zaloUserId);
     case 'AWAITING_REPAY_AMOUNT':
       return handleRepayAmountState(session, text, zaloUserId);
+    case 'AWAITING_SEARCH_QUERY':
+      return handleAwaitingSearchQuery(session, text, zaloUserId);
+    case 'SHOWING_PRODUCT_DETAIL':
+      return handleProductDetailState(session, text, zaloUserId);
     case 'REGISTRATION_START':
     case 'AWAITING_SHOP_NAME':
     case 'AWAITING_SHOP_ADDRESS':
@@ -148,7 +152,9 @@ async function handleIdleState(session: ConversationSession, text: string, zaloU
       '• ' + t('zaloBot.helpRepay') + '\n' +
       '• ' + t('zaloBot.helpCancel') + '\n' +
       '• ' + t('zaloBot.helpLanguage') + '\n' +
-      '• ' + t('zaloBot.regHelpRegister') + '\n\n' +
+      '• ' + t('zaloBot.regHelpRegister') + '\n' +
+      '• ' + t('zaloBot.searchCmd') + '\n' +
+      '• ' + t('zaloBot.detailCmd') + '\n\n' +
       '💡 ' + t('zaloBot.helpTip');
     return createResponse(
       '🧞 ' + t('zaloBot.helpTitle') + helpBody,
@@ -167,8 +173,18 @@ async function handleIdleState(session: ConversationSession, text: string, zaloU
     return handleProfileCommand(session, zaloUserId);
   }
 
+  // Search command (explicit)
+  if (text === 'search' || text === 'tìm kiếm') {
+    updateSession(zaloUserId, { state: 'AWAITING_SEARCH_QUERY' });
+    return createResponse(
+      t('zaloBot.searchPrompt') + '\n\n' + t('zaloBot.searchHint'),
+      ['menu', vi ? 'phổ biến' : 'popular', vi ? 'quay lại' : 'back'],
+      'AWAITING_SEARCH_QUERY'
+    );
+  }
+
   // Menu command
-  if (text === 'menu' || text === 'danh mục') {
+  if (text === 'menu' || text === 'danh mục' || text === 'categories') {
     const categories = await getCategoryList();
     if (categories.length === 0) {
       return createResponse(t('zaloBot.noCategories'), [], session.state);
@@ -261,6 +277,16 @@ async function handleSearchState(session: ConversationSession, text: string, zal
   const t = createTranslator(session.language);
   const vi = session.language === 'vi';
 
+  // Product detail request: "chi tiết N", "detail N", "xem N"
+  const detailMatch = text.match(/^(?:chi tiết|detail|xem)\s+(\d+)$/i);
+  if (detailMatch && session.searchResults) {
+    const idx = parseInt(detailMatch[1]) - 1;
+    if (idx >= 0 && idx < session.searchResults.length) {
+      updateSession(zaloUserId, { state: 'SHOWING_PRODUCT_DETAIL', selectedProductIndex: idx });
+      return showProductDetail(session.searchResults[idx], session);
+    }
+  }
+
   // Check if user selected a number from search results
   if (session.searchResults && /^\d+$/.test(text)) {
     const idx = parseInt(text) - 1;
@@ -277,6 +303,7 @@ async function handleSearchState(session: ConversationSession, text: string, zal
       updateSession(zaloUserId, {
         state: 'AWAITING_ORDER_QTY',
         searchQuery: product.name,
+        selectedProductIndex: idx,
       });
 
       return createResponse(
@@ -287,6 +314,38 @@ async function handleSearchState(session: ConversationSession, text: string, zal
         t('zaloBot.enterQtyHint', { max: product.stockQuantity }),
         ['1', '2', '5', '10', (vi ? 'hủy' : 'cancel')],
         'AWAITING_ORDER_QTY'
+      );
+    }
+  }
+
+  // Category detection: check if text matches a category name
+  if (session.state === 'AWAITING_PRODUCT_SEARCH' || session.state === 'SHOWING_PRODUCTS') {
+    const categories = await getCategoryList();
+    const matchedCat = categories.find(
+      (c) => c.name.toLowerCase() === text.toLowerCase()
+    );
+    if (matchedCat) {
+      const products = await getProductsByCategory(matchedCat.id, 5);
+      if (products.length === 0) {
+        return createResponse(
+          t('zaloBot.catNoProducts'),
+          categories.map((c) => c.name),
+          'AWAITING_PRODUCT_SEARCH'
+        );
+      }
+      const productLines = products.map((p, i) => formatProductLine(p, i + 1)).join('\n\n');
+      updateSession(zaloUserId, {
+        state: 'SHOWING_PRODUCTS',
+        browsingCategoryId: matchedCat.id,
+        searchQuery: matchedCat.name,
+        searchResults: products,
+      });
+      return createResponse(
+        t('zaloBot.catBrowseTitle', { name: matchedCat.name }) +
+        productLines + '\n\n' +
+        t('zaloBot.catBrowseHint'),
+        [...products.map((_, i) => `${i + 1}`), vi ? 'menu' : 'back'],
+        'SHOWING_PRODUCTS'
       );
     }
   }
@@ -308,12 +367,14 @@ async function handleSearchState(session: ConversationSession, text: string, zal
     state: 'SHOWING_PRODUCTS',
     searchQuery: text,
     searchResults: results,
+    browsingCategoryId: undefined,
   });
 
   return createResponse(
     t('zaloBot.searchResultsTitle', { query: text }) +
     productLines + '\n\n' +
-    t('zaloBot.searchSelectHint'),
+    t('zaloBot.searchSelectHint') +
+    t('zaloBot.searchDetailHint'),
     [...results.map((_, i) => `${i + 1}`), vi ? 'menu' : 'back'],
     'SHOWING_PRODUCTS'
   );
@@ -354,8 +415,8 @@ async function handleOrderQtyState(session: ConversationSession, text: string, z
     return handleIdleState(session, text, zaloUserId);
   }
 
-  // Use the first result as the selected product (or the one that matches the search query)
-  const selectedProduct = session.searchResults[0];
+  // Use the selected product from the correct index
+  const selectedProduct = session.searchResults[session.selectedProductIndex ?? 0];
   const maxQty = selectedProduct.stockQuantity;
 
   if (qty > maxQty) {
@@ -1819,6 +1880,213 @@ async function handleProfileCommand(session: ConversationSession, zaloUserId: st
       session.state
     );
   }
+}
+
+// ============================================
+// STATE: AWAITING_SEARCH_QUERY (explicit search)
+// ============================================
+
+async function handleAwaitingSearchQuery(session: ConversationSession, text: string, zaloUserId: string): Promise<BotResponse> {
+  const t = createTranslator(session.language);
+  const vi = session.language === 'vi';
+
+  // Back / cancel
+  if (text === 'back' || text === 'quay lại' || text === 'cancel' || text === 'hủy') {
+    updateSession(zaloUserId, { state: 'IDLE' });
+    return createResponse(
+      t('zaloBot.backToMenu'),
+      ['menu', 'help'],
+      'IDLE'
+    );
+  }
+
+  // Menu → go to categories
+  if (text === 'menu' || text === 'danh mục' || text === 'categories') {
+    resetSession(zaloUserId);
+    return handleIdleState(session, text, zaloUserId);
+  }
+
+  // Popular
+  if (text === 'popular' || text === 'phổ biến') {
+    return handleIdleState(session, text, zaloUserId);
+  }
+
+  // Require at least 2 chars
+  if (text.length < 2) {
+    return createResponse(
+      t('zaloBot.qtyInvalidMsg'), // Reuse as generic "too short" message
+      [vi ? 'quay lại' : 'back'],
+      'AWAITING_SEARCH_QUERY'
+    );
+  }
+
+  // Delegate to search
+  return handleSearchState(session, text, zaloUserId);
+}
+
+// ============================================
+// STATE: SHOWING_PRODUCT_DETAIL
+// ============================================
+
+async function handleProductDetailState(session: ConversationSession, text: string, zaloUserId: string): Promise<BotResponse> {
+  const t = createTranslator(session.language);
+  const vi = session.language === 'vi';
+
+  // Back to product list
+  if (text === 'back' || text === 'quay lại') {
+    if (session.searchResults && session.searchResults.length > 0) {
+      const query = session.searchQuery || '';
+      const productLines = session.searchResults.map((p, i) => formatProductLine(p, i + 1)).join('\n\n');
+      updateSession(zaloUserId, { state: 'SHOWING_PRODUCTS', selectedProductIndex: undefined });
+      return createResponse(
+        t('zaloBot.searchResultsTitle', { query }) + productLines + '\n\n' +
+        t('zaloBot.searchSelectHint') + t('zaloBot.searchDetailHint'),
+        [...session.searchResults.map((_, i) => `${i + 1}`), vi ? 'menu' : 'back'],
+        'SHOWING_PRODUCTS'
+      );
+    }
+    resetSession(zaloUserId);
+    return handleIdleState(session, text, zaloUserId);
+  }
+
+  // Menu → back to categories
+  if (text === 'menu' || text === 'danh mục') {
+    resetSession(zaloUserId);
+    return handleIdleState(session, text, zaloUserId);
+  }
+
+  // Number → select this product for ordering (quantity shortcut)
+  if (/^\d+$/.test(text)) {
+    const qty = parseInt(text);
+    if (session.searchResults && session.selectedProductIndex !== undefined) {
+      const product = session.searchResults[session.selectedProductIndex];
+      if (product.stockQuantity === 0) {
+        return createResponse(
+          t('zaloBot.outOfStockMsg', { name: product.name }),
+          [vi ? 'quay lại' : 'back'],
+          'SHOWING_PRODUCT_DETAIL'
+        );
+      }
+
+      // Validate quantity
+      const minQty = 1;
+      const maxQty = product.stockQuantity;
+      if (qty < minQty || qty > maxQty) {
+        return createResponse(
+          t('zaloBot.stockRemainingMsg', { qty: maxQty, unit: product.unit }),
+          [String(maxQty), vi ? 'quay lại' : 'back'],
+          'SHOWING_PRODUCT_DETAIL'
+        );
+      }
+
+      // Add to cart
+      const unitPrice = product.groupBuyPrice || product.basePrice;
+      const existingIdx = session.orderItems.findIndex((item) => item.productId === product.id);
+      if (existingIdx >= 0) {
+        session.orderItems[existingIdx].quantity += qty;
+        session.orderItems[existingIdx].totalPrice = session.orderItems[existingIdx].quantity * unitPrice;
+      } else {
+        session.orderItems.push({
+          productId: product.id,
+          productName: product.name,
+          sku: product.sku,
+          unitPrice,
+          quantity: qty,
+          totalPrice: qty * unitPrice,
+        });
+      }
+
+      session.orderTotal = session.orderItems.reduce((sum, item) => sum + item.totalPrice, 0);
+      const orderSummary = session.orderItems
+        .map((item, i) => `${i + 1}. ${item.productName} × ${item.quantity} = ${formatVND(item.totalPrice)}`)
+        .join('\n');
+
+      updateSession(zaloUserId, { state: 'REVIEWING_ORDER', selectedProductIndex: undefined });
+      return createResponse(
+        t('zaloBot.cartTitle') + orderSummary + '\n\n' +
+        t('zaloBot.cartTotal', { total: formatVND(session.orderTotal) }) + '\n\n' +
+        t('zaloBot.cartOptionsHint'),
+        [vi ? 'thêm' : 'add', vi ? 'đặt hàng' : 'order', vi ? 'xóa' : 'clear'],
+        'REVIEWING_ORDER'
+      );
+    }
+  }
+
+  // Default: show hint with back option
+  return createResponse(
+    t('zaloBot.productDetailBackHint'),
+    [vi ? 'quay lại' : 'back', 'menu'],
+    'SHOWING_PRODUCT_DETAIL'
+  );
+}
+
+// ============================================
+// HELPER: Show Product Detail
+// ============================================
+
+async function showProductDetail(product: ZaloProductResult, session: ConversationSession): Promise<BotResponse> {
+  const t = createTranslator(session.language);
+  const vi = session.language === 'vi';
+
+  // Fetch full product from DB for min/max order and brand
+  const fullProduct = await db.product.findUnique({
+    where: { id: product.id },
+    include: { category: { select: { name: true } } },
+  });
+
+  if (!fullProduct) {
+    // Fallback to basic info from ZaloProductResult
+    let detail = t('zaloBot.productDetailTitle') +
+      `  ${t('zaloBot.productDetailName')}: ${product.name}\n` +
+      `  ${t('zaloBot.productDetailSku')}: ${product.sku}\n` +
+      `  ${t('zaloBot.productDetailPrice')}: ${formatVND(product.basePrice)}/${product.unit}\n` +
+      (product.groupBuyPrice ? `  ${t('zaloBot.productDetailGroupBuy')}: ${formatVND(product.groupBuyPrice)}/${product.unit}\n` : '') +
+      `  ${t('zaloBot.productDetailStock')}: ${product.stockQuantity} ${product.unit}\n`;
+
+    if (product.isPrivateLabel) detail += '  [ALADIN]\n';
+
+    return createResponse(
+      detail + t('zaloBot.productDetailSelectHint'),
+      ['1', '2', '5', '10', vi ? 'quay lại' : 'back'],
+      'SHOWING_PRODUCT_DETAIL'
+    );
+  }
+
+  const stockIcon = fullProduct.stockQuantity > 50 ? '✅' : fullProduct.stockQuantity > 0 ? '⚠️' : '❌';
+  const stockLabel = fullProduct.stockQuantity > 50 ? '' : fullProduct.stockQuantity > 0 ? ' (còn ít!)' : ' (hết hàng!)';
+  const plTag = fullProduct.isPrivateLabel ? ' [ALADIN]' : '';
+
+  let detail = t('zaloBot.productDetailTitle') +
+    `  ${fullProduct.name}${plTag}\n` +
+    (fullProduct.nameEn ? `  (${fullProduct.nameEn})\n` : '') +
+    `\n` +
+    `  ${t('zaloBot.productDetailSku')}: ${fullProduct.sku}\n`;
+
+  if (fullProduct.brand) {
+    detail += `  ${t('zaloBot.productDetailBrand')}: ${fullProduct.brand}\n`;
+  }
+  if (fullProduct.category) {
+    detail += `  ${t('zaloBot.productDetailCategory')}: ${fullProduct.category.name}\n`;
+  }
+
+  detail += `\n` +
+    `  ${t('zaloBot.productDetailPrice')}: ${formatVND(fullProduct.basePrice)}/${fullProduct.unit}\n`;
+
+  if (fullProduct.groupBuyPrice) {
+    detail += `  ${t('zaloBot.productDetailGroupBuy')}: ${formatVND(fullProduct.groupBuyPrice)}/${fullProduct.unit}\n`;
+  }
+
+  detail += `  ${t('zaloBot.productDetailStock')}: ${stockIcon} ${fullProduct.stockQuantity} ${fullProduct.unit}${stockLabel}\n` +
+    `  ${t('zaloBot.productDetailMinOrder')}: ${fullProduct.minOrderQty} ${fullProduct.unit}\n` +
+    `  ${t('zaloBot.productDetailMaxOrder')}: ${fullProduct.maxOrderQty ? fullProduct.maxOrderQty + ' ' + fullProduct.unit : t('zaloBot.productDetailNoMax')}\n`;
+
+  if (fullProduct.stockQuantity > 0) {
+    detail += t('zaloBot.productDetailSelectHint');
+  }
+
+  const quickReplies = ['1', '2', '5', '10', vi ? 'quay lại' : 'back'];
+
+  return createResponse(detail, quickReplies, 'SHOWING_PRODUCT_DETAIL');
 }
 
 // ============================================

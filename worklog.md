@@ -1,3 +1,35 @@
+---
+Task ID: 4B
+Agent: main
+Task: Sprint 4B — Zalo Bot: Category Browse & Product Search
+
+Work Log:
+- Updated `src/lib/zalo/config.ts` with 2 new ConversationState values (`AWAITING_SEARCH_QUERY`, `SHOWING_PRODUCT_DETAIL`) and 2 new session fields (`selectedProductIndex`, `browsingCategoryId`)
+- Updated `resetSession()` in config.ts to clear new fields
+- Added 22 new i18n keys to `src/messages/vi.json` (search, category browse, product detail keys)
+- Added 22 new i18n keys to `src/messages/en.json` (matching English translations)
+- Added `AWAITING_SEARCH_QUERY` and `SHOWING_PRODUCT_DETAIL` routes to main switch in conversation-engine.ts
+- Added `searchCmd` and `detailCmd` to help text body
+- Added "categories" as alias for menu command
+- Added explicit "tìm kiếm"/"search" command in IDLE handler → `AWAITING_SEARCH_QUERY` state
+- Enhanced `handleSearchState` with category detection (matches text against category names, calls `getProductsByCategory()`)
+- Added product detail detection ("chi tiết N"/"detail N"/"xem N") in search results
+- Added `selectedProductIndex: idx` when user selects a product by number
+- Fixed bug in `handleOrderQtyState`: changed `session.searchResults[0]` to `session.searchResults[session.selectedProductIndex ?? 0]`
+- Added `handleAwaitingSearchQuery` handler for explicit search command flow
+- Added `handleProductDetailState` handler for product detail view with back/menu/quantity shortcuts
+- Added `showProductDetail` helper that fetches full product from DB (brand, category, min/max order) and displays formatted detail
+- Added `searchDetailHint` i18n key appended to search results for discoverability
+- Build result: ✅ Zero errors, zero lint warnings, 6.9s compile
+
+Stage Summary:
+- Users can now browse product categories via "menu"/"danh mục"/"categories" and tap a category name to see its products
+- Explicit search command "tìm kiếm"/"search" enters a dedicated search query state
+- Product detail view available via "chi tiết N"/"detail N"/"xem N" while viewing products
+- Product detail shows full info: SKU, brand, category, prices, stock status, min/max order quantities
+- Critical bug fixed: product selection now uses correct index instead of always using first result
+
+---
 # ALADIN Sprint 4A — Zalo Bot Shop Registration & Onboarding
 
 ## Date: 2026-04-20
