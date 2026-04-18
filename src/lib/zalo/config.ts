@@ -34,7 +34,12 @@ export type ConversationState =
   | 'REVIEWING_ORDER'
   | 'AWAITING_PAYMENT_METHOD'
   | 'ORDER_CONFIRMED'
-  | 'AWAITING_IMAGE_INVOICE';
+  | 'AWAITING_IMAGE_INVOICE'
+  | 'AWAITING_ORDER_LOOKUP'
+  | 'SHOWING_ORDERS'
+  | 'AWAITING_CREDIT_INFO'
+  | 'AWAITING_REPAY_ORDER'
+  | 'AWAITING_REPAY_AMOUNT';
 
 export type PaymentOption = 'DIGITAL' | 'CREDIT' | 'COD';
 
@@ -60,6 +65,27 @@ export interface ConversationSession {
   // Error recovery
   errorCount: number;
   lastErrorAt?: number;
+
+  // Order lookup context
+  recentOrders?: Array<{
+    id: string;
+    orderNumber: string;
+    status: string;
+    totalAmount: number;
+    itemCount: number;
+    paymentMethod: string;
+    createdAt: Date;
+  }>;
+
+  // Repay context
+  creditOrders?: Array<{
+    id: string;
+    orderNumber: string;
+    totalAmount: number;
+    creditUsed: number;
+    dueDate: string;
+  }>;
+  selectedRepayOrderId?: string;
 }
 
 export interface ZaloProductResult {
@@ -146,6 +172,9 @@ export function resetSession(zaloUserId: string): ConversationSession {
   session.paymentMethod = undefined;
   session.paymentDiscount = undefined;
   session.errorCount = 0;
+  session.recentOrders = undefined;
+  session.creditOrders = undefined;
+  session.selectedRepayOrderId = undefined;
   return session;
 }
 

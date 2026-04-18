@@ -1,4 +1,113 @@
-# ALADIN Sprint 3A — Orders API Work Log
+# ALADIN Sprint 3E — Zalo Conversation Engine: Orders, Credit, & Payment Flow
+
+## Date: 2026-04-19
+
+## Task: Enhance Zalo Conversation Engine with Orders, Credit, and Enhanced Payment Flow
+
+### Files Modified
+
+1. **`src/lib/zalo/config.ts`** — Added 5 new ConversationState types, session fields for orders/credit/repay context
+2. **`src/lib/zalo/conversation-engine.ts`** — Major rewrite (601 → 1574 lines)
+
+### Build Result: ✅ Zero errors — `npx next build` passed successfully
+
+---
+
+### Changes to `config.ts`
+
+- **New ConversationState values**: `AWAITING_ORDER_LOOKUP`, `SHOWING_ORDERS`, `AWAITING_CREDIT_INFO`, `AWAITING_REPAY_ORDER`, `AWAITING_REPAY_AMOUNT`
+- **New session fields**: `recentOrders?`, `creditOrders?`, `selectedRepayOrderId?`
+- **Updated `resetSession()`**: Clears all new fields
+
+### Changes to `conversation-engine.ts`
+
+#### A. Atomic Order Creation (`handlePaymentState`)
+- Uses `db.$transaction` for all order operations (order + items + stock deduction + credit transaction + shop stats)
+- Generates proper `ALD-YYYYMMDD-XXX` order numbers with per-day auto-increment (same pattern as admin API)
+- Uses `generateIdempotencyKey(zaloUserId)` for idempotency
+- Creates `CREDIT_USED` transaction record for credit payments inside the transaction
+- Deducts stock atomically inside the transaction
+- Updates shop stats (`totalOrders`, `totalGmv`, `avgOrderValue`)
+- Builds proper `shopSnapshot` JSON
+- 2% discount for DIGITAL payment via `CREDIT_CONFIG.PAY_NOW_DISCOUNT`
+- 15,000 VND delivery fee for COD
+- Credit validation: checks LOCKED/OVERDUE status and available credit before order creation
+
+#### B. Dynamic Payment Method Selection (`handleShowPaymentOptions`)
+- Extracted into dedicated helper function
+- Checks shop credit status before showing payment options
+- Disables 7-Day Credit option when LOCKED, OVERDUE, or insufficient credit
+- Shows available credit amount next to the credit option
+- Warns when available credit < order total
+- Removes credit option from quick replies when disabled
+
+#### C. "orders" / "đơn hàng" Command (`handleOrdersCommand`)
+- Fetches 5 most recent orders for the shop (order by createdAt desc)
+- Displays with status icons (⏳✅⚙️📦🚚✅❌🔄), item count, total, payment method
+- Status labels in Vietnamese (CHỜ XÁC NHẬN, ĐÃ GIAO, etc.)
+- Supports selecting by number to see full detail
+- Order detail includes: items list, subtotal/discount/delivery/total, payment method, credit remaining, order date
+- Bilingual (vi/en)
+
+#### D. "credit" / "tín dụng" Command (`handleCreditCommand`)
+- Uses `getShopCreditInfo(shopId)` from credit-engine
+- Shows credit dashboard: limit, used, available, status, days until due
+- Status icons: 🟢 ACTIVE, 🔴 LOCKED/OVERDUE
+- Vietnamese status labels: HOẠT ĐỘNG, BỊ KHÓA, QUÁ HẠN
+- Smart due date messaging: Today! (0 days), X ngày nữa (>2), overdue warning
+- OVERDUE: warns about permanent lock risk
+- LOCKED: explains auto-unlock on repayment
+- Zero balance: encourages credit usage
+- Bilingual (vi/en)
+
+#### E. "repay" / "trả nợ" Command (`handleRepayCommand`)
+- Checks for outstanding credit balance > 0
+- Queries CREDIT_USED transactions and subtracts REPAYMENT transactions per order
+- Lists unpaid credit orders with amounts and due dates
+- Total debt summary
+- Select order by number → enter amount (or "tất cả"/"all" for full repayment)
+- Vietnamese number parsing: removes dots/spaces for "100.000" format
+- Processes repayment via `db.$transaction` (atomic):
+  - Creates REPAYMENT transaction record (negative amount)
+  - Updates shop creditBalance
+  - Auto-reactivates credit from LOCKED/OVERDUE on full repayment
+- Shows success with remaining balance and celebration on full repayment
+- Bilingual (vi/en)
+
+#### F. Updated Help Text
+- Added: "đơn hàng" / "orders" — Xem đơn gần đây
+- Added: "tín dụng" / "credit" — Xem tài khoản tín dụng
+- Added: "trả nợ" / "repay" — Thanh toán nợ
+
+#### G. Updated State Machine
+- All 5 new states handled in switch statement
+- ORDER_CONFIRMED intercepts orders/credit/repay commands
+- AWAITING_CREDIT_INFO intercepts repay/orders commands
+- Back/cancel navigation in all new states
+
+#### H. Helper Functions
+- `getStatusLabelVi()` — Maps order statuses to Vietnamese labels
+- `formatDate()` — Date formatting for Zalo messages
+- `getProductsByCategory` imported (available but not yet wired to category selection)
+
+---
+
+### Key Decisions
+
+1. **Inline transaction vs credit-engine**: Used inline `db.$transaction` for order creation (same pattern as admin API `/api/orders`) to ensure atomicity across order + items + stock + credit + stats. The credit-engine functions (`repayCredit`, `getShopCreditInfo`, etc.) are used for repayment and info lookup where they fit cleanly.
+
+2. **Credit check before payment display**: The payment method screen now dynamically disables the credit option based on real-time shop credit status, preventing user frustration from failed credit orders.
+
+3. **Repayment amount parsing**: Supports Vietnamese-formatted numbers ("100.000"), plain numbers ("100000"), and keyword "tất cả"/"all" for full repayment.
+
+4. **Session state management**: New session fields (`recentOrders`, `creditOrders`, `selectedRepayOrderId`) are properly typed and cleared on reset.
+
+5. **Error recovery**: All new states have back/cancel handlers that gracefully return to IDLE. Credit/repay failures show actionable error messages.
+
+6. **Code organization**: Commands (orders, credit, repay) are extracted into dedicated functions, keeping the state machine router clean and readable.
+
+### Issues Encountered
+- **None** — Build passed on first attempt with zero errors.
 
 ## Date: 2025-07-13
 
@@ -307,3 +416,37 @@
 ### Issues Encountered
 
 - **Import error**: Initially imported `Skeleton` from `@/components/ui/separator` instead of `@/components/ui/skeleton` in order-create-dialog.tsx. Fixed immediately and build passed on second run.
+
+---
+Task ID: 3E
+Agent: full-stack-developer
+Task: Enhance Zalo Conversation Engine with Orders, Credit, and Payment Flow
+
+Work Log:
+- Updated config.ts with new ConversationState types (AWAITING_ORDER_LOOKUP, SHOWING_ORDERS, AWAITING_CREDIT_INFO, AWAITING_REPAY_ORDER, AWAITING_REPAY_AMOUNT)
+- Added recentOrders, creditOrders, selectedRepayOrderId to ConversationSession
+- Rewrote conversation-engine.ts with:
+  - Atomic order creation (db.$transaction) matching admin API pattern
+  - Proper ALD-YYYYMMDD-XXX order numbers with per-day auto-increment
+  - Idempotency keys on order creation via generateIdempotencyKey()
+  - Stock deduction inside transaction
+  - CREDIT_USED transaction record for credit payment
+  - Shop stats update (totalOrders, totalGmv, avgOrderValue)
+  - Shop snapshot JSON with full address info
+  - 2% PAY_NOW_DISCOUNT for DIGITAL payment
+  - 15,000 VND delivery fee for COD
+  - Dynamic payment method selection with credit health checks (LOCKED/OVERDUE warnings, available credit display)
+  - "orders" / "đơn hàng" command: view 5 recent orders with status icons, select by number for detail view
+  - "credit" / "tín dụng" command: credit dashboard showing limit, used, available, status, days until due
+  - "repay" / "trả nợ" command: list unpaid credit orders, select order, enter amount or "all", process repayment via db.$transaction
+  - Full bilingual support (vi/en) for all new features
+  - Updated help text with new commands
+  - Updated state machine router with all new state cases
+  - Enhanced ORDER_CONFIRMED state to handle orders/credit/repay commands
+- Build result: ✅ Zero errors, zero lint warnings
+
+Stage Summary:
+- Conversation engine now fully integrated with credit system
+- Shop owners can view orders, check credit, and repay via Zalo
+- All payment flows are atomic and idempotent
+- Credit health checks prevent over-limit credit orders
