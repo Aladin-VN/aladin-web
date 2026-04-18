@@ -589,6 +589,27 @@
     "statusOutForDelivery": "OUT FOR DELIVERY",
     "statusDelivered": "DELIVERED",
     "statusCancelled": "CANCELLED",
-    "statusRefunded": "REFUNDED"
+    "statusRefunded": "REFUNDED",
+    "regWelcome": "Welcome to ALADIN! 🧞\nTo get started, I need a few details.",
+    "regStart": "\n\nI'll ask 4 quick questions:\n1️⃣ Shop name\n2️⃣ Address\n3️⃣ District\n4️⃣ Shop type\n\nType \"ok\" to start or \"cancel\" to skip.",
+    "regCancel": "Registration cancelled. Type \"register\" when ready!",
+    "regAskName": "Question 1/4: 🏪 What is your shop name?\n(E.g. Happy Grocery)",
+    "regAskNameInvalid": "Please enter a shop name (at least 2 characters).\nOr \"cancel\" to stop.",
+    "regAskAddress": "Question 2/4: 📍 Shop address?\n(E.g. 123 Nguyen Van Linh)",
+    "regAskAddressInvalid": "Please enter an address (at least 5 characters).\nOr \"cancel\" to stop.",
+    "regAskDistrict": "Question 3/4: 🏘️ District?\n(E.g. Thu Dau Mot, Di An)",
+    "regAskDistrictInvalid": "Please enter a district name.\nOr \"cancel\" to stop.",
+    "regAskType": "Question 4/4: 🏷️ Shop type?\n1. Grocery store (Tạp hóa)\n2. Convenience store\n3. Factory store",
+    "regAskTypeInvalid": "Please choose 1, 2, or 3.\nOr \"cancel\" to stop.",
+    "regCreating": "⏳ Creating your account...",
+    "regSuccess": "🎉 Registration successful!\n\n🛒 {shopName}\n📍 {address}\n🏘️ {district}\n🏷️ {shopType}\n💳 Credit limit: {creditLimit}\n\n",
+    "regWelcomeMenu": "You can:\n• Type a product name to search\n• \"menu\" — Browse categories\n• \"popular\" — Trending products\n• \"help\" — View instructions",
+    "regShopTypeTaphoa": "Grocery store (Tạp hóa)",
+    "regShopTypeConvenience": "Convenience store",
+    "regShopTypeFactory": "Factory store",
+    "regHelpRegister": "\"register\" — Create account",
+    "regProfileTitle": "📋 Shop Information:\n\n",
+    "regProfileLine": "🛒 {shopName}\n📍 {address}\n🏘️ {district}\n🏷️ {shopType}\n💳 Credit limit: {creditLimit}",
+    "regSkipHint": "Type \"register\" to create an account."
   }
 }

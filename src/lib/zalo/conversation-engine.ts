@@ -72,6 +72,27 @@ export async function handleZaloMessage(
     );
   }
 
+  // Registration gate: check if user is registered when in IDLE state
+  if (session.state === 'IDLE') {
+    const isLanguageCmd = text.toLowerCase().includes('switch to english') || text === 'en'
+      || text.includes('chuyển sang tiếng việt') || text === 'vi';
+    const isHelpCmd = text === 'help' || text === 'giúp đỡ' || text === 'hỗ trợ';
+    const isRegisterCmd = text === 'register' || text === 'đăng ký';
+
+    if (!isLanguageCmd && !isHelpCmd && !isRegisterCmd) {
+      // Check if user has a shop
+      const regStatus = await isUserRegistered(zaloUserId);
+      if (!regStatus.registered) {
+        // Not registered — start registration flow
+        return handleRegistrationStart(session, zaloUserId);
+      }
+      // If registered, populate session
+      if (regStatus.shopId && !session.shopId) {
+        updateSession(zaloUserId, { shopId: regStatus.shopId, userId: regStatus.userId });
+      }
+    }
+  }
+
   // Route to state handler
   switch (session.state) {
     case 'IDLE':
@@ -96,6 +117,12 @@ export async function handleZaloMessage(
       return handleRepayOrderState(session, text, zaloUserId);
     case 'AWAITING_REPAY_AMOUNT':
       return handleRepayAmountState(session, text, zaloUserId);
+    case 'REGISTRATION_START':
+    case 'AWAITING_SHOP_NAME':
+    case 'AWAITING_SHOP_ADDRESS':
+    case 'AWAITING_SHOP_DISTRICT':
+    case 'AWAITING_SHOP_TYPE':
+      return handleRegistrationState(session, text, zaloUserId);
     default:
       resetSession(zaloUserId);
       return handleIdleState(session, text, zaloUserId);
@@ -120,13 +147,24 @@ async function handleIdleState(session: ConversationSession, text: string, zaloU
       '• ' + t('zaloBot.helpCredit') + '\n' +
       '• ' + t('zaloBot.helpRepay') + '\n' +
       '• ' + t('zaloBot.helpCancel') + '\n' +
-      '• ' + t('zaloBot.helpLanguage') + '\n\n' +
+      '• ' + t('zaloBot.helpLanguage') + '\n' +
+      '• ' + t('zaloBot.regHelpRegister') + '\n\n' +
       '💡 ' + t('zaloBot.helpTip');
     return createResponse(
       '🧞 ' + t('zaloBot.helpTitle') + helpBody,
       ['menu', vi ? 'phổ biến' : 'popular', vi ? 'đơn hàng' : 'orders'],
       session.state
     );
+  }
+
+  // Register command
+  if (text === 'register' || text === 'đăng ký') {
+    return handleRegistrationStart(session, zaloUserId);
+  }
+
+  // Profile command (show shop info)
+  if (text === 'profile' || text === 'thông tin') {
+    return handleProfileCommand(session, zaloUserId);
   }
 
   // Menu command
@@ -1451,6 +1489,334 @@ async function handleRepayAmountState(session: ConversationSession, text: string
       t('zaloBot.repayError'),
       ['help', 'menu'],
       'IDLE'
+    );
+  }
+}
+
+// ============================================
+// REGISTRATION: Check if user is registered
+// ============================================
+
+async function isUserRegistered(zaloUserId: string): Promise<{ registered: boolean; shopId?: string; userId?: string }> {
+  const user = await db.user.findUnique({
+    where: { zaloId: zaloUserId },
+    select: { id: true, shop: { select: { id: true } } },
+  });
+  if (user && user.shop) {
+    return { registered: true, shopId: user.shop.id, userId: user.id };
+  }
+  return { registered: false };
+}
+
+// ============================================
+// REGISTRATION: Find only (no auto-create)
+// ============================================
+
+async function findShopByZaloUser(zaloUserId: string) {
+  const user = await db.user.findUnique({
+    where: { zaloId: zaloUserId },
+    include: { shop: true },
+  });
+  return user?.shop || null;
+}
+
+// ============================================
+// REGISTRATION: Start
+// ============================================
+
+async function handleRegistrationStart(session: ConversationSession, zaloUserId: string): Promise<BotResponse> {
+  const t = createTranslator(session.language);
+  const vi = session.language === 'vi';
+
+  updateSession(zaloUserId, {
+    state: 'REGISTRATION_START',
+    registrationData: { shopName: '', address: '', district: '', shopType: '' },
+  });
+
+  return createResponse(
+    t('zaloBot.regWelcome') + t('zaloBot.regStart'),
+    [vi ? 'đồng ý' : 'ok', vi ? 'hủy' : 'cancel'],
+    'REGISTRATION_START'
+  );
+}
+
+// ============================================
+// REGISTRATION: State Handler
+// ============================================
+
+async function handleRegistrationState(session: ConversationSession, text: string, zaloUserId: string): Promise<BotResponse> {
+  const t = createTranslator(session.language);
+  const vi = session.language === 'vi';
+
+  // Cancel at any step
+  if (text === 'cancel' || text === 'hủy') {
+    updateSession(zaloUserId, { state: 'IDLE', registrationData: undefined });
+    return createResponse(t('zaloBot.regCancel'), ['help'], 'IDLE');
+  }
+
+  switch (session.state) {
+    case 'REGISTRATION_START': {
+      // Confirm start
+      if (text === 'ok' || text === 'đồng ý') {
+        updateSession(zaloUserId, { state: 'AWAITING_SHOP_NAME' });
+        return createResponse(
+          t('zaloBot.regAskName'),
+          [vi ? 'hủy' : 'cancel'],
+          'AWAITING_SHOP_NAME'
+        );
+      }
+      // If they type something else, treat as confirmation
+      updateSession(zaloUserId, { state: 'AWAITING_SHOP_NAME' });
+      return createResponse(
+        t('zaloBot.regAskName'),
+        [vi ? 'hủy' : 'cancel'],
+        'AWAITING_SHOP_NAME'
+      );
+    }
+
+    case 'AWAITING_SHOP_NAME': {
+      const name = sanitizeInput(text);
+      if (name.length < 2) {
+        return createResponse(
+          t('zaloBot.regAskNameInvalid'),
+          [vi ? 'hủy' : 'cancel'],
+          'AWAITING_SHOP_NAME'
+        );
+      }
+      updateSession(zaloUserId, {
+        state: 'AWAITING_SHOP_ADDRESS',
+        registrationData: { ...session.registrationData!, shopName: name },
+      });
+      return createResponse(
+        t('zaloBot.regAskAddress'),
+        [vi ? 'hủy' : 'cancel'],
+        'AWAITING_SHOP_ADDRESS'
+      );
+    }
+
+    case 'AWAITING_SHOP_ADDRESS': {
+      const address = sanitizeInput(text);
+      if (address.length < 5) {
+        return createResponse(
+          t('zaloBot.regAskAddressInvalid'),
+          [vi ? 'hủy' : 'cancel'],
+          'AWAITING_SHOP_ADDRESS'
+        );
+      }
+      updateSession(zaloUserId, {
+        state: 'AWAITING_SHOP_DISTRICT',
+        registrationData: { ...session.registrationData!, address },
+      });
+      return createResponse(
+        t('zaloBot.regAskDistrict'),
+        [vi ? 'hủy' : 'cancel'],
+        'AWAITING_SHOP_DISTRICT'
+      );
+    }
+
+    case 'AWAITING_SHOP_DISTRICT': {
+      const district = sanitizeInput(text);
+      if (district.length < 2) {
+        return createResponse(
+          t('zaloBot.regAskDistrictInvalid'),
+          [vi ? 'hủy' : 'cancel'],
+          'AWAITING_SHOP_DISTRICT'
+        );
+      }
+      updateSession(zaloUserId, {
+        state: 'AWAITING_SHOP_TYPE',
+        registrationData: { ...session.registrationData!, district },
+      });
+      return createResponse(
+        t('zaloBot.regAskType'),
+        ['1', '2', '3', vi ? 'hủy' : 'cancel'],
+        'AWAITING_SHOP_TYPE'
+      );
+    }
+
+    case 'AWAITING_SHOP_TYPE': {
+      let shopType = '';
+      let shopTypeLabel = '';
+      const typeMap: Record<string, { type: string; viLabel: string; enLabel: string }> = {
+        '1': { type: 'TAPHOA', viLabel: 'Tạp hóa', enLabel: 'Grocery store (Tạp hóa)' },
+        '2': { type: 'CONVENIENCE', viLabel: 'Cửa hàng tiện lợi', enLabel: 'Convenience store' },
+        '3': { type: 'FACTORY', viLabel: 'Cửa hàng công nghiệp', enLabel: 'Factory store' },
+      };
+
+      // Also accept Vietnamese text
+      if (text.includes('tạp hóa') || text.includes('tap hoa')) {
+        shopType = 'TAPHOA';
+        shopTypeLabel = vi ? 'Tạp hóa' : 'Grocery store (Tạp hóa)';
+      } else if (text.includes('tiện lợi') || text.includes('tien loi')) {
+        shopType = 'CONVENIENCE';
+        shopTypeLabel = vi ? 'Cửa hàng tiện lợi' : 'Convenience store';
+      } else if (text.includes('công nghiệp') || text.includes('cong nghiep')) {
+        shopType = 'FACTORY';
+        shopTypeLabel = vi ? 'Cửa hàng công nghiệp' : 'Factory store';
+      } else {
+        const mapped = typeMap[text];
+        if (!mapped) {
+          return createResponse(
+            t('zaloBot.regAskTypeInvalid'),
+            ['1', '2', '3', vi ? 'hủy' : 'cancel'],
+            'AWAITING_SHOP_TYPE'
+          );
+        }
+        shopType = mapped.type;
+        shopTypeLabel = vi ? mapped.viLabel : mapped.enLabel;
+      }
+
+      // Complete registration
+      return handleRegistrationComplete(session, zaloUserId, shopType, shopTypeLabel);
+    }
+
+    default:
+      resetSession(zaloUserId);
+      return handleRegistrationStart(session, zaloUserId);
+  }
+}
+
+// ============================================
+// REGISTRATION: Complete (create User + Shop)
+// ============================================
+
+async function handleRegistrationComplete(
+  session: ConversationSession,
+  zaloUserId: string,
+  shopType: string,
+  shopTypeLabel: string
+): Promise<BotResponse> {
+  const t = createTranslator(session.language);
+  const vi = session.language === 'vi';
+  const regData = session.registrationData!;
+
+  try {
+    // Check if user already exists (e.g. from a previous failed registration)
+    let user = await db.user.findUnique({ where: { zaloId: zaloUserId } });
+
+    if (!user) {
+      user = await db.user.create({
+        data: {
+          zaloId: zaloUserId,
+          phone: `zalo_${zaloUserId.slice(-6)}`,
+          name: regData.shopName,
+          role: 'SHOP_OWNER',
+          status: 'ACTIVE',
+        },
+      });
+    } else {
+      // Update existing user's name to match shop name
+      await db.user.update({
+        where: { id: user.id },
+        data: { name: regData.shopName },
+      });
+    }
+
+    // Check if shop already exists for this user
+    const existingShop = await db.shop.findUnique({ where: { userId: user.id } });
+
+    let shop;
+    if (existingShop) {
+      // Update existing shop with new registration data
+      shop = await db.shop.update({
+        where: { id: existingShop.id },
+        data: {
+          name: regData.shopName,
+          address: regData.address,
+          district: regData.district,
+          shopType,
+        },
+      });
+    } else {
+      // Create new shop
+      shop = await db.shop.create({
+        data: {
+          userId: user.id,
+          name: regData.shopName,
+          address: regData.address,
+          district: regData.district,
+          province: 'Binh Duong',
+          shopType,
+          creditLimit: CREDIT_CONFIG.DEFAULT_LIMIT,
+          creditBalance: 0,
+          creditStatus: 'ACTIVE',
+          loyaltyTier: 'BRONZE',
+        },
+      });
+    }
+
+    // Update session with shop info
+    updateSession(zaloUserId, {
+      state: 'IDLE',
+      userId: user.id,
+      shopId: shop.id,
+      registrationData: undefined,
+    });
+
+    const creditLimitFormatted = formatVND(CREDIT_CONFIG.DEFAULT_LIMIT);
+
+    return createResponse(
+      t('zaloBot.regSuccess', {
+        shopName: regData.shopName,
+        address: regData.address,
+        district: regData.district,
+        shopType: shopTypeLabel,
+        creditLimit: creditLimitFormatted,
+      }) + t('zaloBot.regWelcomeMenu'),
+      ['menu', vi ? 'phổ biến' : 'popular', 'help'],
+      'IDLE'
+    );
+  } catch (error) {
+    console.error('[ZALO REGISTRATION ERROR]', error);
+    resetSession(zaloUserId);
+    return createResponse(
+      t('zaloBot.repayError'), // Generic error — reuse existing key
+      ['help', 'menu'],
+      'IDLE'
+    );
+  }
+}
+
+// ============================================
+// COMMAND: Profile (thông tin / profile)
+// ============================================
+
+async function handleProfileCommand(session: ConversationSession, zaloUserId: string): Promise<BotResponse> {
+  const t = createTranslator(session.language);
+  const vi = session.language === 'vi';
+
+  try {
+    const shop = await findShopByZaloUser(zaloUserId);
+    if (!shop) {
+      return handleRegistrationStart(session, zaloUserId);
+    }
+
+    const shopTypeLabels: Record<string, string> = {
+      TAPHOA: vi ? 'Tạp hóa' : 'Grocery store',
+      CONVENIENCE: vi ? 'Cửa hàng tiện lợi' : 'Convenience store',
+      FACTORY: vi ? 'Cửa hàng công nghiệp' : 'Factory store',
+    };
+
+    const typeLabel = shopTypeLabels[shop.shopType] || shop.shopType;
+
+    return createResponse(
+      t('zaloBot.regProfileTitle') +
+      t('zaloBot.regProfileLine', {
+        shopName: shop.name,
+        address: shop.address || '-',
+        district: shop.district || '-',
+        shopType: typeLabel,
+        creditLimit: formatVND(shop.creditLimit),
+      }),
+      ['menu', 'help', vi ? 'đơn hàng' : 'orders'],
+      session.state
+    );
+  } catch (error) {
+    console.error('[ZALO PROFILE ERROR]', error);
+    return createResponse(
+      t('zaloBot.ordersError'),
+      ['help', 'menu'],
+      session.state
     );
   }
 }

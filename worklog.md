@@ -1,3 +1,117 @@
+# ALADIN Sprint 4A — Zalo Bot Shop Registration & Onboarding
+
+## Date: 2026-04-20
+
+## Task: Guided Shop Registration Flow in Zalo Conversation Engine
+
+### Files Modified
+
+1. **`src/lib/zalo/config.ts`** (236 → 249 lines) — Added 5 registration ConversationState values, `registrationData` session field
+2. **`src/messages/vi.json`** (594 → 615 lines) — Added 22 registration i18n keys
+3. **`src/messages/en.json`** (594 → 615 lines) — Added 22 registration i18n keys (English)
+4. **`src/lib/zalo/conversation-engine.ts`** (1536 → 1902 lines) — Added registration gate, 4-step flow, profile command
+
+### Build Result: ✅ Zero errors — `npx next build` passed successfully (6.5s, 29 pages)
+
+---
+
+### Changes to `config.ts`
+
+- **New ConversationState values**: `REGISTRATION_START`, `AWAITING_SHOP_NAME`, `AWAITING_SHOP_ADDRESS`, `AWAITING_SHOP_DISTRICT`, `AWAITING_SHOP_TYPE`
+- **New session field**: `registrationData?: { shopName, address, district, shopType }`
+- **Updated `resetSession()`**: Clears `registrationData`
+
+### Changes to `vi.json` / `en.json`
+
+- Added 22 i18n keys under `zaloBot`: `regWelcome`, `regStart`, `regCancel`, `regAskName`, `regAskNameInvalid`, `regAskAddress`, `regAskAddressInvalid`, `regAskDistrict`, `regAskDistrictInvalid`, `regAskType`, `regAskTypeInvalid`, `regCreating`, `regSuccess`, `regWelcomeMenu`, `regShopTypeTaphoa`, `regShopTypeConvenience`, `regShopTypeFactory`, `regHelpRegister`, `regProfileTitle`, `regProfileLine`, `regSkipHint`
+
+### Changes to `conversation-engine.ts`
+
+#### A. Registration Gate (`handleZaloMessage`)
+- Added `isUserRegistered(zaloUserId)` check before routing to IDLE state handler
+- Unregistered users are redirected to `handleRegistrationStart()` for any non-exempt command
+- Exempt commands: language switch, help, register — these always work regardless of registration status
+- Registered users get their `shopId`/`userId` auto-populated in session
+
+#### B. Registration Check (`isUserRegistered`)
+- Queries `db.user.findUnique` with `shop` relation
+- Returns `{ registered, shopId?, userId? }` — used by the gate
+
+#### C. Find-Only Helper (`findShopByZaloUser`)
+- Read-only lookup (no auto-create), unlike `findOrCreateShopByZaloUser`
+- Used by profile command to display shop info
+
+#### D. 4-Step Registration Flow (`handleRegistrationState`)
+- **Step 0 — REGISTRATION_START**: Confirm intent with "đồng ý"/"ok" (any text also accepted)
+- **Step 1 — AWAITING_SHOP_NAME**: Min 2 chars, `sanitizeInput()`, stores in `registrationData`
+- **Step 2 — AWAITING_SHOP_ADDRESS**: Min 5 chars, `sanitizeInput()`, stores in `registrationData`
+- **Step 3 — AWAITING_SHOP_DISTRICT**: Min 2 chars, `sanitizeInput()`, stores in `registrationData`
+- **Step 4 — AWAITING_SHOP_TYPE**: Accepts "1"/"2"/"3" or Vietnamese text ("tạp hóa"/"tiện lợi"/"công nghiệp")
+- **Cancel**: "hủy"/"cancel" at any step returns to IDLE with cancellation message
+- **Validation**: Each step shows specific error message with min-length requirements
+
+#### E. Registration Complete (`handleRegistrationComplete`)
+- Checks for existing User (handles re-registration from failed previous attempt)
+- Creates User with `zaloId`, phone placeholder, shop name, `SHOP_OWNER` role
+- Creates Shop with `Binh Duong` province, default credit limit (1M VND), BRONZE tier
+- If User/Shop already exists, updates with new registration data (idempotent re-registration)
+- Success message shows: shop name, address, district, type, credit limit, welcome menu
+- Error handling: generic error message + reset to IDLE
+
+#### F. Profile Command (`handleProfileCommand`)
+- Triggered by "profile" or "thông tin"
+- Shows shop info: name, address, district, type (localized), credit limit
+- Falls back to registration start if no shop found
+
+#### G. Updated Help Text
+- Added `regHelpRegister` to help body
+
+#### H. Updated State Machine
+- All 5 registration states routed to `handleRegistrationState()`
+- Register and profile commands added to IDLE handler
+
+---
+
+### Key Decisions
+
+1. **Non-blocking gate**: The registration check only runs when `session.state === 'IDLE'` and only for non-exempt commands. Help, language switch, and register commands always pass through.
+
+2. **Idempotent re-registration**: If a User/Shop already exists (e.g., from `findOrCreateShopByZaloUser` during a previous order attempt), the registration flow updates the existing records rather than creating duplicates.
+
+3. **Separate `findShopByZaloUser`**: Created a read-only finder to avoid unintended auto-creation. The existing `findOrCreateShopByZaloUser` is preserved for order/payment flows that require a shop to exist.
+
+4. **Flexible type input**: Shop type accepts both numeric ("1", "2", "3") and Vietnamese text input, improving usability on mobile.
+
+5. **Session data accumulation**: `registrationData` accumulates across steps (spread operator preserves previous fields), allowing cancel to simply clear the entire object.
+
+### Issues Encountered
+
+- **Build error on first attempt**: Missing closing brace `}` on `ConversationSession` interface after multi-edit. Fixed by adding the missing `}`. Build passed on second run.
+
+---
+
+Task ID: 4A
+Agent: main
+Task: Sprint 4A — Zalo Bot Shop Registration & Onboarding
+
+Work Log:
+- Updated `src/lib/zalo/config.ts` with 5 registration ConversationState values and `registrationData` session field
+- Added 22 i18n keys to `src/messages/vi.json` and `src/messages/en.json`
+- Implemented registration gate in `handleZaloMessage` — unregistered users redirected to 4-step registration
+- Added `isUserRegistered()`, `findShopByZaloUser()` helper functions
+- Implemented `handleRegistrationStart()`, `handleRegistrationState()`, `handleRegistrationComplete()` for 4-step flow
+- Added `handleProfileCommand()` for "profile"/"thông tin" shop info display
+- Updated help text with registration command
+- Build result: ✅ Zero errors, 0 warnings, 6.5s compile
+
+Stage Summary:
+- New users are guided through a 4-step registration flow (shop name → address → district → type)
+- After registration, User + Shop records are auto-created with default credit (1M VND, BRONZE tier)
+- Re-registration updates existing records (idempotent)
+- All existing functionality preserved (orders, credit, repay, product search)
+- Already-registered users never see the registration flow again
+
+---
 # ALADIN Sprint 3E — Zalo Conversation Engine: Orders, Credit, & Payment Flow
 
 ## Date: 2026-04-19

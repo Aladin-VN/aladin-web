@@ -39,7 +39,12 @@ export type ConversationState =
   | 'SHOWING_ORDERS'
   | 'AWAITING_CREDIT_INFO'
   | 'AWAITING_REPAY_ORDER'
-  | 'AWAITING_REPAY_AMOUNT';
+  | 'AWAITING_REPAY_AMOUNT'
+  | 'REGISTRATION_START'
+  | 'AWAITING_SHOP_NAME'
+  | 'AWAITING_SHOP_ADDRESS'
+  | 'AWAITING_SHOP_DISTRICT'
+  | 'AWAITING_SHOP_TYPE';
 
 export type PaymentOption = 'DIGITAL' | 'CREDIT' | 'COD';
 
@@ -86,6 +91,14 @@ export interface ConversationSession {
     dueDate: string;
   }>;
   selectedRepayOrderId?: string;
+
+  // Registration context
+  registrationData?: {
+    shopName: string;
+    address: string;
+    district: string;
+    shopType: string;
+  };
 }
 
 export interface ZaloProductResult {
@@ -175,6 +188,7 @@ export function resetSession(zaloUserId: string): ConversationSession {
   session.recentOrders = undefined;
   session.creditOrders = undefined;
   session.selectedRepayOrderId = undefined;
+  session.registrationData = undefined;
   return session;
 }
 

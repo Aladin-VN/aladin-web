@@ -589,6 +589,27 @@
     "statusOutForDelivery": "ĐANG GIAO",
     "statusDelivered": "ĐÃ GIAO",
     "statusCancelled": "ĐÃ HỦY",
-    "statusRefunded": "ĐÃ HOÀN TIỀN"
+    "statusRefunded": "ĐÃ HOÀN TIỀN",
+    "regWelcome": "Chào mừng đến ALADIN! 🧞\nĐể bắt đầu đặt hàng, tôi cần một vài thông tin.",
+    "regStart": "\n\nChúng tôi sẽ hỏi 4 câu ngắn:\n1️⃣ Tên cửa hàng\n2️⃣ Địa chỉ\n3️⃣ Quận/Huyện\n4️⃣ Loại cửa hàng\n\nGõ \"đồng ý\" để bắt đầu hoặc \"hủy\" để bỏ qua.",
+    "regCancel": "Đã hủy. Gõ \"đăng ký\" khi nào sẵn sàng!",
+    "regAskName": "Câu 1/4: 🏪 Tên cửa hàng của bạn?\n(Ví dụ: Tạp hóa Hạnh Phúc)",
+    "regAskNameInvalid": "Vui lòng nhập tên cửa hàng (ít nhất 2 ký tự).\nHoặc \"hủy\" để dừng.",
+    "regAskAddress": "Câu 2/4: 📍 Địa chỉ cửa hàng?\n(Ví dụ: 123/5 Nguyễn Văn Linh)",
+    "regAskAddressInvalid": "Vui lòng nhập địa chỉ (ít nhất 5 ký tự).\nHoặc \"hủy\" để dừng.",
+    "regAskDistrict": "Câu 3/4: 🏘️ Quận/Huyện?\n(Ví dụ: Thủ Dầu Một, Dĩ An, Tân Uyên)",
+    "regAskDistrictInvalid": "Vui lòng nhập tên quận/huyện.\nHoặc \"hủy\" để dừng.",
+    "regAskType": "Câu 4/4: 🏷️ Loại cửa hàng?\n1. Tạp hóa\n2. Cửa hàng tiện lợi\n3. Cửa hàng công nghiệp",
+    "regAskTypeInvalid": "Vui lòng chọn 1, 2, hoặc 3.\nHoặc \"hủy\" để dừng.",
+    "regCreating": "⏳ Đang tạo tài khoản...",
+    "regSuccess": "🎉 Đăng ký thành công!\n\n🛒 {shopName}\n📍 {address}\n🏘️ {district}\n🏷️ {shopType}\n💳 Hạn mức tín dụng: {creditLimit}\n\n",
+    "regWelcomeMenu": "Bạn có thể:\n• Gõ tên sản phẩm để tìm kiếm\n• \"menu\" — Xem danh mục\n• \"phổ biến\" — Sản phẩm bán chạy\n• \"help\" — Xem hướng dẫn",
+    "regShopTypeTaphoa": "Tạp hóa",
+    "regShopTypeConvenience": "Cửa hàng tiện lợi",
+    "regShopTypeFactory": "Cửa hàng công nghiệp",
+    "regHelpRegister": "\"đăng ký\" — Đăng ký tài khoản",
+    "regProfileTitle": "📋 Thông tin cửa hàng:\n\n",
+    "regProfileLine": "🛒 {shopName}\n📍 {address}\n🏘️ {district}\n🏷️ {shopType}\n💳 Hạn mức: {creditLimit}",
+    "regSkipHint": "Gõ \"đăng ký\" để tạo tài khoản."
   }
 }
