@@ -1,0 +1,603 @@
+// ============================================================
+// ALADIN PLATFORM — Complete Database Schema
+// B2B AI-Powered Commerce Platform for Vietnam
+// ============================================================
+// Architecture: Modular Monolith (Next.js App Router)
+// Database: SQLite (dev) → PostgreSQL (production)
+// Conventions: UTC timestamps, append-only ledger, soft deletes
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// ENUMS (SQLite: use String type with validation in app layer)
+// ============================================================
+
+// User Roles
+// ADMIN, SHOP_OWNER, SALES_REP, DRIVER, BROKER
+
+// User Status
+// ACTIVE, SUSPENDED, PENDING_VERIFICATION
+
+// Order Status
+// PENDING, CONFIRMED, PROCESSING, PACKED, OUT_FOR_DELIVERY, DELIVERED, CANCELLED, REFUNDED
+
+// Payment Method
+// CREDIT, DIGITAL, COD
+
+// Payment Status
+// PENDING, PAID, FAILED, REFUNDED, PARTIALLY_REFUNDED
+
+// Transaction Type
+// CREDIT_USED, REPAYMENT, CREDIT_LIMIT_INCREASE, CREDIT_LIMIT_DECREASE, ORDER_PAYMENT, REFUND
+
+// Shipment Status
+// PENDING, PICKED_UP, IN_TRANSIT, DELIVERED, FAILED
+
+// Group Deal Status
+// ACTIVE, COMPLETED, CANCELLED, EXPIRED
+
+// ============================================================
+// CORE: USERS & AUTHENTICATION
+// ============================================================
+
+model User {
+  id            String   @id @default(cuid())
+  phone         String   @unique                            // Primary login (Vietnamese phone)
+  email         String?  @unique                            // Optional email
+  passwordHash  String?                                     // Null = Zalo-only login
+  name          String
+  nameEn        String?                                     // English name variant
+  avatarUrl     String?
+  role          String   @default("SHOP_OWNER")             // ADMIN, SHOP_OWNER, SALES_REP, DRIVER, BROKER
+  status        String   @default("ACTIVE")                 // ACTIVE, SUSPENDED, PENDING_VERIFICATION
+  zaloId        String?  @unique                            // Zalo OA user ID for 1-tap login
+  lastLoginAt   DateTime?
+  mustChangePwd Boolean  @default(false)
+  
+  // Relations
+  shop          Shop?
+  broker        Broker?
+  shipments     Shipment[]  @relation("DriverAssignments")
+
+  // Metadata
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?                                     // Soft delete
+
+  @@index([phone])
+  @@index([role])
+  @@index([status])
+}
+
+// ============================================================
+// CORE: SHOPS (Mom-and-pop tạp hóa)
+// ============================================================
+
+model Shop {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  name          String                                       // Shop display name
+  nameEn        String?                                     // English variant
+  wardId        String?                                     // Geographic ward for group buying
+  district      String?                                     // E.g., Thu Dau Mot
+  province      String   @default("Binh Duong")
+  address       String?
+  lat           Float?                                       // GPS for delivery routing
+  lng           Float?
+  shopType      String   @default("TAPHOA")                 // TAPHOA, CONVENIENCE, FACTORY
+  loyaltyTier   String   @default("BRONZE")                 // BRONZE, SILVER, GOLD, PLATINUM
+
+  // Credit System (7-day micro-credit)
+  creditLimit   Int      @default(1000000)                  // In VND (default 1M)
+  creditBalance Int      @default(0)                        // Currently used credit (VND)
+  creditStatus  String   @default("ACTIVE")                 // ACTIVE, LOCKED, OVERDUE
+  
+  // Stats
+  totalOrders   Int      @default(0)
+  totalGmv      Int      @default(0)                        // Lifetime GMV in VND
+  avgOrderValue Int      @default(0)
+  
+  // Relations
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ward          Ward?    @relation(fields: [wardId], references: [id])
+  orders        Order[]
+  transactions  Transaction[]
+  groupParticipations GroupDealParticipant[]
+
+  // Metadata
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+
+  @@index([userId])
+  @@index([wardId])
+  @@index([district])
+  @@index([creditStatus])
+}
+
+// ============================================================
+// CORE: WARD / ZONE (Geographic clustering for group buy)
+// ============================================================
+
+model Ward {
+  id          String @id @default(cuid())
+  name        String                                     // E.g., "Phu My Ward"
+  nameEn      String?                                   // English variant
+  district    String                                     // E.g., "Thu Dau Mot"
+  province    String @default("Binh Duong")
+  shopCount   Int    @default(0)                         // Denormalized for performance
+  
+  // Relations
+  shops       Shop[]
+  groupDeals  GroupDeal[]
+  brokers     Broker[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([district])
+  @@index([province])
+}
+
+// ============================================================
+// PRODUCT CATALOG
+// ============================================================
+
+model Category {
+  id          String     @id @default(cuid())
+  name        String                               // Vietnamese name
+  nameEn      String?                             // English name
+  slug        String     @unique
+  icon        String?                             // Emoji or icon name
+  sortOrder   Int        @default(0)
+  isActive    Boolean    @default(true)
+  
+  // Relations
+  products    Product[]
+  
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([slug])
+  @@index([sortOrder])
+}
+
+model Product {
+  id            String   @id @default(cuid())
+  sku           String   @unique
+  name          String                              // Vietnamese name
+  nameEn        String?                            // English name
+  description   String?                            // Vietnamese description
+  descriptionEn String?                            // English description
+  categoryId    String
+  brand         String?                            // E.g., "Hao Hao", "Unilever"
+  unit          String   @default("cai")           // Unit type: bao, chai, thung, goi
+  unitEn        String?                            // English unit
+  basePrice     Int                                 // Base price in VND (smallest unit)
+  groupBuyPrice Int?                               // Discounted price for group deals (VND)
+  stockQuantity Int      @default(0)               // Available inventory
+  minOrderQty   Int      @default(1)
+  maxOrderQty   Int?                               // Null = unlimited
+  weightKg      Float?                              // For delivery cost calculation
+  imageUrl      String?
+  isActive      Boolean  @default(true)
+  isPrivateLabel Boolean @default(false)            // Aladin Select house brand
+  barcode       String?  @unique                    // For OCR scanning
+  
+  // Manufacturer / Supplier
+  manufacturerId String?
+  distributorId   String?
+  
+  // Relations
+  category        Category      @relation(fields: [categoryId], references: [id])
+  manufacturer    Manufacturer?  @relation(fields: [manufacturerId], references: [id])
+  distributor     Distributor?   @relation(fields: [distributorId], references: [id])
+  orderItems      OrderItem[]
+  promotionItems  PromotionItem[]
+  groupDeals      GroupDeal[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deletedAt       DateTime?
+
+  @@index([categoryId])
+  @@index([sku])
+  @@index([manufacturerId])
+  @@index([isActive])
+  @@index([name])
+}
+
+// ============================================================
+// SUPPLY CHAIN: MANUFACTURERS & DISTRIBUTORS
+// ============================================================
+
+model Manufacturer {
+  id            String   @id @default(cuid())
+  name          String
+  nameEn        String?
+  contactPerson String?
+  contactPhone  String?
+  email         String?
+  address       String?
+  province      String?
+  commissionRate Float   @default(0.15)           // 15% standard margin
+  
+  // Relations
+  products      Product[]
+  promotions    Promotion[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([name])
+}
+
+model Distributor {
+  id            String   @id @default(cuid())
+  name          String
+  nameEn        String?
+  contactPerson String?
+  contactPhone  String?
+  email         String?
+  address       String?
+  lat           Float?
+  lng           Float?                             // For smart sourcing distance calc
+  isActive      Boolean  @default(true)
+  
+  // Relations
+  products      Product[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([isActive])
+}
+
+// ============================================================
+// ORDERS (The core transaction)
+// ============================================================
+
+model Order {
+  id                String    @id @default(cuid())
+  orderNumber       String    @unique                // Human-readable: "ALD-20260418-001"
+  shopId            String
+  shopSnapshot      String                            // JSON: shop details at order time (for audit)
+  
+  // Status
+  status            String    @default("PENDING")     // PENDING → CONFIRMED → PROCESSING → PACKED → OUT_FOR_DELIVERY → DELIVERED
+  
+  // Payment
+  paymentMethod     String    @default("COD")         // CREDIT, DIGITAL, COD
+  paymentStatus     String    @default("PENDING")     // PENDING, PAID, FAILED, REFUNDED
+  subtotalAmount    Int                                // Sum of items (VND)
+  discountAmount    Int      @default(0)              // Promo discounts
+  deliveryFee       Int      @default(0)
+  totalAmount       Int                                // Final amount
+  paidAmount        Int      @default(0)              // Amount actually paid
+  
+  // Credit
+  creditUsed        Int      @default(0)              // If paid via 7-day credit
+  
+  // Group Buy
+  groupDealId       String?                            // If this order is part of a group deal
+  
+  // Fulfillment
+  distributorId     String?                            // Which distributor sourced from
+  assignedDriverId  String?                            // Internal driver assignment
+  thirdPartyOrderId String?                            // Ahamove/Grab tracking ID
+  
+  // Notes
+  customerNotes     String?
+  adminNotes        String?
+  
+  // Idempotency
+  idempotencyKey    String?   @unique                  // Prevent double-order on 3G
+
+  // Relations
+  shop              Shop      @relation(fields: [shopId], references: [id])
+  items             OrderItem[]
+  transactions      Transaction[]
+  shipment          Shipment?
+  groupDeal         GroupDeal? @relation(fields: [groupDealId], references: [id])
+
+  // Metadata
+  confirmedAt       DateTime?
+  packedAt          DateTime?
+  deliveredAt       DateTime?
+  cancelledAt       DateTime?
+  cancelReason      String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([shopId])
+  @@index([status])
+  @@index([paymentMethod])
+  @@index([paymentStatus])
+  @@index([createdAt])
+  @@index([distributorId])
+  @@index([groupDealId])
+}
+
+model OrderItem {
+  id              String   @id @default(cuid())
+  orderId         String
+  productId       String
+  productName     String                             // Snapshot: name at time of order
+  productSku      String                             // Snapshot: SKU at time of order
+  unitPrice       Int                                 // Price at time of order (VND)
+  quantity        Int
+  totalPrice      Int                                 // unitPrice * quantity
+  
+  // Promotion applied to this item
+  promotionId     String?
+  freeQty         Int      @default(0)               // "Buy 10 Get 1" → freeQty = 1
+  
+  // Relations
+  order           Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product         Product   @relation(fields: [productId], references: [id])
+  promotion       Promotion? @relation(fields: [promotionId], references: [id])
+
+  createdAt       DateTime @default(now())
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+// ============================================================
+// FINANCIAL: APPEND-ONLY LEDGER (7-Day Credit System)
+// CRITICAL: NEVER mutate credit_balance directly on Shop.
+// Always create Transaction records. Balance = SUM(credit transactions).
+// ============================================================
+
+model Transaction {
+  id              String   @id @default(cuid())
+  shopId          String
+  orderId         String?                             // Related order (if credit used)
+  
+  // Transaction details
+  type            String                              // CREDIT_USED, REPAYMENT, CREDIT_LIMIT_INCREASE, CREDIT_LIMIT_DECREASE, ORDER_PAYMENT, REFUND
+  amount          Int                                 // Amount in VND (positive = debit, negative = credit to shop)
+  runningBalance  Int                                 // Credit balance AFTER this transaction
+  
+  // Payment details
+  paymentMethod   String?                             // DIGITAL, COD
+  paymentRef      String?                             // MoMo/ZaloPay transaction ID
+  collectedBy     String?                             // Rep or Driver user ID (for cash collection)
+  
+  // Metadata
+  description     String?                             // Human-readable description
+  metadata        String?                             // JSON: additional data
+  
+  // Relations
+  shop            Shop      @relation(fields: [shopId], references: [id])
+  order           Order?     @relation(fields: [orderId], references: [id])
+
+  createdAt       DateTime @default(now())
+
+  @@index([shopId])
+  @@index([orderId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+// ============================================================
+// GROUP BUY ENGINE (Mua Chung — Pinduoduo model)
+// ============================================================
+
+model GroupDeal {
+  id              String   @id @default(cuid())
+  title           String                             // Vietnamese: "Gạo ST25 Group Buy Ward 5"
+  titleEn         String?
+  description     String?
+  productId       String                             // The product being grouped
+  
+  // Threshold & Pricing
+  targetQty       Int                                 // Minimum quantity to unlock discount
+  currentQty      Int      @default(0)               // Current committed quantity
+  originalPrice   Int                                 // Normal price per unit
+  discountPrice   Int                                 // Group buy price per unit
+  maxParticipants Int?                                // Cap on number of shops (null = unlimited)
+  
+  // Timing
+  startsAt        DateTime
+  expiresAt       DateTime                            // Auto-cancel if not met
+  
+  // Zone
+  wardId          String?                             // Scoped to ward for local group buying
+  
+  // Status
+  status          String   @default("ACTIVE")         // ACTIVE, COMPLETED, CANCELLED, EXPIRED
+  
+  // When deal is completed, create a bulk order
+  bulkOrderId     String?                            // The consolidated order sent to distributor
+
+  // Relations
+  product         Product   @relation(fields: [productId], references: [id])
+  ward            Ward?     @relation(fields: [wardId], references: [id])
+  participants    GroupDealParticipant[]
+  orders          Order[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([productId])
+  @@index([wardId])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+model GroupDealParticipant {
+  id              String   @id @default(cuid())
+  groupDealId     String
+  shopId          String
+  committedQty    Int                                 // How many units this shop committed
+  isActive        Boolean  @default(true)             // Can withdraw before deal completes
+  
+  // Relations
+  groupDeal       GroupDeal @relation(fields: [groupDealId], references: [id])
+  shop            Shop      @relation(fields: [shopId], references: [id])
+
+  createdAt       DateTime @default(now())
+
+  @@unique([groupDealId, shopId])                    // One participation per deal per shop
+  @@index([shopId])
+}
+
+// ============================================================
+// LOGISTICS: SHIPMENTS & DELIVERY
+// ============================================================
+
+model Shipment {
+  id              String   @id @default(cuid())
+  orderId         String   @unique
+  type            String   @default("INTERNAL")       // INTERNAL, THIRD_PARTY (Ahamove/Grab)
+  
+  // Status
+  status          String   @default("PENDING")        // PENDING, PICKED_UP, IN_TRANSIT, DELIVERED, FAILED
+  
+  // Driver
+  assignedDriverId String?
+  
+  // Route
+  pickupAddress   String?                            // Distributor/warehouse location
+  pickupLat       Float?
+  pickupLng       Float?
+  dropoffAddress  String                             // Shop address
+  dropoffLat      Float?
+  dropoffLng      Float?
+  
+  // Proof of Delivery
+  deliveredAt     DateTime?
+  podPhotoUrl     String?                             // Proof of delivery photo
+  podSignatureUrl String?                             // Digital signature
+  podOtp          String?                             // OTP confirmed by shop owner
+  
+  // 3rd Party
+  thirdPartyTrackingId String?                       // Ahamove/Grab order ID
+  thirdPartyStatus    String?
+
+  // Relations
+  order           Order     @relation(fields: [orderId], references: [id])
+  assignedDriver  User?     @relation("DriverAssignments", fields: [assignedDriverId], references: [id])
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([assignedDriverId])
+  @@index([status])
+}
+
+// ============================================================
+// SFA: PROMOTIONS & MERCHANDISING (Trade Marketing)
+// ============================================================
+
+model Promotion {
+  id              String   @id @default(cuid())
+  manufacturerId  String
+  title           String
+  titleEn         String?
+  description     String?
+  
+  // Promotion type
+  promoType       String                              // BUY_X_GET_Y, PERCENT_OFF, FIXED_DISCOUNT
+  buyQty          Int?                                // For BUY_X_GET_Y: buy X
+  getQty          Int?                                // For BUY_X_GET_Y: get Y free
+  discountPercent Float?                              // For PERCENT_OFF
+  discountAmount  Int?                                // For FIXED_DISCOUNT
+  
+  // Validity
+  startsAt        DateTime
+  expiresAt       DateTime
+  
+  // Budget & Tracking
+  totalBudget     Int?                                // Manufacturer's budget (VND)
+  usedBudget      Int      @default(0)
+  totalRedemptions Int     @default(0)
+  
+  isActive        Boolean  @default(true)
+
+  // Relations
+  manufacturer    Manufacturer @relation(fields: [manufacturerId], references: [id])
+  items           PromotionItem[]
+  orderItems      OrderItem[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([manufacturerId])
+  @@index([isActive])
+  @@index([expiresAt])
+}
+
+model PromotionItem {
+  id              String   @id @default(cuid())
+  promotionId     String
+  productId       String                             // Product this promo applies to
+
+  // Relations
+  promotion       Promotion @relation(fields: [promotionId], references: [id])
+  product         Product   @relation(fields: [productId], references: [id])
+
+  createdAt       DateTime @default(now())
+
+  @@unique([promotionId, productId])
+  @@index([productId])
+}
+
+model MerchandisingAudit {
+  id              String   @id @default(cuid())
+  shopId          String
+  productId       String?
+  promotionId     String?
+  photoUrl        String                             // Shelf photo from shop owner
+  
+  // Audit result
+  status          String   @default("PENDING_REVIEW") // PENDING_REVIEW, APPROVED, REJECTED
+  reviewerId      String?                             // Admin who reviewed
+  reviewNotes     String?
+  reviewedAt      DateTime?
+
+  // Relations
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([shopId])
+  @@index([status])
+}
+
+// ============================================================
+// BROKER NETWORK
+// ============================================================
+
+model Broker {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  tier            String   @default("WARD_LEVEL")    // WARD_LEVEL, CATEGORY_SPECIALIST, FACTORY_GATE
+  wardId          String?                             // Territory assignment
+  commissionRate  Float    @default(0.03)            // 3% standard commission
+  
+  // Stats
+  totalShopsReferred Int   @default(0)
+  totalCommissionEarned Int @default(0)
+  totalGmvGenerated    Int @default(0)
+
+  // Relations
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ward            Ward?    @relation(fields: [wardId], references: [id])
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tier])
+  @@index([wardId])
+}
