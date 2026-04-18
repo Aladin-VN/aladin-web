@@ -109,19 +109,50 @@ async function main() {
   console.log(`✅ Created ${shops.length} shops`);
 
   // ============================================
-  // 4. PRODUCTS
+  // 4. MANUFACTURERS (before products — products reference them)
+  // ============================================
+  const manufacturers = await Promise.all([
+    db.manufacturer.create({ data: { name: 'Công ty Lương thực Bình Dương', nameEn: 'Binh Duong Food Corp', contactPerson: 'Anh Minh', contactPhone: '0911222333', commissionRate: 0.15 } }),
+    db.manufacturer.create({ data: { name: 'Tập đoàn Dầu ăn Tương An', nameEn: 'Tuong An Oil Group', contactPerson: 'Chị Lan', contactPhone: '0911333444', commissionRate: 0.18 } }),
+    db.manufacturer.create({ data: { name: 'Công ty Thực phẩm Acecook', nameEn: 'Acecook Vietnam', contactPerson: 'Anh Hùng', contactPhone: '0911444555', commissionRate: 0.12 } }),
+  ]);
+  console.log(`✅ Created ${manufacturers.length} manufacturers`);
+
+  // ============================================
+  // 5. PRODUCTS
   // ============================================
   const productsData = [
-    { sku: 'GAO-ST25-10', name: 'Gạo ST25 (10kg)', nameEn: 'ST25 Rice (10kg)', catIdx: 0, brand: 'ST25', price: 250000, groupPrice: 220000, stock: 500, unit: 'bao' },
-    { sku: 'GAO-JASMINE-20', name: 'Gạo Jasmine (20kg)', nameEn: 'Jasmine Rice (20kg)', catIdx: 0, brand: 'Jasmine', price: 380000, groupPrice: 340000, stock: 300, unit: 'bao' },
-    { sku: 'DAU-SIMPLY-5L', name: 'Dầu ăn Simply (5L)', nameEn: 'Simply Cooking Oil (5L)', catIdx: 1, brand: 'Simply', price: 175000, groupPrice: 155000, stock: 200, unit: 'chai' },
-    { sku: 'DAU-TUONG-AN-2L', name: 'Dầu Tương An (2L)', nameEn: 'Tuong An Oil (2L)', catIdx: 1, brand: 'Tương An', price: 89000, groupPrice: 79000, stock: 350, unit: 'chai' },
-    { sku: 'MI-HAOHAO-30', name: 'Mì Hảo Hảo (Gói 30)', nameEn: 'Hao Hao Noodles (Pack 30)', catIdx: 2, brand: 'Hảo Hảo', price: 115000, groupPrice: 99000, stock: 1000, unit: 'thung' },
-    { sku: 'MI-OMACHI-30', name: 'Mì Omachi (Gói 30)', nameEn: 'Omachi Noodles (Pack 30)', catIdx: 2, brand: 'Omachi', price: 125000, groupPrice: 109000, stock: 800, unit: 'thung' },
-    { sku: 'NUOC-LAVIE-6', name: 'Nước LaVie (Lốc 6)', nameEn: 'LaVie Water (6-pack)', catIdx: 3, brand: 'LaVie', price: 45000, groupPrice: 39000, stock: 2000, unit: 'loc' },
-    { sku: 'BIA-SAIGON-24', name: 'Bia Sài Gòn (Thùng 24)', nameEn: 'Saigon Beer (Case 24)', catIdx: 3, brand: 'Sài Gòn', price: 320000, groupPrice: 285000, stock: 150, unit: 'thung' },
-    { sku: 'BISCO-OREO-10', name: 'Bánh Oreo (Gói 10)', nameEn: 'Oreo Cookies (Pack 10)', catIdx: 4, brand: 'Oreo', price: 65000, groupPrice: 56000, stock: 400, unit: 'hop' },
-    { sku: 'GIA-VI-NAM-BO', name: 'Gia vị Nam Bộ (Hộp)', nameEn: 'Southern Seasoning (Box)', catIdx: 5, brand: 'Nam Bộ', price: 35000, groupPrice: null, stock: 600, unit: 'hop' },
+    // === Rice (Gạo) ===
+    { sku: 'GAO-ST25-10', name: 'Gạo ST25 (10kg)', nameEn: 'ST25 Rice (10kg)', catIdx: 0, brand: 'ST25', price: 250000, groupPrice: 220000, stock: 500, unit: 'bao', manufacturerIdx: 0, barcode: '8938500001001', isPL: true },
+    { sku: 'GAO-JASMINE-20', name: 'Gạo Jasmine (20kg)', nameEn: 'Jasmine Rice (20kg)', catIdx: 0, brand: 'Jasmine', price: 380000, groupPrice: 340000, stock: 300, unit: 'bao', manufacturerIdx: 0, barcode: '8938500001002' },
+    { sku: 'GAO-NANG-HUONG-10', name: 'Gạo Nàng Hương (10kg)', nameEn: 'Nang Huong Rice (10kg)', catIdx: 0, brand: 'Nàng Hương', price: 215000, groupPrice: 190000, stock: 400, unit: 'bao', manufacturerIdx: 0 },
+    { sku: 'GAO-THOM-XANH-5', name: 'Gạo Thơm Xanh (5kg)', nameEn: 'Green Fragrant Rice (5kg)', catIdx: 0, brand: 'Thơm Xanh', price: 135000, groupPrice: 120000, stock: 250, unit: 'bao', manufacturerIdx: 0 },
+    // === Cooking Oil (Dầu ăn) ===
+    { sku: 'DAU-SIMPLY-5L', name: 'Dầu ăn Simply (5L)', nameEn: 'Simply Cooking Oil (5L)', catIdx: 1, brand: 'Simply', price: 175000, groupPrice: 155000, stock: 200, unit: 'chai', manufacturerIdx: 1, barcode: '8938500002001' },
+    { sku: 'DAU-TUONG-AN-2L', name: 'Dầu Tương An (2L)', nameEn: 'Tuong An Oil (2L)', catIdx: 1, brand: 'Tương An', price: 89000, groupPrice: 79000, stock: 350, unit: 'chai', manufacturerIdx: 1, barcode: '8938500002002' },
+    { sku: 'DAU-THANH-NHAT-1L', name: 'Dầu Thảnh Nhất (1L)', nameEn: 'Thanh Nhat Oil (1L)', catIdx: 1, brand: 'Thảnh Nhất', price: 42000, groupPrice: 37000, stock: 15, unit: 'chai', manufacturerIdx: 1 },
+    { sku: 'DAU-MAM-CAI-5L', name: 'Dầu Mắm Cái (5L)', nameEn: 'Mam Cai Oil (5L)', catIdx: 1, brand: 'Mắm Cái', price: 168000, groupPrice: 148000, stock: 0, unit: 'chai', manufacturerIdx: 1 },
+    // === Instant Noodles (Mì ăn liền) ===
+    { sku: 'MI-HAOHAO-30', name: 'Mì Hảo Hảo (Gói 30)', nameEn: 'Hao Hao Noodles (Pack 30)', catIdx: 2, brand: 'Hảo Hảo', price: 115000, groupPrice: 99000, stock: 1000, unit: 'thung', manufacturerIdx: 2, barcode: '8938500003001' },
+    { sku: 'MI-OMACHI-30', name: 'Mì Omachi (Gói 30)', nameEn: 'Omachi Noodles (Pack 30)', catIdx: 2, brand: 'Omachi', price: 125000, groupPrice: 109000, stock: 800, unit: 'thung', manufacturerIdx: 2, barcode: '8938500003002' },
+    { sku: 'MI-CAY-30', name: 'Mì Cay (Gói 30)', nameEn: 'Spicy Noodles (Pack 30)', catIdx: 2, brand: 'Mì Cay', price: 108000, groupPrice: 95000, stock: 600, unit: 'thung', manufacturerIdx: 2 },
+    { sku: 'MI-3-MIEN-30', name: 'Mì 3 Miền (Gói 30)', nameEn: '3 Mien Noodles (Pack 30)', catIdx: 2, brand: '3 Miền', price: 118000, groupPrice: 103000, stock: 30, unit: 'thung', manufacturerIdx: 2 },
+    // === Beverages (Nước giải khát) ===
+    { sku: 'NUOC-LAVIE-6', name: 'Nước LaVie (Lốc 6)', nameEn: 'LaVie Water (6-pack)', catIdx: 3, brand: 'LaVie', price: 45000, groupPrice: 39000, stock: 2000, unit: 'loc', barcode: '8938500004001' },
+    { sku: 'BIA-SAIGON-24', name: 'Bia Sài Gòn (Thùng 24)', nameEn: 'Saigon Beer (Case 24)', catIdx: 3, brand: 'Sài Gòn', price: 320000, groupPrice: 285000, stock: 150, unit: 'thung', barcode: '8938500004002' },
+    { sku: 'BIA-HEINEKEN-24', name: 'Bia Heineken (Thùng 24)', nameEn: 'Heineken Beer (Case 24)', catIdx: 3, brand: 'Heineken', price: 520000, groupPrice: 480000, stock: 100, unit: 'thung' },
+    { sku: 'TRA-DRTHANH-24', name: 'Trà Địa Trùng Khánh (Thùng 24)', nameEn: 'DrThanh Tea (Case 24)', catIdx: 3, brand: 'Địa Trùng Khánh', price: 145000, groupPrice: 128000, stock: 500, unit: 'thung', barcode: '8938500004003' },
+    { sku: 'NUOC-TIGER-24', name: 'Nước Tiger (Thùng 24)', nameEn: 'Tiger Water (Case 24)', catIdx: 3, brand: 'Tiger', price: 85000, groupPrice: 75000, stock: 0, unit: 'thung' },
+    // === Snacks (Đồ ăn vặt) ===
+    { sku: 'BISCO-OREO-10', name: 'Bánh Oreo (Gói 10)', nameEn: 'Oreo Cookies (Pack 10)', catIdx: 4, brand: 'Oreo', price: 65000, groupPrice: 56000, stock: 400, unit: 'hop', barcode: '8938500005001' },
+    { sku: 'BISCO-COSY-10', name: 'Bánh Cosy (Gói 10)', nameEn: 'Cosy Cookies (Pack 10)', catIdx: 4, brand: 'Cosy', price: 42000, groupPrice: 36000, stock: 350, unit: 'hop' },
+    { sku: 'DAU-PEANUT-500G', name: 'Đậu Phộng (500g)', nameEn: 'Peanuts (500g)', catIdx: 4, brand: 'Đậu Phộng', price: 35000, groupPrice: null, stock: 200, unit: 'goi' },
+    { sku: 'KHAO-SATAY-10', name: 'Khao Satay (Gói 10)', nameEn: 'Satay Crackers (Pack 10)', catIdx: 4, brand: 'Satay', price: 28000, groupPrice: 24000, stock: 8, unit: 'goi' },
+    // === Seasonings (Gia vị) ===
+    { sku: 'GIA-VI-NAM-BO', name: 'Gia vị Nam Bộ (Hộp)', nameEn: 'Southern Seasoning (Box)', catIdx: 5, brand: 'Nam Bộ', price: 35000, groupPrice: null, stock: 600, unit: 'hop', barcode: '8938500006001' },
+    { sku: 'MUOI-IOT-500G', name: 'Muối I-ốt (500g)', nameEn: 'Iodized Salt (500g)', catIdx: 5, brand: 'Muối', price: 12000, groupPrice: null, stock: 800, unit: 'goi' },
+    { sku: 'DUONG-REFINE-1KG', name: 'Đường Refined (1kg)', nameEn: 'Refined Sugar (1kg)', catIdx: 5, brand: 'Đường', price: 25000, groupPrice: 22000, stock: 700, unit: 'goi', barcode: '8938500006002' },
+    { sku: 'BOT-GIA-VI-200G', name: 'Bột Gia Vị (200g)', nameEn: 'Seasoning Powder (200g)', catIdx: 5, brand: 'Knorr', price: 18000, groupPrice: 15000, stock: 0, unit: 'goi' },
   ];
 
   const products = await Promise.all(
@@ -134,12 +165,17 @@ async function main() {
           categoryId: categories[p.catIdx].id,
           brand: p.brand,
           unit: p.unit,
+          unitEn: p.unitEn || null,
           basePrice: p.price,
           groupBuyPrice: p.groupPrice,
           stockQuantity: p.stock,
           minOrderQty: 1,
+          maxOrderQty: p.maxQty || null,
+          weightKg: p.weight || null,
+          barcode: p.barcode || null,
+          manufacturerId: p.manufacturerIdx !== undefined ? manufacturers[p.manufacturerIdx].id : null,
           isActive: true,
-          isPrivateLabel: p.catIdx === 0 && p.sku === 'GAO-ST25-10', // Example PL product
+          isPrivateLabel: p.isPL || false,
         },
       })
     )
@@ -147,7 +183,7 @@ async function main() {
   console.log(`✅ Created ${products.length} products`);
 
   // ============================================
-  // 5. ORDERS
+  // 6. ORDERS
   // ============================================
   const now = new Date();
   const orderData = [
@@ -205,16 +241,6 @@ async function main() {
     orders.push(order);
   }
   console.log(`✅ Created ${orders.length} orders`);
-
-  // ============================================
-  // 6. MANUFACTURERS
-  // ============================================
-  const manufacturers = await Promise.all([
-    db.manufacturer.create({ data: { name: 'Công ty Lương thực Bình Dương', nameEn: 'Binh Duong Food Corp', contactPerson: 'Anh Minh', contactPhone: '0911222333', commissionRate: 0.15 } }),
-    db.manufacturer.create({ data: { name: 'Tập đoàn Dầu ăn Tương An', nameEn: 'Tuong An Oil Group', contactPerson: 'Chị Lan', contactPhone: '0911333444', commissionRate: 0.18 } }),
-    db.manufacturer.create({ data: { name: 'Công ty Thực phẩm Acecook', nameEn: 'Acecook Vietnam', contactPerson: 'Anh Hùng', contactPhone: '0911444555', commissionRate: 0.12 } }),
-  ]);
-  console.log(`✅ Created ${manufacturers.length} manufacturers`);
 
   console.log('\n🎉 Seed completed successfully!');
   console.log('  - 1 Admin user (0901234567)');
