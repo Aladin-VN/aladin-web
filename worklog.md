@@ -1,4 +1,34 @@
 ---
+Task ID: 5B
+Agent: main
+Task: Sprint 5B — Supply Chain: Manufacturers & Distributors
+
+Work Log:
+- Created `src/app/api/manufacturers/route.ts` — GET (paginated list with search, product/promotion counts) + POST (create with commission rate validation, ADMIN only)
+- Created `src/app/api/manufacturers/[id]/route.ts` — GET (detail with products + promotions), PUT (update all fields), DELETE (with product/promotion link check preventing orphan deletion)
+- Created `src/app/api/distributors/route.ts` — GET (paginated list with search, active/inactive filter, product count) + POST (create with lat/lng validation, ADMIN only)
+- Created `src/app/api/distributors/[id]/route.ts` — GET (detail with products), PUT (update all fields including isActive toggle), DELETE (with product link check)
+- Created `src/components/supply-chain/supply-chain-forms.tsx` — 2 form dialogs: ManufacturerFormDialog (name, nameEn, contact, phone, email, address, province, commission rate %) and DistributorFormDialog (name, nameEn, contact, phone, email, address, lat, lng). Both support create + edit modes with validation and toast feedback.
+- Created `src/app/supply-chain/manufacturers/page.tsx` — Full admin page: 3 summary stat cards (total manufacturers, total products, active promotions), search bar, table with 7 columns (name with icon, contact info with phone/email, commission rate badge, product count, promo count, province, actions), edit/delete actions, delete confirmation dialog with product link warning, pagination
+- Created `src/app/supply-chain/distributors/page.tsx` — Full admin page: 4 summary stat cards (total distributors, active, with coordinates, total products), smart sourcing info banner, search + status filter, table with 7 columns (name with icon + active/inactive badge, contact info, product count, address, coordinates, toggle active + edit + delete actions), delete confirmation dialog, pagination
+- Updated `src/messages/vi.json` — Expanded manufacturers section (22 keys) and distributors section (26 keys) with page UI strings
+- Updated `src/messages/en.json` — Matching English translations for all new i18n keys
+- Fixed JSX parsing issue: ternary inside Button children wrapped in parentheses with React keys
+- Build result: ✅ Zero errors, 6.4s compile, 38 pages compiled (6 new: 4 API routes + 2 pages)
+
+Stage Summary:
+- Sprint 5B complete: Full Supply Chain management for Manufacturers and Distributors
+- 4 new API endpoints: GET+POST /api/manufacturers, GET+PUT+DELETE /api/manufacturers/[id], GET+POST /api/distributors, GET+PUT+DELETE /api/distributors/[id]
+- 2 new admin pages: /supply-chain/manufacturers and /supply-chain/distributors
+- Full CRUD: create, read, update, delete with proper validation and foreign key protection
+- Smart sourcing info banner explains AI-based distributor selection feature
+- Active/inactive toggle for distributors directly from the table
+- Delete protection: prevents deletion when products or promotions are linked
+- Commission rate management for manufacturers (displayed as %, stored as 0-1 decimal)
+- Coordinate fields (lat/lng) for distributors enable future distance-based smart sourcing
+- Sidebar sub-navigation for Supply Chain now resolves to actual pages
+
+---
 Task ID: 5A
 Agent: main
 Task: Sprint 5A — Shops Management (Admin Page)
