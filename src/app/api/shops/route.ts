@@ -1,11 +1,12 @@
-// ALADIN Shop API — Simple List & Search
-// GET /api/shops — paginated shop list for order creation
+// ALADIN Shop API — Full List with Pagination, Filters & Stats
+// Sprint 5A: Shops Management
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { extractBearerToken, verifyAccessToken } from '@/lib/auth';
-import { successResponse, errorResponse } from '@/lib/security';
+import { successResponse, errorResponse, formatVND } from '@/lib/security';
 
+// GET /api/shops — paginated shop list with filters
 export async function GET(request: NextRequest) {
   try {
     const token = extractBearerToken(request.headers.get('authorization'));
@@ -18,36 +19,100 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const search = searchParams.get('search') || '';
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
     const limit = Math.min(50, Math.max(1, parseInt(searchParams.get('limit') || '20')));
+    const search = searchParams.get('search') || '';
+    const creditStatus = searchParams.get('creditStatus') || '';
+    const loyaltyTier = searchParams.get('loyaltyTier') || '';
+    const shopType = searchParams.get('shopType') || '';
+    const district = searchParams.get('district') || '';
+    const sortBy = searchParams.get('sortBy') || 'createdAt';
+    const sortOrder = searchParams.get('sortOrder') || 'desc';
 
-    const where: Record<string, unknown> = {};
+    // Build WHERE clause
+    const where: Record<string, unknown> = { deletedAt: null };
+
     if (search) {
       where.OR = [
         { name: { contains: search } },
+        { nameEn: { contains: search } },
+        { address: { contains: search } },
+        { district: { contains: search } },
         { user: { phone: { contains: search } } },
+        { user: { name: { contains: search } } },
       ];
     }
 
-    const shops = await db.shop.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      take: limit,
-      select: {
-        id: true,
-        name: true,
-        nameEn: true,
-        district: true,
-        province: true,
-        creditStatus: true,
-        creditLimit: true,
-        creditBalance: true,
-        user: { select: { phone: true, name: true } },
-      },
-    });
+    if (creditStatus) {
+      where.creditStatus = creditStatus;
+    }
+
+    if (loyaltyTier) {
+      where.loyaltyTier = loyaltyTier;
+    }
+
+    if (shopType) {
+      where.shopType = shopType;
+    }
+
+    if (district) {
+      where.district = district;
+    }
+
+    // Build ORDER BY
+    type SortField = 'createdAt' | 'name' | 'creditLimit' | 'totalGmv' | 'totalOrders' | 'avgOrderValue' | 'creditBalance';
+    const validSortFields: SortField[] = ['createdAt', 'name', 'creditLimit', 'totalGmv', 'totalOrders', 'avgOrderValue', 'creditBalance'];
+    const sortField: SortField = validSortFields.includes(sortBy as SortField) ? (sortBy as SortField) : 'createdAt';
+    const orderDir = sortOrder === 'asc' ? 'asc' : 'desc';
+
+    const orderBy = { [sortField]: orderDir };
+
+    // Parallel queries
+    const [shops, total] = await Promise.all([
+      db.shop.findMany({
+        where,
+        orderBy,
+        skip: (page - 1) * limit,
+        take: limit,
+        select: {
+          id: true,
+          name: true,
+          nameEn: true,
+          district: true,
+          province: true,
+          address: true,
+          shopType: true,
+          loyaltyTier: true,
+          creditStatus: true,
+          creditLimit: true,
+          creditBalance: true,
+          totalOrders: true,
+          totalGmv: true,
+          avgOrderValue: true,
+          createdAt: true,
+          ward: { select: { id: true, name: true } },
+          user: { select: { id: true, phone: true, name: true, status: true, zaloId: true } },
+        },
+      }),
+      db.shop.count({ where }),
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
+
+    // Format response with formatted currency values
+    const items = shops.map((shop) => ({
+      ...shop,
+      creditLimitFormatted: formatVND(shop.creditLimit),
+      creditBalanceFormatted: formatVND(shop.creditBalance),
+      creditAvailable: Math.max(0, shop.creditLimit - shop.creditBalance),
+      creditAvailableFormatted: formatVND(Math.max(0, shop.creditLimit - shop.creditBalance)),
+      totalGmvFormatted: formatVND(shop.totalGmv),
+      avgOrderValueFormatted: formatVND(shop.avgOrderValue),
+    }));
 
     return NextResponse.json(successResponse({
-      items: shops,
+      items,
+      pagination: { page, limit, total, totalPages },
     }));
   } catch (error) {
     console.error('[SHOPS LIST ERROR]', error);
@@ -56,4 +121,13 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// GET /api/shops/stats — Aggregate shop statistics
+export async function POST(request: NextRequest) {
+  // Reserved for future shop creation endpoint
+  return NextResponse.json(
+    errorResponse('NOT_IMPLEMENTED', 'Use Zalo bot for shop registration'),
+    { status: 501 }
+  );
 }

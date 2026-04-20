@@ -1,4 +1,32 @@
 ---
+Task ID: 5A
+Agent: main
+Task: Sprint 5A — Shops Management (Admin Page)
+
+Work Log:
+- Upgraded `src/app/api/shops/route.ts` — Full pagination, search (name/phone/address/district/user), filters (creditStatus, loyaltyTier, shopType, district), sort (6 fields + asc/desc), formatted VND amounts
+- Created `src/app/api/shops/stats/route.ts` — Aggregate stats: totalShops, activeShops, lockedShops, overdueShops, platinumShops, newThisMonth, totalGmv, totalCreditExposure, tierDistribution, creditDistribution, topDistricts (by shop count), shopTypeDistribution
+- Created `src/app/api/shops/[id]/route.ts` — Shop detail GET: user info, ward, recent 20 orders, recent 15 transactions, calculated stats (30-day orders, 30-day GMV, pending/delivered counts). PATCH: update shop fields (name, nameEn, address, district, province, shopType, loyaltyTier, creditLimit, creditStatus) with validation (limit can't go below used balance, max 50M, valid enums)
+- Created `src/components/shops/shop-status-badge.tsx` — 3 badge components: LoyaltyTierBadge (BRONZE/SILVER/GOLD/PLATINUM with icons), CreditStatusBadge (ACTIVE/LOCKED/OVERDUE with warning icons), ShopTypeBadge (TAPHOA/CONVENIENCE/FACTORY)
+- Created `src/components/shops/shop-detail-drawer.tsx` — Sheet drawer with 3 tabs: Overview (quick stats grid, shop info card), Orders (recent 20 orders table with status badges), Credit (3-column credit summary, credit status warnings, transaction history table with colored amounts)
+- Created `src/components/shops/shop-edit-dialog.tsx` — Dialog for editing all shop fields: name/nameEn, address, district/province, shop type select, loyalty tier select with colored dots, credit limit with validation, credit status select. Saves via PATCH API with toast feedback
+- Created `src/app/shops/page.tsx` — Full admin page: 4 stat cards (total shops, new this month, overdue, total GMV), district quick-stats chips, filter bar (search, credit status, loyalty tier, shop type, sort field, sort direction toggle, reset), shops table with 9 columns (responsive hiding), row click opens detail drawer, edit button opens edit dialog, CSV export, loyalty tier distribution chart, pagination
+- Updated `src/messages/vi.json` — Added 55+ new shops i18n keys (management, filters, tabs, credit warnings, sort options, edit labels)
+- Updated `src/messages/en.json` — Added 55+ matching English shops i18n keys
+- Build result: ✅ Zero errors, 6.4s compile, 36 pages compiled (1 new page + 2 new API routes)
+- Verification: All component imports verified, all function exports verified, all API routes verified
+
+Stage Summary:
+- Sprint 5A complete: Full Shops Management admin page with list/detail/edit capabilities
+- /shops page features: search, filter by credit status/tier/shop type, sort by 6 fields, CSV export, loyalty tier distribution
+- Shop detail drawer: 3-tab layout (overview/orders/credit) with full stats, order history, transaction ledger
+- Shop edit dialog: all fields editable with validation, loyalty tier and credit limit management
+- 3 new API endpoints: GET /api/shops (paginated), GET /api/shops/stats, GET/PATCH /api/shops/[id]
+- Geographic clustering visible via district quick-stats chips and top districts in stats API
+- All monetary values protected with SensitiveValue masking
+- Consistent with existing admin page patterns (orders, products, credit)
+
+---
 Task ID: AUDIT-4A-4F
 Agent: main
 Task: Comprehensive verification audit of Sprints 4A through 4F + Sprint 4E bug fix
