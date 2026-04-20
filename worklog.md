@@ -1,4 +1,35 @@
 ---
+Task ID: 5E
+Agent: main
+Task: Sprint 5E — Shipments & Delivery (Vận chuyển & Giao hàng)
+
+Work Log:
+- Created `src/app/api/shipments/route.ts` — GET (paginated list with search by order#/shop/address/driver, status filter PENDING/PICKED_UP/IN_TRANSIT/DELIVERED/FAILED, type filter INTERNAL/THIRD_PARTY, driverId filter, date range, sort by status/createdAt/dropoffAddress; includes order with shop name/province, assigned driver; formatted VND amounts) + POST (create shipment with orderId, type, assignedDriverId, pickup/dropoff addresses with lat/lng; validates order exists, valid status (CONFIRMED/PROCESSING/PACKED/OUT_FOR_DELIVERY), no duplicate shipment, driver has DRIVER role; auto-populates dropoff from shop address)
+- Created `src/app/api/shipments/[id]/route.ts` — GET (full detail with order items, shop info, assigned driver, POD data, 3rd party tracking) + PATCH (update driver assignment with role validation, addresses, POD fields, 3rd party tracking) + DELETE (only PENDING shipments, ADMIN only)
+- Created `src/app/api/shipments/[id]/status/route.ts` — PATCH (status transitions with validation: PENDING→PICKED_UP/FAILED, PICKED_UP→IN_TRANSIT/FAILED, IN_TRANSIT→DELIVERED/FAILED, FAILED→PENDING; when DELIVERED auto-updates order status and deliveredAt timestamp; accepts POD fields)
+- Created `src/app/api/shipments/stats/route.ts` — Aggregate stats: totalShipments, pendingShipments, inTransitShipments, deliveredToday, deliveredThisWeek, failedShipments, activeDrivers, unassignedShipments, avgDeliveryHours, deliveryRate%, failureRate%, status/type distribution
+- Created `src/app/api/shipments/drivers/route.ts` — GET (list active drivers with current active shipment count, availability status sorted by fewest active first, max 5 per driver)
+- Created `src/components/shipments/shipment-status-badge.tsx` — 2 badge components: ShipmentStatusBadge (5 statuses with colors/icons: PENDING=yellow clock, PICKED_UP=blue box, IN_TRANSIT=indigo truck, DELIVERED=green check, FAILED=red X) + ShipmentTypeBadge (INTERNAL=blue, THIRD_PARTY=purple)
+- Created `src/components/shipments/shipment-create-dialog.tsx` — Create dialog: order search (filters to CONFIRMED/PROCESSING/PACKED/OUT_FOR_DELIVERY), shipment type select (Internal Fleet / 3rd Party Ahamove/Grab), driver assignment select (shows active shipment count, availability indicator), pickup address, dropoff address (auto-populated from shop)
+- Created `src/components/shipments/shipment-detail-drawer.tsx` — Sheet drawer: delivery timeline (4-step visual: Pending→Picked Up→In Transit→Delivered with failed state), order info card (shop, address, phone, total, items count), items table with pricing, driver info card with avatar (or unassigned warning), route visualization (pickup/dropoff with colored dots), 3rd party tracking section, POD section (delivered timestamp, OTP badge, photo link), status transition controls (select + update button with color coding), refresh
+- Created `src/app/shipments/page.tsx` — Full admin page: 6 stat cards (Total, Pending with unassigned sub-count, In Transit with active drivers, Delivered Today, Failed with failure rate, Success Rate with avg delivery hours), search + status filter + type filter + date range + reset, responsive table (order#, shop, status badge, type badge, driver avatar/name or unassigned warning, dropoff address, order value with SensitiveValue masking, date, view action), row click opens detail drawer, create dialog, empty state, pagination
+- Verified deal-form-dialog.tsx SelectItem value="" bug was already fixed (uses value="none")
+- Build result: ✅ Zero errors, 66 routes compiled (5 new API routes + 1 new page)
+
+Stage Summary:
+- Sprint 5E complete: Full Shipments & Delivery management for the ALADIN B2B platform
+- 5 new API endpoints: GET+POST /api/shipments, GET+PATCH+DELETE /api/shipments/[id], PATCH /api/shipments/[id]/status, GET /api/shipments/stats, GET /api/shipments/drivers
+- 3 new UI components: ShipmentStatusBadge, ShipmentTypeBadge, ShipmentCreateDialog, ShipmentDetailDrawer
+- 1 new admin page: /shipments with full list, detail drawer, status workflow, driver management
+- Status state machine: PENDING → PICKED_UP → IN_TRANSIT → DELIVERED | FAILED, FAILED can retry to PENDING
+- Auto-delivery: When shipment marked DELIVERED, order status automatically updated to DELIVERED
+- Driver assignment: List available drivers with active shipment counts, max 5 per driver
+- 3rd party support: INTERNAL fleet or THIRD_PARTY (Ahamove/Grab) with tracking ID
+- POD (Proof of Delivery): Photo URL, signature URL, OTP confirmation
+- Bilingual (vi/en) throughout
+- All monetary values protected with SensitiveValue masking
+
+---
 Task ID: 5D
 Agent: main
 Task: Sprint 5D — Group Buy Engine (Mua Chung — Pinduoduo Model)
