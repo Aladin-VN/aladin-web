@@ -1,4 +1,40 @@
 ---
+Task ID: 5G
+Agent: main
+Task: Sprint 5G — Analytics & Reporting (Báo cáo & Phân tích)
+
+Work Log:
+- Created `src/app/api/reports/overview/route.ts` — Platform-wide KPIs: total revenue (with growth %), total orders, active shops, new shops, avg order value, credit exposure, overdue shops, total shipments, delivered shipments, success rate (with delta), avg delivery hours, group buy savings, broker GMV/commission. Distributions: order status, payment method, loyalty tier, shipment type. Daily revenue trend (30 days). Top categories by revenue. Date range filtering (today/7d/30d/90d/thisMonth/lastMonth) with period-over-period comparison.
+- Created `src/app/api/reports/revenue/route.ts` — Revenue analytics: total revenue with growth, total discounts, delivery fees, credit used, AOV. Breakdown by payment method (revenue/count/percentage), by shop tier, by district (top 10). Daily and weekly revenue trends. Top revenue shops (top 10). Month-over-month comparison with growth %. All monetary amounts formatted as VND.
+- Created `src/app/api/reports/orders/route.ts` — Order analytics: total orders with growth, completed/pending/cancelled counts, cancellation rate, completion rate, total revenue, AOV, completed AOV, avg items per order, avg fulfillment hours. Revenue by payment method (credit/digital/COD). Status distribution, payment method distribution (with revenue), payment status distribution. Daily order trend (total/completed/cancelled/revenue). Top ordering shops (by order count), largest orders (by amount).
+- Created `src/app/api/reports/products/route.ts` — Product analytics: total products, active products, unique products sold, total items sold, total revenue, avg unit price. Low stock count, out of stock count. Private label revenue and percentage. Top products by revenue (20), top products by quantity (10), top categories (15), top brands (10), top manufacturers (10). Stock alerts: low stock products (<=10), out of stock products.
+- Created `src/app/api/reports/shops-analytics/route.ts` — Shop analytics: total shops, active shops, new shops with growth, total GMV, dormant shops. Credit health dashboard (active/overdue/locked, utilization %, total exposure/limit/available). Tier distribution (count + GMV), shop type distribution, district distribution (top 15). Top GMV shops (15), top by orders (15), top by period revenue (15). Daily new shops trend.
+- Created `src/app/api/reports/shipments-analytics/route.ts` — Shipment analytics: total shipments with growth, pending/in-transit/delivered/failed counts, success/failure rates with delta, avg/min/max delivery hours, shipment value, avg shipment value. Internal vs 3rd party comparison with success rates. Status distribution, delivery time buckets (under 2h/2-4h/4-8h/8-24h/over 24h). Daily shipment trend. Driver performance ranking (total/delivered/failed/success rate/avg time/value). District delivery performance.
+- Created `src/components/reports/date-range-picker.tsx` — Period selector component with 6 presets (today, 7d, 30d, 90d, this month, last month), bilingual vi/en, supports sm/default sizes.
+- Created `src/components/reports/kpi-card.tsx` — Reusable KPI stat card with title (bilingual), value, icon, growth indicator (up/down/neutral arrow with %), 5 color variants (default/success/warning/danger/info), optional suffix and sensitive value support.
+- Created `src/components/reports/charts.tsx` — 3 CSS-based chart components: BarChart (vertical bars for trends), HBarChart (horizontal bars for rankings), DistributionChart (stacked bar + legend for distributions). All with bilingual support, responsive sizing, compact value formatting.
+- Created `src/app/reports/page.tsx` — Full analytics dashboard with 6 tabs: Overview (8 KPI cards + revenue trend bar chart + order status/payment/tier distributions + top categories), Revenue (4 KPIs + monthly comparison + daily revenue trend + payment method/tier/district breakdowns + top revenue shops table), Orders (4 KPIs + credit/digital/COD revenue split + daily order trend + status distribution + top ordering shops table + largest orders table), Products (4 KPIs + stock alerts banner + private label card + top products/categories horizontal bars + out of stock table), Shops (4 KPIs + credit health dashboard + tier/district distributions + top GMV shops table), Shipments (4 KPIs + delivery time stats + internal vs 3rd party + daily trend + delivery time distribution + driver performance table + district delivery table). Date range picker in header. CSV export per tab. Loading skeletons. Empty states. Responsive grid layouts.
+- Updated `src/components/layout/admin-sidebar.tsx` — Added Reports sub-navigation with 6 children (Overview, Revenue, Orders, Products, Shops, Shipments).
+- Build result: ✅ Zero errors, 77 routes compiled (6 new API routes + 1 new page)
+
+Stage Summary:
+- Sprint 5G complete: Full Analytics & Reporting dashboard for the ALADIN B2B platform
+- 6 new API endpoints: GET /api/reports/overview, GET /api/reports/revenue, GET /api/reports/orders, GET /api/reports/products, GET /api/reports/shops-analytics, GET /api/reports/shipments-analytics
+- 3 new UI components: DateRangePicker (6 period presets), KpiCard (growth indicators, 5 variants), Charts (BarChart, HBarChart, DistributionChart)
+- 1 new admin page: /reports with 6-tab analytics dashboard
+- Period filtering: today, 7d, 30d, 90d, this month, last month — all with period-over-period comparison
+- Growth indicators: revenue/order/shipment/shop growth with % arrows
+- Revenue analytics: payment method breakdown, tier breakdown, district breakdown, monthly MoM comparison
+- Order analytics: status funnel, payment method split, fulfillment time, largest orders
+- Product analytics: top sellers, category performance, brand/manufacturer ranking, stock alerts, private label tracking
+- Shop analytics: credit health dashboard, dormant shop detection, tier/district distribution, performance ranking
+- Shipment analytics: delivery time distribution, internal vs 3rd party comparison, driver performance leaderboard, district delivery rates
+- CSV export per active tab
+- Bilingual (vi/en) throughout with t() pattern
+- All monetary values protected with SensitiveValue masking
+- CSS-based charts (no external charting library dependency)
+
+---
 Task ID: 5E
 Agent: main
 Task: Sprint 5E — Shipments & Delivery (Vận chuyển & Giao hàng)

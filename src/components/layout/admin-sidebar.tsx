@@ -139,6 +139,14 @@ const navItems: NavItem[] = [
     titleVi: 'Bao cao',
     href: '/reports',
     icon: <BarChart3 className="h-4 w-4" />,
+    children: [
+      { title: 'Overview', titleVi: 'Tong quan', href: '/reports' },
+      { title: 'Revenue', titleVi: 'Doanh thu', href: '/reports?tab=revenue' },
+      { title: 'Orders', titleVi: 'Don hang', href: '/reports?tab=orders' },
+      { title: 'Products', titleVi: 'San pham', href: '/reports?tab=products' },
+      { title: 'Shops', titleVi: 'Cua hang', href: '/reports?tab=shops' },
+      { title: 'Shipments', titleVi: 'Van chuyen', href: '/reports?tab=shipments' },
+    ],
   },
 ];
 
