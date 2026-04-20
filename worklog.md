@@ -1,4 +1,57 @@
 ---
+Task ID: 5D
+Agent: main
+Task: Sprint 5D — Group Buy Engine (Mua Chung — Pinduoduo Model)
+
+Work Log:
+- Created `src/app/api/group-deals/route.ts` — GET (paginated list with search by title/product name/SKU, status filter ACTIVE/COMPLETED/CANCELLED/EXPIRED, wardId filter, productId filter; computed fields: progressPercent capped at 100, savingsPercent, savingsPerUnit, timeRemaining in Vietnamese "X ngày"/"X giờ"/"Đã hết hạn"; includes product name/sku, ward name, participant count; returns filter dropdowns for wards and products) + POST (create group deal with title, titleEn, description, productId, targetQty, originalPrice, discountPrice, startsAt, expiresAt, wardId, maxParticipants; validates product exists, dates valid startsAt < expiresAt and startsAt >= now, discountPrice < originalPrice, targetQty > 0; transaction sets product.groupBuyPrice = discountPrice)
+- Created `src/app/api/group-deals/[id]/route.ts` — GET (full detail with product, ward, participants with shop info, orders; computed: progressPercent, savingsPercent, timeRemaining, totalCommitted, totalPotentialSavings) + PATCH (update title, description, status, targetQty, discountPrice, maxParticipants, expiresAt; validates status transitions ACTIVE→COMPLETED/CANCELLED; when status=COMPLETED, sets product.groupBuyPrice in transaction) + DELETE (checks for active participants, returns 409 if any; clears product.groupBuyPrice if matches deal's discountPrice; deletes participants then deal in transaction)
+- Created `src/app/api/group-deals/stats/route.ts` — Aggregate stats: totalDeals, activeDeals, completedDeals, expiredDeals, cancelledDeals, totalSavings (sum of (originalPrice - discountPrice) * currentQty for completed), totalSavingsFormatted, totalParticipants (unique shops in active deals), avgCompletionRate, topDealsByParticipation (top 5 with progressPercent), wardDistribution with ward names, statusDistribution
+- Created `src/components/group-buy/deal-status-badge.tsx` — Badge component for 4 statuses: ACTIVE (emerald with pulse animation), COMPLETED (blue), EXPIRED (amber), CANCELLED (red); bilingual vi/en
+- Created `src/components/group-buy/deal-form-dialog.tsx` — Create/edit dialog: Title (vi) + Title (en), product search/select (search by name/SKU, shows price and stock), target quantity, original price (auto-filled from product), group buy price with live savings % and total potential savings indicator, start/expiry datetime pickers, ward select (optional zone scope), max participants (optional), description; validation: discount < original, dates valid, target > 0, product selected
+- Created `src/components/group-buy/deal-detail-drawer.tsx` — Sheet drawer with 3 tabs: Overview (progress bar with percentage, pricing card with original/discount/savings, product info, participants count, validity period with time remaining, savings per unit + total potential), Participants (table of shops with committed qty, join date, active status, total committed summary), Orders (related orders table with order number, status, amount)
+- Created `src/app/group-buy/page.tsx` — Full admin page: 4 stat cards (Active Deals emerald, Completed Deals blue, Total Savings formatted VND green, Participants purple), status distribution bar, search + status filter + ward filter with reset, responsive table with columns: Deal (title + product), Progress (bar + qty), Savings (discount % + VND/unit), Participants count, Ward, Status badge, Expiry countdown, Actions (view/edit/complete/cancel), row click opens detail drawer, create button opens form dialog, status change confirmation dialog with participant warning, empty state, pagination, Pinduoduo info banner
+- Lint result: ✅ Zero new errors (2 pre-existing errors in promotions components)
+
+Stage Summary:
+- Sprint 5D complete: Full Group Buy Engine (Pinduoduo model) admin management
+- 3 new API routes: GET+POST /api/group-deals, GET+PATCH+DELETE /api/group-deals/[id], GET /api/group-deals/stats
+- 3 new UI components: DealStatusBadge (4 statuses with colors/icons), DealFormDialog (product search, live savings calc), DealDetailDrawer (3-tab: overview/participants/orders)
+- 1 new admin page: /group-buy with full CRUD, status workflow (active→completed/cancelled), zone-scoped deals
+- Computed fields: progressPercent, savingsPercent, savingsPerUnit, timeRemaining (Vietnamese), totalPotentialSavings
+- Product.groupBuyPrice auto-set on deal creation and completion
+- Transaction-safe: deal creation, status change, and deletion all use db.$transaction
+- Delete protection: prevents deletion with active participants
+- Bilingual (vi/en) throughout with t() pattern
+- Consistent with existing admin page patterns (promotions, shops, manufacturers)
+
+---
+Task ID: 5D
+Agent: main
+Task: Fix Supply Chain 404 + Build Broker Network Page
+
+Work Log:
+- Fixed Supply Chain 404: Created `src/app/supply-chain/page.tsx` — Overview page with AdminSidebar + AdminHeader layout, page title (vi/en), info banner, 2 cards linking to /supply-chain/manufacturers and /supply-chain/distributors with icons and descriptions
+- Created `src/app/api/brokers/route.ts` — GET (paginated list with search by name/phone/ward, tier filter, status filter, wardId filter; includes user + ward relations; returns filter options for wards and tier distribution) + POST (create broker with userId, tier, wardId, commissionRate validation; checks user exists, no duplicate broker, ward exists)
+- Created `src/app/api/brokers/[id]/route.ts` — GET (full detail with user, ward, shop info), PATCH (update tier, wardId, commissionRate with validation), DELETE (remove broker, keep user)
+- Created `src/app/api/brokers/stats/route.ts` — Aggregate stats: totalBrokers, activeBrokers, totalCommissionEarned (formatted VND), totalGmvGenerated (formatted VND), tierDistribution
+- Created `src/components/brokers/broker-tier-badge.tsx` — 2 badge components: BrokerTierBadge (WARD_LEVEL=blue, CATEGORY_SPECIALIST=purple, FACTORY_GATE=orange with vi/en labels) and UserStatusBadge (ACTIVE/INACTIVE/LOCKED/SUSPENDED with vi/en labels)
+- Created `src/components/brokers/broker-form-dialog.tsx` — Create/edit dialog: userId input (create mode), user info display (edit mode), tier select (3 tiers with colored dots), ward select (populated from API), commission rate number input (stored as 0-1 decimal, displayed as %), validation, toast feedback
+- Created `src/components/brokers/broker-detail-drawer.tsx` — Sheet drawer: 3 performance stat cards (shops referred, commission earned, GMV generated), broker info section (name, phone, email, tier badge, commission %, status badge, territory, Zalo ID, join date), edit/delete action buttons
+- Created `src/app/brokers/page.tsx` — Full admin page: 4 stat cards (total brokers, active brokers, total commission VND, total GMV VND), tier distribution chips, search + tier filter + status filter, table with 8 columns (broker name+phone, tier badge, ward, commission %, shops referred, GMV, status badge, edit actions), row click opens detail drawer, create/edit dialog, pagination, empty state with add button
+- Build result: ✅ Zero errors, all 3 broker API routes + 1 broker page + 1 supply-chain overview page compiled successfully
+
+Stage Summary:
+- Supply Chain 404 fixed: /supply-chain now shows overview page with links to manufacturers and distributors
+- Broker Network 404 fixed: /brokers now shows full admin management page
+- 3 new API endpoints: GET+POST /api/brokers, GET+PATCH+DELETE /api/brokers/[id], GET /api/brokers/stats
+- 3 new UI components: BrokerTierBadge, UserStatusBadge, BrokerFormDialog, BrokerDetailDrawer
+- Full CRUD: create brokers, view list/detail, edit tier/ward/commission, delete (preserves user)
+- All monetary values use SensitiveValue masking
+- Bilingual (vi/en) throughout
+- Consistent with existing admin page patterns (shops, manufacturers)
+
+---
 Task ID: 5C
 Agent: main
 Task: Sprint 5C — Promotions & Trade Marketing
