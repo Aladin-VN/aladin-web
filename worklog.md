@@ -1,4 +1,34 @@
 ---
+Task ID: 5C
+Agent: main
+Task: Sprint 5C — Promotions & Trade Marketing
+
+Work Log:
+- Created `src/app/api/promotions/route.ts` — GET (paginated list with search, promoType/manufacturerId/status filters, date-range status computation, budget %, manufacturer dropdown) + POST (create promotion with type validation, product linking, date validation, budget)
+- Created `src/app/api/promotions/stats/route.ts` — Aggregate stats: totalPromotions, active/upcoming/expired, typeDistribution, topByRedemptions (top 5), budgetSummary (total/used/utilization %)
+- Created `src/app/api/promotions/[id]/route.ts` — GET (full detail with manufacturer, products, order items), PATCH (update + replace product items), DELETE (prevents deletion if applied to orders)
+- Created `src/app/api/merchandising/route.ts` — GET (paginated list with search, status filter, shop/product/reviewer relations)
+- Created `src/app/api/merchandising/[id]/route.ts` — GET (full detail with shop/product/promotion), PATCH (review: APPROVED/REJECTED with reviewerId + reviewedAt)
+- Created `src/components/promotions/promo-type-badge.tsx` — Badge for BUY_X_GET_Y (emerald), PERCENT_OFF (blue), FIXED_DISCOUNT (orange)
+- Created `src/components/promotions/promo-status-badge.tsx` — Badge for active (emerald), upcoming (blue), expired/paused (amber/red)
+- Created `src/components/promotions/promotion-form-dialog.tsx` — Create/edit dialog with all promo fields, product search + add/remove
+- Created `src/components/promotions/promotion-detail-drawer.tsx` — 3-tab Sheet drawer: Overview, Products, Orders
+- Created `src/components/merchandising/audit-status-badge.tsx` — Badge for PENDING_REVIEW, APPROVED, REJECTED
+- Created `src/components/merchandising/audit-review-dialog.tsx` — Review dialog with photo preview, approve/reject
+- Created `src/app/trade-marketing/promotions/page.tsx` — Full admin page: 4 stat cards, type distribution, 3 filters, table, CRUD, detail drawer, scheme engine banner
+- Created `src/app/trade-marketing/merchandising/page.tsx` — Full admin page: 4 stat cards, search + status filter, table, review workflow, photo verification banner
+- Updated `src/messages/vi.json` — Expanded promotions (50 keys) + added merchandising (25 keys)
+- Updated `src/messages/en.json` — Matching English translations
+- Build result: ✅ Zero errors, 44 pages compiled (7 new: 5 API routes + 2 pages)
+
+Stage Summary:
+- Sprint 5C complete: Full Promotions & Trade Marketing management
+- Promotions: Full CRUD with 3 promo types, manufacturer linking, product linking, budget tracking, redemption counting
+- Merchandising: Audit review workflow (approve/reject) with photo preview
+- Sidebar Trade Marketing sub-navigation now resolves to actual pages
+- 5 new API routes + 2 new pages + 6 new UI components
+
+---
 Task ID: 5B
 Agent: main
 Task: Sprint 5B — Supply Chain: Manufacturers & Distributors
