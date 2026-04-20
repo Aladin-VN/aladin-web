@@ -45,7 +45,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
-import { SensitiveValue } from '@/components/shared/sensitive-value';
 
 interface NavItem {
   title: string;
@@ -252,7 +251,7 @@ export function AdminSidebar({ locale = 'en', userName = 'Admin User', userRole 
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col items-start text-sm">
-                    <SensitiveValue value={userName} maskType="name" />
+                    <span>{userName}</span>
                     <span className="text-[10px] text-muted-foreground">{userRole}</span>
                   </div>
                   <ChevronDown className="ml-auto h-4 w-4" />
