@@ -4,11 +4,26 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { successResponse, errorResponse, formatVND } from '@/lib/security';
+import { extractBearerToken, verifyAccessToken, hasRole } from '@/lib/auth';
+import {
+  successResponse,
+  errorResponse,
+  rateLimit,
+  formatVND,
+} from '@/lib/security';
 
 // GET /api/brokers
 export async function GET(request: NextRequest) {
   try {
+    const token = extractBearerToken(request.headers.get('authorization'));
+    if (!token) {
+      return NextResponse.json(errorResponse('UNAUTHORIZED', 'Authentication required'), { status: 401 });
+    }
+    const payload = verifyAccessToken(token);
+    if (!payload) {
+      return NextResponse.json(errorResponse('INVALID_TOKEN', 'Token expired or invalid'), { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search') || '';
     const tier = searchParams.get('tier') || '';
@@ -69,9 +84,6 @@ export async function GET(request: NextRequest) {
               province: true,
             },
           },
-          _count: {
-            select: { /* placeholder for future relations */ },
-          },
         },
       }),
       db.broker.count({ where }),
@@ -112,6 +124,21 @@ export async function GET(request: NextRequest) {
 // POST /api/brokers — Create broker
 export async function POST(request: NextRequest) {
   try {
+    const token = extractBearerToken(request.headers.get('authorization'));
+    if (!token) {
+      return NextResponse.json(errorResponse('UNAUTHORIZED', 'Authentication required'), { status: 401 });
+    }
+    const payload = verifyAccessToken(token);
+    if (!payload || !hasRole(payload.role, ['ADMIN', 'SALES_REP'])) {
+      return NextResponse.json(errorResponse('FORBIDDEN', 'Admin or Sales Rep access required'), { status: 403 });
+    }
+
+    // Rate limit
+    const rl = rateLimit(`broker:create:${payload.userId}`, { maxRequests: 20, windowMs: 60 * 1000 });
+    if (!rl.allowed) {
+      return NextResponse.json(errorResponse('RATE_LIMITED', 'Too many requests'), { status: 429 });
+    }
+
     const body = await request.json();
     const { userId, tier, wardId, commissionRate } = body;
 

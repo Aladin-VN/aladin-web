@@ -1,11 +1,12 @@
 // ALADIN Broker Detail API
-// GET /api/brokers/[id] — Full detail
+// GET /api/brokers/[id] — Full detail with referred shops
 // PATCH /api/brokers/[id] — Update broker
 // DELETE /api/brokers/[id] — Remove broker (keep user)
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { successResponse, errorResponse, formatVND } from '@/lib/security';
+import { extractBearerToken, verifyAccessToken, hasRole } from '@/lib/auth';
+import { successResponse, errorResponse } from '@/lib/security';
 
 // GET /api/brokers/[id]
 export async function GET(
@@ -13,6 +14,15 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const token = extractBearerToken(request.headers.get('authorization'));
+    if (!token) {
+      return NextResponse.json(errorResponse('UNAUTHORIZED', 'Authentication required'), { status: 401 });
+    }
+    const payload = verifyAccessToken(token);
+    if (!payload) {
+      return NextResponse.json(errorResponse('INVALID_TOKEN', 'Token expired or invalid'), { status: 401 });
+    }
+
     const { id } = await params;
 
     const broker = await db.broker.findUnique({
@@ -57,7 +67,33 @@ export async function GET(
       return NextResponse.json(errorResponse('NOT_FOUND', 'Broker not found'), { status: 404 });
     }
 
-    return NextResponse.json(successResponse(broker));
+    // Fetch referred shops (shops in the same ward as broker, created after broker)
+    let referredShops: unknown[] = [];
+    if (broker.wardId) {
+      referredShops = await db.shop.findMany({
+        where: {
+          wardId: broker.wardId,
+          createdAt: { gte: broker.createdAt },
+        },
+        select: {
+          id: true,
+          name: true,
+          district: true,
+          province: true,
+          loyaltyTier: true,
+          totalOrders: true,
+          totalGmv: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+      });
+    }
+
+    return NextResponse.json(successResponse({
+      ...broker,
+      referredShops,
+    }));
   } catch (error) {
     console.error('[BROKER DETAIL ERROR]', error);
     return NextResponse.json(errorResponse('INTERNAL_ERROR', 'Failed to fetch broker'), { status: 500 });
@@ -70,6 +106,15 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const token = extractBearerToken(request.headers.get('authorization'));
+    if (!token) {
+      return NextResponse.json(errorResponse('UNAUTHORIZED', 'Authentication required'), { status: 401 });
+    }
+    const payload = verifyAccessToken(token);
+    if (!payload || !hasRole(payload.role, ['ADMIN', 'SALES_REP'])) {
+      return NextResponse.json(errorResponse('FORBIDDEN', 'Admin or Sales Rep access required'), { status: 403 });
+    }
+
     const { id } = await params;
     const body = await request.json();
     const { tier, wardId, commissionRate } = body;
@@ -140,6 +185,15 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const token = extractBearerToken(request.headers.get('authorization'));
+    if (!token) {
+      return NextResponse.json(errorResponse('UNAUTHORIZED', 'Authentication required'), { status: 401 });
+    }
+    const payload = verifyAccessToken(token);
+    if (!payload || !hasRole(payload.role, ['ADMIN'])) {
+      return NextResponse.json(errorResponse('FORBIDDEN', 'Admin access required'), { status: 403 });
+    }
+
     const { id } = await params;
 
     const existing = await db.broker.findUnique({ where: { id } });

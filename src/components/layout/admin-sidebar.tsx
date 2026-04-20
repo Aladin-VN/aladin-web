@@ -128,6 +128,11 @@ const navItems: NavItem[] = [
     titleVi: 'Dai ly',
     href: '/brokers',
     icon: <Users className="h-4 w-4" />,
+    children: [
+      { title: 'All Brokers', titleVi: 'Dai ly', href: '/brokers' },
+      { title: 'Commissions', titleVi: 'Hoa hong', href: '/brokers/commissions' },
+      { title: 'Territories', titleVi: 'Khu vuc', href: '/brokers/territories' },
+    ],
   },
   {
     title: 'Reports',
