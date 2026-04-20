@@ -307,6 +307,7 @@ model Order {
   transactions      Transaction[]
   shipment          Shipment?
   groupDeal         GroupDeal? @relation(fields: [groupDealId], references: [id])
+  payments          Payment[]
 
   // Metadata
   confirmedAt       DateTime?
@@ -600,4 +601,31 @@ model Broker {
 
   @@index([tier])
   @@index([wardId])
+}
+
+// ============================================================
+// PAYMENT: Digital Payment Gateway Tracking (Sprint 4F)
+// ZaloPay, MoMo, and Mock gateway integration
+// ============================================================
+
+model Payment {
+  id            String   @id @default(cuid())
+  orderId       String
+  order         Order    @relation(fields: [orderId], references: [id])
+  gateway       String                                     // ZALOPAY, MOMO, MOCK
+  gatewayTxId   String?  @unique                            // Gateway transaction ID
+  amount        Int                                        // Amount in VND
+  status        String   @default("PENDING")                // PENDING, SUCCESS, FAILED, EXPIRED
+  paymentUrl    String?                                     // URL for user to pay
+  qrCodeUrl     String?
+  rawRequest    String?                                     // JSON: gateway request for debugging
+  rawCallback   String?                                     // JSON: gateway callback for debugging
+  paidAt        DateTime?
+  expiresAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([gatewayTxId])
+  @@index([status])
 }

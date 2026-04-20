@@ -1,10 +1,14 @@
 // ALADIN Zalo Bot — Webhook API Route
 // POST /api/zalo/webhook — Receive Zalo messages (<5s response guaranteed)
 // GET  /api/zalo/webhook — Zalo webhook verification
+//
+// Sprint 4D: Async architecture — webhook enqueues and returns 200 immediately.
+// Actual processing happens in background worker (worker.ts).
 
 import { NextRequest, NextResponse } from 'next/server';
 import { ZALO_CONFIG } from '@/lib/zalo/config';
-import { handleZaloMessage } from '@/lib/zalo/conversation-engine';
+import { messageQueue } from '@/lib/zalo/message-queue';
+import { startWorker } from '@/lib/zalo/worker';
 import crypto from 'crypto';
 
 // ============================================
@@ -54,40 +58,47 @@ export async function GET(request: NextRequest) {
 
 // ============================================
 // POST /api/zalo/webhook — Receive Message
-// CRITICAL: Must respond within 5 seconds
-// AI processing happens async — we queue it and respond immediately
+// Sprint 4D: Enqueue immediately, return 200 in <50ms.
+// All heavy processing happens in the background worker.
 // ============================================
 
 export async function POST(request: NextRequest) {
+  // Ensure worker is running (idempotent — safe to call multiple times)
+  startWorker();
+
   try {
     const body = await request.json();
     const eventName = body.event_name;
 
     // Handle different event types
     if (eventName === 'user_send_text') {
-      return await handleTextMessage(body);
+      return await enqueueTextMessage(body);
     }
 
     if (eventName === 'user_send_image') {
-      return await handleImageMessage(body);
+      return await enqueueImageMessage(body);
     }
 
-    // Acknowledge other events
-    console.log(`[ZALO WEBHOOK] Event: ${eventName}`);
-    return NextResponse.json({ success: true, message: 'Event received' });
+    // Handle other Zalo events (follow, unfollow, etc.)
+    const data = body.data as { user_id?: string } | undefined;
+    if (data?.user_id) {
+      messageQueue.enqueueEvent(data.user_id, eventName, body.data);
+    }
+
+    // Acknowledge all events immediately
+    return NextResponse.json({ success: true, message: 'Event queued' });
   } catch (error) {
     console.error('[ZALO WEBHOOK ERROR]', error);
+    // Always return 200 to prevent Zalo from retrying
     return NextResponse.json({ success: true, message: 'Webhook received' });
   }
 }
 
 // ============================================
-// Handle Text Message — CRITICAL PATH (<5s)
+// ENQUEUE TEXT MESSAGE — Returns 200 immediately
 // ============================================
 
-async function handleTextMessage(body: Record<string, unknown>) {
-  const startTime = Date.now();
-
+async function enqueueTextMessage(body: Record<string, unknown>) {
   const data = body.data as {
     user_id: string;
     message: {
@@ -104,32 +115,26 @@ async function handleTextMessage(body: Record<string, unknown>) {
   const { user_id: zaloUserId, message } = data;
   const messageText = message.text || '';
 
-  console.log(`[ZALO MSG] User: ${zaloUserId}, Text: "${messageText.substring(0, 100)}"`);
+  console.log(`[ZALO WEBHOOK] Text from ${zaloUserId}: "${messageText.substring(0, 80)}"`);
 
-  // Process message through conversation engine
-  const response = await handleZaloMessage(zaloUserId, messageText);
+  // Enqueue for async processing — this is O(1), returns immediately
+  const result = messageQueue.enqueueTextMessage(zaloUserId, messageText, message.msg_id);
 
-  const processingTime = Date.now() - startTime;
-  console.log(`[ZALO MSG] Processed in ${processingTime}ms, State: ${response.state}`);
-
-  // Safety check
-  if (processingTime > 4000) {
-    console.warn(`[ZALO MSG] Warning: processing took ${processingTime}ms, approaching timeout`);
+  if (!result.enqueued) {
+    console.warn(`[ZALO WEBHOOK] Message not enqueued: ${result.reason} (user: ${zaloUserId})`);
+    // Still return 200 — Zalo shouldn't know about our queue issues
+    return NextResponse.json({ success: true, message: 'Message deduplicated' });
   }
 
-  // Send reply asynchronously
-  sendZaloReply(zaloUserId, response.replyText, response.quickReplies).catch((err) => {
-    console.error('[ZALO REPLY ERROR]', err);
-  });
-
-  return NextResponse.json({ success: true, processingTimeMs: processingTime });
+  console.log(`[ZALO WEBHOOK] Enqueued: ${result.messageId} (user: ${zaloUserId})`);
+  return NextResponse.json({ success: true, messageId: result.messageId });
 }
 
 // ============================================
-// Handle Image Message (OCR placeholder)
+// ENQUEUE IMAGE MESSAGE — Returns 200 immediately
 // ============================================
 
-async function handleImageMessage(body: Record<string, unknown>) {
+async function enqueueImageMessage(body: Record<string, unknown>) {
   const data = body.data as {
     user_id: string;
     message: {
@@ -147,63 +152,15 @@ async function handleImageMessage(body: Record<string, unknown>) {
     return NextResponse.json({ success: true, message: 'No user' });
   }
 
-  console.log(`[ZALO IMAGE] User: ${data.user_id}`);
+  const imageUrl = data.message?.attachments?.[0]?.full_size_url || '';
 
-  const replyText = '📸 Hình ảnh đã nhận! Tính năng OCR sẽ sớm khả dụng.\n\nHiện tại, vui lòng gõ tên sản phẩm để tìm kiếm.';
+  console.log(`[ZALO WEBHOOK] Image from ${data.user_id}: ${imageUrl.substring(0, 80)}`);
 
-  sendZaloReply(data.user_id, replyText, ['menu', 'phổ biến']).catch((err) => {
-    console.error('[ZALO IMAGE REPLY ERROR]', err);
+  const result = messageQueue.enqueueImageMessage(data.user_id, imageUrl, data.message.msg_id);
+
+  return NextResponse.json({
+    success: true,
+    messageId: result.messageId,
+    message: 'Image queued',
   });
-
-  return NextResponse.json({ success: true, message: 'Image received' });
-}
-
-// ============================================
-// Zalo Send Message API
-// Fire-and-forget: sends reply via Zalo OA Send Message API
-// ============================================
-
-async function sendZaloReply(
-  userId: string,
-  text: string,
-  quickReplies?: string[]
-): Promise<void> {
-  // In production, this calls Zalo OA Send Message API
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`[ZALO REPLY → ${userId}]`);
-    console.log(`  Text: ${text.substring(0, 200)}`);
-    if (quickReplies?.length) {
-      console.log(`  Quick Replies: [${quickReplies.join(', ')}]`);
-    }
-    return;
-  }
-
-  const accessToken = ZALO_CONFIG.OA_ACCESS_TOKEN;
-  if (!accessToken) {
-    console.error('[ZALO REPLY] No OA access token configured');
-    return;
-  }
-
-  try {
-    const response = await fetch(ZALO_CONFIG.SEND_MESSAGE_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'access_token': accessToken,
-      },
-      body: JSON.stringify({
-        recipient: { user_id: userId },
-        message: { text },
-      }),
-    });
-
-    const result = await response.json();
-    if (result.error !== 0) {
-      console.error('[ZALO REPLY API ERROR]', result);
-    } else {
-      console.log(`[ZALO REPLY] Sent to ${userId}, msg_id: ${result.data?.msg_id}`);
-    }
-  } catch (error) {
-    console.error('[ZALO REPLY API ERROR]', error);
-  }
 }

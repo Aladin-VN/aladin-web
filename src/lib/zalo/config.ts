@@ -33,6 +33,8 @@ export type ConversationState =
   | 'AWAITING_ORDER_QTY'
   | 'REVIEWING_ORDER'
   | 'AWAITING_PAYMENT_METHOD'
+  | 'AWAITING_ORDER_CONFIRM'
+  | 'AWAITING_PAYMENT_GATEWAY'
   | 'ORDER_CONFIRMED'
   | 'AWAITING_IMAGE_INVOICE'
   | 'AWAITING_ORDER_LOOKUP'
@@ -105,6 +107,22 @@ export interface ConversationSession {
   // Category browse & product detail context
   selectedProductIndex?: number;
   browsingCategoryId?: string;
+
+  // Order confirmation context (Sprint 4C)
+  pendingPayment?: {
+    method: PaymentOption;
+    discountAmount: number;
+    deliveryFee: number;
+    grandTotal: number;
+ };
+
+  // Recommendation context
+  lastOrderedProductIds?: string[];
+  recommendationProducts?: ZaloProductResult[];
+
+  // Payment gateway context (Sprint 4F)
+  pendingPaymentGateway?: 'ZALOPAY' | 'MOMO';
+  lastCreatedOrderId?: string;
 }
 
 export interface ZaloProductResult {
@@ -197,6 +215,11 @@ export function resetSession(zaloUserId: string): ConversationSession {
   session.registrationData = undefined;
   session.selectedProductIndex = undefined;
   session.browsingCategoryId = undefined;
+  session.pendingPayment = undefined;
+  session.lastOrderedProductIds = undefined;
+  session.recommendationProducts = undefined;
+  session.pendingPaymentGateway = undefined;
+  session.lastCreatedOrderId = undefined;
   return session;
 }
 

@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { extractBearerToken, verifyAccessToken, hasRole } from '@/lib/auth';
 import { successResponse, errorResponse, rateLimit, ORDER_STATUS, PAYMENT_METHOD, PAYMENT_STATUS } from '@/lib/security';
+import { notifyOrderStatusChange } from '@/lib/zalo/notification-engine';
 
 // ============================================
 // Valid status transition map
@@ -148,6 +149,11 @@ export async function PATCH(
       },
       message: `Order ${updatedOrder.orderNumber} status updated to ${status}`,
     }));
+
+    // Send Zalo notification to shop owner (async, non-blocking)
+    notifyOrderStatusChange(id, status).catch((err) => {
+      console.error('[ORDER STATUS] Notification error (non-blocking):', err);
+    });
   } catch (error) {
     console.error('[ORDER STATUS ERROR]', error);
     return NextResponse.json(

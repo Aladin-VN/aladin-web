@@ -15,6 +15,7 @@ import {
   PAYMENT_STATUS,
   TRANSACTION_TYPES,
 } from '@/lib/security';
+import { notifyOrderCancellation } from '@/lib/zalo/notification-engine';
 
 // Orders that can be cancelled
 const CANCELLABLE_STATUSES = new Set([
@@ -176,6 +177,11 @@ export async function PATCH(
         : null,
       stockRestored: order.items.length,
     }));
+
+    // Send Zalo cancellation notification to shop owner (async, non-blocking)
+    notifyOrderCancellation(id, reason ? String(reason) : undefined).catch((err) => {
+      console.error('[ORDER CANCEL] Notification error (non-blocking):', err);
+    });
   } catch (error) {
     console.error('[ORDER CANCEL ERROR]', error);
     return NextResponse.json(

@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { extractBearerToken, verifyAccessToken, isAdmin } from '@/lib/auth';
 import { successResponse, errorResponse } from '@/lib/security';
 import { checkAndLockOverdueShops } from '@/lib/credit-engine';
+import { sendCreditLockedNotification } from '@/lib/zalo/notification-engine';
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,6 +20,13 @@ export async function POST(request: NextRequest) {
 
     // Run the overdue check
     const result = await checkAndLockOverdueShops();
+
+    // Send Zalo credit locked notification to newly locked shops (async, non-blocking)
+    for (const detail of result.details) {
+      sendCreditLockedNotification(detail.shopId).catch((err) => {
+        console.error(`[PROCESS OVERDUE] Notification error for shop ${detail.shopId}:`, err);
+      });
+    }
 
     return NextResponse.json(
       successResponse({

@@ -3,7 +3,7 @@
 // States: IDLE → PRODUCT_SEARCH → ORDER_QTY → REVIEW → PAYMENT → CONFIRMED
 // Enhanced with Orders, Credit, and Repayment commands
 
-import type { ConversationSession, ZaloProductResult, PaymentOption } from './config';
+import type { ConversationSession, ZaloProductResult, ZaloOrderItem, PaymentOption } from './config';
 import {
   getOrCreateSession,
   updateSession,
@@ -106,6 +106,10 @@ export async function handleZaloMessage(
       return handleReviewState(session, text, zaloUserId);
     case 'AWAITING_PAYMENT_METHOD':
       return handlePaymentState(session, text, zaloUserId);
+    case 'AWAITING_ORDER_CONFIRM':
+      return handleOrderConfirmState(session, text, zaloUserId);
+    case 'AWAITING_PAYMENT_GATEWAY':
+      return handlePaymentGatewayState(session, text, zaloUserId);
     case 'ORDER_CONFIRMED':
       return handleConfirmedState(session, text, zaloUserId);
     case 'AWAITING_ORDER_LOOKUP':
@@ -154,7 +158,9 @@ async function handleIdleState(session: ConversationSession, text: string, zaloU
       '• ' + t('zaloBot.helpLanguage') + '\n' +
       '• ' + t('zaloBot.regHelpRegister') + '\n' +
       '• ' + t('zaloBot.searchCmd') + '\n' +
-      '• ' + t('zaloBot.detailCmd') + '\n\n' +
+      '• ' + t('zaloBot.detailCmd') + '\n' +
+      '• ' + t('zaloBot.suggestCmd') + '\n' +
+      '• ' + t('zaloBot.paymentCommand') + '\n\n' +
       '💡 ' + t('zaloBot.helpTip');
     return createResponse(
       '🧞 ' + t('zaloBot.helpTitle') + helpBody,
@@ -239,6 +245,16 @@ async function handleIdleState(session: ConversationSession, text: string, zaloU
     return handleRepayCommand(session, zaloUserId);
   }
 
+  // Suggest command (AI recommendations)
+  if (text === 'suggest' || text === 'gợi ý') {
+    return handleSuggestCommand(session, zaloUserId);
+  }
+
+  // Payment command (Sprint 4F)
+  if (text === 'thanh toán' || text === 'payment' || text === 'trả tiền') {
+    return handlePaymentCommand(session, zaloUserId);
+  }
+
   // Cancel/clear cart
   if (text === 'cancel' || text === 'hủy' || text === 'xóa') {
     if (session.orderItems.length > 0) {
@@ -254,6 +270,52 @@ async function handleIdleState(session: ConversationSession, text: string, zaloU
       ['menu', vi ? 'phổ biến' : 'popular'],
       session.state
     );
+  }
+
+  // Recommendation add-to-cart: check if user selected a number from recommendations
+  if (session.recommendationProducts && session.recommendationProducts.length > 0 && /^\d+$/.test(text)) {
+    const idx = parseInt(text) - 1;
+    if (idx >= 0 && idx < session.recommendationProducts.length) {
+      const product = session.recommendationProducts[idx];
+
+      // Add to cart with quantity 1 (user can adjust later in review)
+      const newItem: ZaloOrderItem = {
+        productId: product.id,
+        productName: product.name,
+        sku: product.sku,
+        unitPrice: product.basePrice,
+        quantity: 1,
+        totalPrice: product.basePrice,
+      };
+
+      // Check if product already in cart — increment quantity
+      const existingIdx = session.orderItems.findIndex((item) => item.productId === product.id);
+      if (existingIdx >= 0) {
+        session.orderItems[existingIdx].quantity += 1;
+        session.orderItems[existingIdx].totalPrice = session.orderItems[existingIdx].quantity * session.orderItems[existingIdx].unitPrice;
+      } else {
+        session.orderItems.push(newItem);
+      }
+
+      const newTotal = session.orderItems.reduce((sum, item) => sum + item.totalPrice, 0);
+      updateSession(zaloUserId, {
+        orderItems: session.orderItems,
+        orderTotal: newTotal,
+        recommendationProducts: undefined, // Clear recommendations after selection
+      });
+
+      const cartSummary = session.orderItems
+        .map((item, i) => `${i + 1}. ${item.productName} x${item.quantity} = ${formatVND(item.totalPrice)}`)
+        .join('\n');
+
+      return createResponse(
+        t('zaloBot.suggestAddToCart', { name: product.name }) +
+        t('zaloBot.suggestViewCart', { total: formatVND(newTotal) }) +
+        '\n' + cartSummary,
+        [vi ? 'đặt hàng' : 'order', vi ? 'thêm' : 'add', vi ? 'xóa' : 'clear'],
+        'REVIEWING_ORDER'
+      );
+    }
   }
 
   // Check if this looks like a product search (default behavior)
@@ -637,18 +699,148 @@ async function handlePaymentState(session: ConversationSession, text: string, za
     );
   }
 
-  // Create the order in the database (atomic transaction)
-  try {
-    const orderItems = session.orderItems;
-    const subtotalAmount = orderItems.reduce((sum, item) => sum + item.totalPrice, 0);
-    const discountAmount = session.orderTotal - finalTotal;
-    const deliveryFee = paymentMethod === 'COD' ? 15000 : 0;
-    const grandTotal = finalTotal + deliveryFee;
+  const subtotalAmount = session.orderTotal;
+  const discountAmount = session.orderTotal - finalTotal;
+  const deliveryFee = paymentMethod === 'COD' ? 15000 : 0;
+  const grandTotal = finalTotal + deliveryFee;
 
+  // Credit validation before showing confirmation
+  if (paymentMethod === 'CREDIT') {
+    try {
+      const shop = await findOrCreateShopByZaloUser(zaloUserId);
+      if (shop.creditStatus === 'LOCKED' || shop.creditStatus === 'OVERDUE') {
+        const status = shop.creditStatus === 'OVERDUE' ? t('zaloBot.creditOverdueLabel') : t('zaloBot.creditLockedLabel');
+        return createResponse(
+          t('zaloBot.creditLockedError', { status }),
+          ['1', '3', (vi ? 'quay lại' : 'back')],
+          'AWAITING_PAYMENT_METHOD'
+        );
+      }
+      const available = shop.creditLimit - shop.creditBalance;
+      if (available < grandTotal) {
+        return createResponse(
+          t('zaloBot.creditInsufficientDetail', { available: formatVND(available), required: formatVND(grandTotal) }),
+          ['1', '3', (vi ? 'trả nợ' : 'repay')],
+          'AWAITING_PAYMENT_METHOD'
+        );
+      }
+    } catch {
+      // Continue to confirmation if credit check fails
+    }
+  }
+
+  // Store pending payment info and show confirmation screen
+  const paymentLabels: Record<string, string> = {
+    DIGITAL: t('zaloBot.payNowLabel'),
+    CREDIT: t('zaloBot.creditLabel'),
+    COD: 'COD',
+  };
+
+  updateSession(zaloUserId, {
+    state: 'AWAITING_ORDER_CONFIRM',
+    pendingPayment: {
+      method: paymentMethod,
+      discountAmount,
+      deliveryFee,
+      grandTotal,
+    },
+  });
+
+  // Build confirmation summary
+  const itemsList = session.orderItems
+    .map((item, i) => `  ${i + 1}. ${item.productName} × ${item.quantity} = ${formatVND(item.totalPrice)}`)
+    .join('\n');
+
+  let confirmText =
+    t('zaloBot.confirmTitle') +
+    t('zaloBot.confirmItems') + '\n' +
+    itemsList + '\n\n' +
+    t('zaloBot.confirmPayment') + paymentLabels[paymentMethod] + '\n' +
+    `  ${t('zaloBot.confirmSubtotal')}: ${formatVND(subtotalAmount)}\n`;
+
+  if (discountAmount > 0) {
+    confirmText += `  ${t('zaloBot.confirmDiscount')}: -${formatVND(discountAmount)}\n`;
+  }
+  if (deliveryFee > 0) {
+    confirmText += `  ${t('zaloBot.confirmDelivery')}: ${formatVND(deliveryFee)}\n`;
+  }
+
+  confirmText += `  ${t('zaloBot.confirmTotal')}: ${formatVND(grandTotal)}`;
+  confirmText += t('zaloBot.confirmHint');
+
+  return createResponse(
+    confirmText,
+    [vi ? 'đồng ý' : 'ok', vi ? 'quay lại' : 'back', vi ? 'hủy' : 'cancel'],
+    'AWAITING_ORDER_CONFIRM'
+  );
+}
+
+// ============================================
+// STATE: ORDER CONFIRMATION (Sprint 4C)
+// ============================================
+
+async function handleOrderConfirmState(session: ConversationSession, text: string, zaloUserId: string): Promise<BotResponse> {
+  const t = createTranslator(session.language);
+  const vi = session.language === 'vi';
+
+  // Back to payment options
+  if (text === 'back' || text === 'quay lại') {
+    updateSession(zaloUserId, { state: 'AWAITING_PAYMENT_METHOD', pendingPayment: undefined });
+    return handleShowPaymentOptions(session, zaloUserId);
+  }
+
+  // Cancel — back to cart review
+  if (text === 'cancel' || text === 'hủy') {
+    updateSession(zaloUserId, { state: 'REVIEWING_ORDER', pendingPayment: undefined });
+    const orderSummary = session.orderItems
+      .map((item, i) => `${i + 1}. ${item.productName} × ${item.quantity} = ${formatVND(item.totalPrice)}`)
+      .join('\n');
+    return createResponse(
+      t('zaloBot.cartBackTitle') +
+      orderSummary + '\n\n' +
+      t('zaloBot.cartOptionsHint'),
+      [vi ? 'đặt hàng' : 'order', vi ? 'thêm' : 'add', vi ? 'xóa' : 'clear'],
+      'REVIEWING_ORDER'
+    );
+  }
+
+  // Confirm order
+  if (text === 'ok' || text === 'đồng ý' || text === 'yes' || text === 'xác nhận') {
+    if (!session.pendingPayment) {
+      // Missing payment context, go back to payment selection
+      updateSession(zaloUserId, { state: 'AWAITING_PAYMENT_METHOD' });
+      return handleShowPaymentOptions(session, zaloUserId);
+    }
+    return executeOrderCreation(session, zaloUserId);
+  }
+
+  // Unknown input — show hint
+  return createResponse(
+    t('zaloBot.confirmBackHint'),
+    [vi ? 'đồng ý' : 'ok', vi ? 'quay lại' : 'back', vi ? 'hủy' : 'cancel'],
+    'AWAITING_ORDER_CONFIRM'
+  );
+}
+
+// ============================================
+// HELPER: Execute order creation (extracted from handlePaymentState)
+// ============================================
+
+async function executeOrderCreation(session: ConversationSession, zaloUserId: string): Promise<BotResponse> {
+  const t = createTranslator(session.language);
+  const vi = session.language === 'vi';
+  const paymentMethod = session.pendingPayment!.method;
+  const discountAmount = session.pendingPayment!.discountAmount;
+  const deliveryFee = session.pendingPayment!.deliveryFee;
+  const grandTotal = session.pendingPayment!.grandTotal;
+  const orderItems = session.orderItems;
+  const subtotalAmount = orderItems.reduce((sum, item) => sum + item.totalPrice, 0);
+
+  try {
     // Find or create shop
     let shop = await findOrCreateShopByZaloUser(zaloUserId);
 
-    // Re-fetch shop with credit info for credit validation
+    // Re-fetch shop with credit info
     const shopWithCredit = await db.shop.findUnique({
       where: { id: shop.id },
       include: { user: { select: { phone: true, name: true } } },
@@ -659,19 +851,20 @@ async function handlePaymentState(session: ConversationSession, text: string, za
     }
     shop = shopWithCredit as typeof shop & { user: { phone: string; name: string } };
 
-    // Credit validation
+    // Credit re-validation (in case balance changed between confirmation and now)
     if (paymentMethod === 'CREDIT') {
       if (shop.creditStatus === 'LOCKED' || shop.creditStatus === 'OVERDUE') {
         const status = shop.creditStatus === 'OVERDUE' ? t('zaloBot.creditOverdueLabel') : t('zaloBot.creditLockedLabel');
+        updateSession(zaloUserId, { state: 'AWAITING_PAYMENT_METHOD', pendingPayment: undefined });
         return createResponse(
           t('zaloBot.creditLockedError', { status }),
           ['1', '3', (vi ? 'quay lại' : 'back')],
           'AWAITING_PAYMENT_METHOD'
         );
       }
-
       const available = shop.creditLimit - shop.creditBalance;
       if (available < grandTotal) {
+        updateSession(zaloUserId, { state: 'AWAITING_PAYMENT_METHOD', pendingPayment: undefined });
         return createResponse(
           t('zaloBot.creditInsufficientDetail', { available: formatVND(available), required: formatVND(grandTotal) }),
           ['1', '3', (vi ? 'trả nợ' : 'repay')],
@@ -715,8 +908,11 @@ async function handlePaymentState(session: ConversationSession, text: string, za
     // Generate idempotency key
     const idempotencyKey = generateIdempotencyKey(zaloUserId);
 
+    // Collect product IDs for recommendations
+    const orderedProductIds = orderItems.map((item) => item.productId);
+
     // Atomic order creation
-    const order = await db.$transaction(async (tx) => {
+    await db.$transaction(async (tx) => {
       // Verify stock again within transaction
       for (const item of orderItems) {
         const product = await tx.product.findUnique({ where: { id: item.productId } });
@@ -788,7 +984,6 @@ async function handlePaymentState(session: ConversationSession, text: string, za
           where: { id: shop.id },
           data: {
             creditBalance: newBalance,
-            // Auto-lock if at limit
             ...(newBalance >= shop.creditLimit ? { creditStatus: 'LOCKED' } : {}),
           },
         });
@@ -813,12 +1008,10 @@ async function handlePaymentState(session: ConversationSession, text: string, za
           },
         });
       }
-
-      return newOrder;
     });
 
-    // Reset session
-    resetSession(zaloUserId);
+    // Generate AI recommendations based on ordered products
+    const recommendations = await generateRecommendations(orderedProductIds, zaloUserId);
 
     const paymentLabels: Record<string, string> = {
       DIGITAL: t('zaloBot.payNowLabel'),
@@ -826,16 +1019,69 @@ async function handlePaymentState(session: ConversationSession, text: string, za
       COD: 'COD',
     };
 
-    return createResponse(
+    // For DIGITAL payment: redirect to gateway selection
+    if (paymentMethod === 'DIGITAL') {
+      // Reset session, store order context, go to gateway selection
+      resetSession(zaloUserId);
+      updateSession(zaloUserId, {
+        state: 'AWAITING_PAYMENT_GATEWAY',
+        lastCreatedOrderId: (await db.order.findUnique({ where: { orderNumber } }))!.id,
+        lastOrderedProductIds: orderedProductIds,
+        recommendationProducts: recommendations,
+      });
+
+      const gatewayMsg =
+        t('zaloBot.orderSuccess') +
+        t('zaloBot.orderNumberLabel') + orderNumber + '\n' +
+        `${orderItems.length} ${t('zaloBot.orderItemsLabel')} | ${formatVND(grandTotal)}\n` +
+        t('zaloBot.orderPaymentLabel') + paymentLabels[paymentMethod] +
+        (discountAmount > 0 ? t('zaloBot.orderSaved', { amount: formatVND(discountAmount) }) : '') +
+        '\n\n' +
+        t('zaloBot.paymentGatewayTitle') +
+        t('zaloBot.paymentGatewayZaloPay') + '\n' +
+        t('zaloBot.paymentGatewayMoMo') + '\n\n' +
+        t('zaloBot.paymentGatewayHint');
+
+      return createResponse(
+        gatewayMsg,
+        ['1', '2', (vi ? 'hủy' : 'cancel')],
+        'AWAITING_PAYMENT_GATEWAY'
+      );
+    }
+
+    // For CREDIT and COD: show success immediately
+    // Reset session but preserve recommendation context
+    resetSession(zaloUserId);
+    updateSession(zaloUserId, {
+      lastOrderedProductIds: orderedProductIds,
+      recommendationProducts: recommendations,
+    });
+
+    // Build success message + recommendations
+    let successMsg =
       t('zaloBot.orderSuccess') +
       t('zaloBot.orderNumberLabel') + orderNumber + '\n' +
       `${orderItems.length} ${t('zaloBot.orderItemsLabel')} | ${formatVND(grandTotal)}\n` +
       t('zaloBot.orderPaymentLabel') + paymentLabels[paymentMethod] +
       (discountAmount > 0 ? t('zaloBot.orderSaved', { amount: formatVND(discountAmount) }) : '') +
       (deliveryFee > 0 ? t('zaloBot.orderDeliveryFee', { fee: formatVND(deliveryFee) }) : '') + '\n\n' +
-      t('zaloBot.orderProcessing'),
+      t('zaloBot.orderProcessing');
+
+    // Append recommendations if available
+    if (recommendations.length > 0) {
+      const recLines = recommendations.map((p, i) => formatProductLine(p, i + 1)).join('\n\n');
+      successMsg += t('zaloBot.suggestAfterOrderTitle') + recLines + '\n\n' + t('zaloBot.suggestAfterOrderHint');
+      return createResponse(
+        successMsg,
+        [...recommendations.map((_, i) => `${i + 1}`), 'menu'],
+        'IDLE'
+      );
+    }
+
+    return createResponse(
+      successMsg,
       [vi ? 'đơn hàng' : 'orders', 'menu'],
-      'ORDER_CONFIRMED'
+      'IDLE'
     );
   } catch (error) {
     console.error('[ZALO ORDER CREATE ERROR]', error);
@@ -845,6 +1091,179 @@ async function handlePaymentState(session: ConversationSession, text: string, za
       t('zaloBot.orderErrorMsg') + (errorMsg ? '\n' + errorMsg : '') + t('zaloBot.orderErrorHint'),
       ['help', 'menu'],
       'IDLE'
+    );
+  }
+}
+
+// ============================================
+// STATE: AWAITING PAYMENT GATEWAY (Sprint 4F)
+// After DIGITAL order creation, choose ZaloPay/MoMo
+// ============================================
+
+async function handlePaymentGatewayState(session: ConversationSession, text: string, zaloUserId: string): Promise<BotResponse> {
+  const t = createTranslator(session.language);
+  const vi = session.language === 'vi';
+
+  // Cancel
+  if (text === 'cancel' || text === 'hủy') {
+    resetSession(zaloUserId);
+    return createResponse(
+      t('zaloBot.cartCleared'),
+      ['menu'],
+      'IDLE'
+    );
+  }
+
+  // Parse gateway selection
+  let gateway: 'ZALOPAY' | 'MOMO' | null = null;
+  if (text === '1') gateway = 'ZALOPAY';
+  else if (text === '2') gateway = 'MOMO';
+
+  if (!gateway) {
+    return createResponse(
+      t('zaloBot.paymentGatewayTitle') +
+      t('zaloBot.paymentGatewayZaloPay') + '\n' +
+      t('zaloBot.paymentGatewayMoMo') + '\n\n' +
+      t('zaloBot.paymentGatewayHint'),
+      ['1', '2', (vi ? 'hủy' : 'cancel')],
+      'AWAITING_PAYMENT_GATEWAY'
+    );
+  }
+
+  // Store selected gateway and create payment
+  updateSession(zaloUserId, { pendingPaymentGateway: gateway });
+
+  if (!session.lastCreatedOrderId) {
+    resetSession(zaloUserId);
+    return createResponse(
+      t('zaloBot.orderErrorMsg'),
+      ['help', 'menu'],
+      'IDLE'
+    );
+  }
+
+  try {
+    // Dynamically import payment service (server-only)
+    const { createPaymentForOrder } = await import('../payment/payment-service');
+    const result = await createPaymentForOrder(session.lastCreatedOrderId, gateway);
+
+    if (!result.success || !result.paymentUrl) {
+      // Payment creation failed — reset and show error
+      const orderId = session.lastCreatedOrderId;
+      resetSession(zaloUserId);
+      return createResponse(
+        t('zaloBot.paymentCreatedError') + '\n' + (result.error || ''),
+        ['menu', vi ? 'thanh toán' : 'payment'],
+        'IDLE'
+      );
+    }
+
+    // Payment created successfully
+    const recProducts = session.recommendationProducts;
+    resetSession(zaloUserId);
+    if (recProducts && recProducts.length > 0) {
+      updateSession(zaloUserId, { recommendationProducts: recProducts });
+    }
+
+    let paymentMsg =
+      t('zaloBot.paymentCreatedTitle') +
+      t('zaloBot.paymentCreatedUrl', { url: result.paymentUrl }) +
+      t('zaloBot.paymentCreatedExpiry') +
+      t('zaloBot.paymentCreatedReminder') +
+      t('zaloBot.paymentRetryHint');
+
+    const quickReplies = [vi ? 'thanh toán' : 'payment', 'menu'];
+    if (recProducts && recProducts.length > 0) {
+      const recLines = recProducts.map((p, i) => formatProductLine(p, i + 1)).join('\n\n');
+      paymentMsg += t('zaloBot.suggestAfterOrderTitle') + recLines + '\n\n' + t('zaloBot.suggestAfterOrderHint');
+      quickReplies.push(...recProducts.map((_, i) => `${i + 1}`));
+    }
+
+    return createResponse(paymentMsg, quickReplies, 'IDLE');
+  } catch (error) {
+    console.error('[PAYMENT GATEWAY ERROR]', error);
+    resetSession(zaloUserId);
+    return createResponse(
+      t('zaloBot.paymentCreatedError'),
+      ['menu', vi ? 'thanh toán' : 'payment'],
+      'IDLE'
+    );
+  }
+}
+
+// ============================================
+// COMMAND: Payment Status (Sprint 4F)
+// "thanh toán" / "payment" / "trả tiền"
+// ============================================
+
+async function handlePaymentCommand(session: ConversationSession, zaloUserId: string): Promise<BotResponse> {
+  const t = createTranslator(session.language);
+  const vi = session.language === 'vi';
+
+  try {
+    const shop = await findOrCreateShopByZaloUser(zaloUserId);
+
+    // Find orders with DIGITAL payment method that are PENDING
+    const pendingOrders = await db.order.findMany({
+      where: {
+        shopId: shop.id,
+        paymentMethod: 'DIGITAL',
+        paymentStatus: 'PENDING',
+        status: { not: 'CANCELLED' },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+      include: {
+        payments: {
+          where: { status: 'PENDING' },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
+      },
+    });
+
+    if (pendingOrders.length === 0) {
+      return createResponse(
+        t('zaloBot.paymentNoPending'),
+        ['menu', vi ? 'đơn hàng' : 'orders'],
+        'IDLE'
+      );
+    }
+
+    let msg = t('zaloBot.paymentPendingTitle');
+
+    for (const order of pendingOrders) {
+      msg += t('zaloBot.paymentPendingMsg', {
+        orderNumber: order.orderNumber,
+        amount: formatVND(order.totalAmount),
+      });
+
+      // If has pending payment, show the URL
+      if (order.payments.length > 0 && order.payments[0].paymentUrl) {
+        const payment = order.payments[0];
+        const isExpired = payment.expiresAt && new Date() > payment.expiresAt;
+        if (isExpired) {
+          msg += t('zaloBot.paymentExpiredMsg') + '\n';
+        } else {
+          msg += t('zaloBot.paymentCreatedUrlFallback', { url: payment.paymentUrl }) + '\n';
+        }
+      }
+      msg += '\n';
+    }
+
+    msg += t('zaloBot.paymentRetryHint');
+
+    return createResponse(
+      msg,
+      ['menu', vi ? 'đơn hàng' : 'orders'],
+      'IDLE'
+    );
+  } catch (error) {
+    console.error('[PAYMENT COMMAND ERROR]', error);
+    return createResponse(
+      t('zaloBot.ordersError'),
+      ['menu'],
+      session.state
     );
   }
 }
@@ -874,6 +1293,203 @@ async function handleConfirmedState(session: ConversationSession, text: string, 
   // Any message resets to idle
   resetSession(zaloUserId);
   return handleIdleState(session, text, zaloUserId);
+}
+
+// ============================================
+// COMMAND: Suggest / AI Recommendations (gợi ý)
+// ============================================
+
+async function handleSuggestCommand(session: ConversationSession, zaloUserId: string): Promise<BotResponse> {
+  const t = createTranslator(session.language);
+  const vi = session.language === 'vi';
+
+  try {
+    const shop = await findOrCreateShopByZaloUser(zaloUserId);
+
+    // Fetch the shop's recent order items to determine personalization
+    const recentItems = await db.orderItem.findMany({
+      where: {
+        order: { shopId: shop.id, status: { not: 'CANCELLED' } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+      select: { productId: true },
+    });
+
+    if (recentItems.length === 0) {
+      // No order history — show popular products as generic recommendations
+      const popular = await getPopularProducts(3);
+      if (popular.length === 0) {
+        return createResponse(
+          t('zaloBot.suggestEmpty'),
+          ['menu', vi ? 'phổ biến' : 'popular'],
+          'IDLE'
+        );
+      }
+      const lines = popular.map((p, i) => formatProductLine(p, i + 1)).join('\n\n');
+      updateSession(zaloUserId, { recommendationProducts: popular });
+      return createResponse(
+        t('zaloBot.suggestNoHistory') + '\n\n' +
+        t('zaloBot.suggestTitle') +
+        lines + '\n\n' +
+        t('zaloBot.suggestAfterOrderHint'),
+        [...popular.map((_, i) => `${i + 1}`), 'menu'],
+        'IDLE'
+      );
+    }
+
+    // Build list of frequently ordered product IDs
+    const productFreq = new Map<string, number>();
+    for (const item of recentItems) {
+      productFreq.set(item.productId, (productFreq.get(item.productId) || 0) + 1);
+    }
+    // Sort by frequency descending, take top 5
+    const topProductIds = [...productFreq.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([id]) => id);
+
+    const recommendations = await generateRecommendations(topProductIds, zaloUserId);
+
+    if (recommendations.length === 0) {
+      // Could not find recommendations — fallback to popular
+      const popular = await getPopularProducts(3);
+      if (popular.length === 0) {
+        return createResponse(
+          t('zaloBot.suggestEmpty'),
+          ['menu', vi ? 'phổ biến' : 'popular'],
+          'IDLE'
+        );
+      }
+      const lines = popular.map((p, i) => formatProductLine(p, i + 1)).join('\n\n');
+      updateSession(zaloUserId, { recommendationProducts: popular });
+      return createResponse(
+        t('zaloBot.suggestTitle') +
+        lines + '\n\n' +
+        t('zaloBot.suggestAfterOrderHint'),
+        [...popular.map((_, i) => `${i + 1}`), 'menu'],
+        'IDLE'
+      );
+    }
+
+    const lines = recommendations.map((p, i) => formatProductLine(p, i + 1)).join('\n\n');
+    updateSession(zaloUserId, { recommendationProducts: recommendations });
+
+    return createResponse(
+      t('zaloBot.suggestTitle') +
+      lines + '\n\n' +
+      t('zaloBot.suggestAfterOrderHint'),
+      [...recommendations.map((_, i) => `${i + 1}`), 'menu'],
+      'IDLE'
+    );
+  } catch (error) {
+    console.error('[ZALO SUGGEST ERROR]', error);
+    return createResponse(
+      t('zaloBot.suggestEmpty'),
+      ['menu', vi ? 'phổ biến' : 'popular'],
+      'IDLE'
+    );
+  }
+}
+
+// ============================================
+// AI RECOMMENDATIONS ENGINE
+// ============================================
+
+/**
+ * Generate product recommendations based on ordered product IDs.
+ * Strategy:
+ *   1. Find categories of ordered products
+ *   2. Get top-selling products in those categories (excluding already-ordered)
+ *   3. Also consider "complementary" categories (e.g., if bought noodles, suggest sauce)
+ *   4. Return up to 3 products
+ */
+async function generateRecommendations(
+  orderedProductIds: string[],
+  zaloUserId: string,
+  limit: number = 3
+): Promise<ZaloProductResult[]> {
+  if (!orderedProductIds || orderedProductIds.length === 0) return [];
+
+  try {
+    // Step 1: Get categories of ordered products
+    const orderedProducts = await db.product.findMany({
+      where: { id: { in: orderedProductIds } },
+      select: { id: true, categoryId: true },
+    });
+
+    const categoryIds = [...new Set(orderedProducts.map((p) => p.categoryId))];
+    if (categoryIds.length === 0) return [];
+
+    // Step 2: Get the shop's existing order history to exclude already-purchased products
+    const shop = await findOrCreateShopByZaloUser(zaloUserId);
+    const pastItems = await db.orderItem.findMany({
+      where: { order: { shopId: shop.id, status: { not: 'CANCELLED' } } },
+      select: { productId: true },
+      distinct: ['productId'],
+    });
+    const excludeIds = new Set(pastItems.map((item) => item.productId));
+
+    // Step 3: Find top products from the same categories (sorted by order popularity)
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const popularInCategories = await db.orderItem.groupBy({
+      by: ['productId'],
+      where: {
+        order: { createdAt: { gte: thirtyDaysAgo }, status: { not: 'CANCELLED' } },
+        product: { categoryId: { in: categoryIds }, isActive: true, deletedAt: null },
+      },
+      _sum: { quantity: true },
+      orderBy: { _sum: { quantity: 'desc' } },
+      take: limit + 5, // Fetch extra to have room for filtering
+    });
+
+    // Step 4: Fetch full product data and filter
+    const candidateIds = popularInCategories
+      .map((p) => p.productId)
+      .filter((id) => !excludeIds.has(id));
+
+    if (candidateIds.length === 0) return [];
+
+    const products = await db.product.findMany({
+      where: {
+        id: { in: candidateIds },
+        isActive: true,
+        deletedAt: null,
+        stockQuantity: { gt: 0 },
+      },
+      include: { category: { select: { name: true } } },
+      take: limit,
+    });
+
+    const results: ZaloProductResult[] = products.map((p) => ({
+      id: p.id,
+      sku: p.sku,
+      name: p.name,
+      nameEn: p.nameEn || undefined,
+      basePrice: p.basePrice,
+      groupBuyPrice: p.groupBuyPrice,
+      unit: p.unit,
+      stockQuantity: p.stockQuantity,
+      category: p.category?.name || '',
+      isPrivateLabel: p.isPrivateLabel,
+    }));
+
+    // Step 5: If same-category recommendations are insufficient, add from popular
+    if (results.length < limit) {
+      const popular = await getPopularProducts(limit);
+      for (const p of popular) {
+        if (results.length >= limit) break;
+        if (excludeIds.has(p.id)) continue;
+        if (results.some((r) => r.id === p.id)) continue;
+        results.push(p);
+      }
+    }
+
+    return results.slice(0, limit);
+  } catch (error) {
+    console.error('[ZALO RECOMMENDATIONS ENGINE ERROR]', error);
+    return [];
+  }
 }
 
 // ============================================
@@ -2053,7 +2669,7 @@ async function showProductDetail(product: ZaloProductResult, session: Conversati
   }
 
   const stockIcon = fullProduct.stockQuantity > 50 ? '✅' : fullProduct.stockQuantity > 0 ? '⚠️' : '❌';
-  const stockLabel = fullProduct.stockQuantity > 50 ? '' : fullProduct.stockQuantity > 0 ? ' (còn ít!)' : ' (hết hàng!)';
+  const stockLabel = fullProduct.stockQuantity > 50 ? '' : fullProduct.stockQuantity > 0 ? t('zaloBot.productDetailStockLow') : t('zaloBot.productDetailStockOut');
   const plTag = fullProduct.isPrivateLabel ? ' [ALADIN]' : '';
 
   let detail = t('zaloBot.productDetailTitle') +
