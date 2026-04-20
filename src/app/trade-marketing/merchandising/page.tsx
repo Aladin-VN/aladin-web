@@ -80,7 +80,7 @@ export default function MerchandisingPage() {
   // Filter state
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
@@ -114,7 +114,7 @@ export default function MerchandisingPage() {
         limit: String(limit),
         search: debouncedSearch,
       });
-      if (statusFilter) params.set('status', statusFilter);
+      if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter);
 
       const res = await fetch(`/api/merchandising?${params.toString()}`);
       const json = await res.json();
@@ -171,11 +171,11 @@ export default function MerchandisingPage() {
 
   const resetFilters = () => {
     setSearchQuery('');
-    setStatusFilter('');
+    setStatusFilter('all');
     setPage(1);
   };
 
-  const hasFilters = debouncedSearch || statusFilter;
+  const hasFilters = debouncedSearch || (statusFilter && statusFilter !== 'all');
 
   const getPageNumbers = () => {
     const pages: number[] = [];
@@ -293,7 +293,7 @@ export default function MerchandisingPage() {
                       <SelectValue placeholder={t('All Status', 'Tat ca TT')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">{t('All Status', 'Tat ca TT')}</SelectItem>
+                      <SelectItem value="all">{t('All Status', 'Tat ca TT')}</SelectItem>
                       <SelectItem value="PENDING_REVIEW">{t('Pending Review', 'Cho duyet')}</SelectItem>
                       <SelectItem value="APPROVED">{t('Approved', 'Da duyet')}</SelectItem>
                       <SelectItem value="REJECTED">{t('Rejected', 'Da tu choi')}</SelectItem>

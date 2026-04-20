@@ -132,9 +132,9 @@ export default function PromotionsPage() {
   // Filter state
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [promoTypeFilter, setPromoTypeFilter] = useState('');
-  const [manufacturerFilter, setManufacturerFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [promoTypeFilter, setPromoTypeFilter] = useState('all');
+  const [manufacturerFilter, setManufacturerFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
@@ -169,9 +169,9 @@ export default function PromotionsPage() {
         limit: String(limit),
         search: debouncedSearch,
       });
-      if (promoTypeFilter) params.set('promoType', promoTypeFilter);
-      if (manufacturerFilter) params.set('manufacturerId', manufacturerFilter);
-      if (statusFilter) params.set('status', statusFilter);
+      if (promoTypeFilter && promoTypeFilter !== 'all') params.set('promoType', promoTypeFilter);
+      if (manufacturerFilter && manufacturerFilter !== 'all') params.set('manufacturerId', manufacturerFilter);
+      if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter);
 
       const res = await fetch(`/api/promotions?${params.toString()}`);
       const json = await res.json();
@@ -255,13 +255,13 @@ export default function PromotionsPage() {
 
   const resetFilters = () => {
     setSearchQuery('');
-    setPromoTypeFilter('');
-    setManufacturerFilter('');
-    setStatusFilter('');
+    setPromoTypeFilter('all');
+    setManufacturerFilter('all');
+    setStatusFilter('all');
     setPage(1);
   };
 
-  const hasFilters = debouncedSearch || promoTypeFilter || manufacturerFilter || statusFilter;
+  const hasFilters = debouncedSearch || (promoTypeFilter && promoTypeFilter !== 'all') || (manufacturerFilter && manufacturerFilter !== 'all') || (statusFilter && statusFilter !== 'all');
 
   const getPageNumbers = () => {
     const pages: number[] = [];
@@ -403,7 +403,7 @@ export default function PromotionsPage() {
                       <SelectValue placeholder={t('All Types', 'Tat loai')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">{t('All Types', 'Tat loai')}</SelectItem>
+                      <SelectItem value="all">{t('All Types', 'Tat loai')}</SelectItem>
                       <SelectItem value="BUY_X_GET_Y">{t('Buy X Get Y', 'Mua X Tang Y')}</SelectItem>
                       <SelectItem value="PERCENT_OFF">{t('Percentage Off', 'Giam theo %')}</SelectItem>
                       <SelectItem value="FIXED_DISCOUNT">{t('Fixed Discount', 'Giam co dinh')}</SelectItem>
@@ -414,7 +414,7 @@ export default function PromotionsPage() {
                       <SelectValue placeholder={t('All Manufacturers', 'Tat ca NSX')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">{t('All Manufacturers', 'Tat ca NSX')}</SelectItem>
+                      <SelectItem value="all">{t('All Manufacturers', 'Tat ca NSX')}</SelectItem>
                       {manufacturers.map((m) => (
                         <SelectItem key={m.id} value={m.id} className="text-xs">{m.name}</SelectItem>
                       ))}
@@ -425,7 +425,7 @@ export default function PromotionsPage() {
                       <SelectValue placeholder={t('All Status', 'Tat ca TT')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">{t('All Status', 'Tat ca TT')}</SelectItem>
+                      <SelectItem value="all">{t('All Status', 'Tat ca TT')}</SelectItem>
                       <SelectItem value="active">{t('Active', 'Hoat dong')}</SelectItem>
                       <SelectItem value="upcoming">{t('Upcoming', 'Sap dien ra')}</SelectItem>
                       <SelectItem value="expired">{t('Expired', 'Het han')}</SelectItem>

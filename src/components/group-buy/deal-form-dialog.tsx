@@ -56,7 +56,7 @@ export function DealFormDialog({
     discountPrice: 0,
     startsAt: '',
     expiresAt: '',
-    wardId: '',
+    wardId: 'none',
     maxParticipants: '',
   });
   const [selectedProduct, setSelectedProduct] = useState<ProductOption | null>(null);
@@ -77,7 +77,7 @@ export function DealFormDialog({
         discountPrice: (deal.discountPrice as number) || 0,
         startsAt: deal.startsAt ? new Date(deal.startsAt as string).toISOString().slice(0, 16) : '',
         expiresAt: deal.expiresAt ? new Date(deal.expiresAt as string).toISOString().slice(0, 16) : '',
-        wardId: (deal.wardId as string) || '',
+        wardId: (deal.wardId as string) || 'none',
         maxParticipants: deal.maxParticipants ? String(deal.maxParticipants) : '',
       });
       // Set selected product from deal
@@ -107,7 +107,7 @@ export function DealFormDialog({
         discountPrice: 0,
         startsAt: new Date().toISOString().slice(0, 16),
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16),
-        wardId: '',
+        wardId: 'none',
         maxParticipants: '',
       });
       setSelectedProduct(null);
@@ -198,7 +198,7 @@ export function DealFormDialog({
         discountPrice: form.discountPrice,
         startsAt: form.startsAt,
         expiresAt: form.expiresAt,
-        wardId: form.wardId || undefined,
+        wardId: form.wardId && form.wardId !== 'none' ? form.wardId : undefined,
         maxParticipants: form.maxParticipants ? parseInt(form.maxParticipants) : undefined,
       };
 
@@ -422,7 +422,7 @@ export function DealFormDialog({
                 <SelectValue placeholder={t('All wards (city-wide)', 'Tất cả phường (toàn thành)')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">{t('All wards (city-wide)', 'Tất cả phường (toàn thành)')}</SelectItem>
+                <SelectItem value="none">{t('All wards (city-wide)', 'Tất cả phường (toàn thành)')}</SelectItem>
                 {wards.map((w) => (
                   <SelectItem key={w.id} value={w.id} className="text-xs">{w.name}</SelectItem>
                 ))}

@@ -86,7 +86,7 @@ export function BrokerFormDialog({
   const [form, setForm] = useState<BrokerFormData>({
     userId: '',
     tier: 'WARD_LEVEL',
-    wardId: '',
+    wardId: 'none',
     commissionRate: '3',
   });
 
@@ -127,14 +127,14 @@ export function BrokerFormDialog({
       setForm({
         userId: broker.userId,
         tier: broker.tier,
-        wardId: broker.wardId || '',
+        wardId: broker.wardId || 'none',
         commissionRate: String(Math.round(broker.commissionRate * 100)),
       });
     } else if (open) {
       setForm({
         userId: '',
         tier: 'WARD_LEVEL',
-        wardId: '',
+        wardId: 'none',
         commissionRate: '3',
       });
     }
@@ -170,7 +170,7 @@ export function BrokerFormDialog({
         payload.userId = form.userId.trim();
       }
 
-      if (form.wardId) {
+      if (form.wardId && form.wardId !== 'none') {
         payload.wardId = form.wardId;
       } else if (isEdit) {
         payload.wardId = null;
@@ -283,7 +283,7 @@ export function BrokerFormDialog({
                 <SelectValue placeholder={t('Select ward (optional)', 'Chon phuong (tu chon)')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">{t('None', 'Khong')}</SelectItem>
+                <SelectItem value="none">{t('None', 'Khong')}</SelectItem>
                 {wards.map((ward) => (
                   <SelectItem key={ward.id} value={ward.id}>
                     {ward.name} ({ward.district})
