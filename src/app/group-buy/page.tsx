@@ -132,8 +132,8 @@ export default function GroupBuyPage() {
   // Filter state
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [wardFilter, setWardFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [wardFilter, setWardFilter] = useState('all');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
@@ -169,8 +169,8 @@ export default function GroupBuyPage() {
         limit: String(limit),
         search: debouncedSearch,
       });
-      if (statusFilter) params.set('status', statusFilter);
-      if (wardFilter) params.set('wardId', wardFilter);
+      if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter);
+      if (wardFilter && wardFilter !== 'all') params.set('wardId', wardFilter);
 
       const res = await fetch(`/api/group-deals?${params.toString()}`);
       const json = await res.json();
@@ -263,12 +263,12 @@ export default function GroupBuyPage() {
 
   const resetFilters = () => {
     setSearchQuery('');
-    setStatusFilter('');
-    setWardFilter('');
+    setStatusFilter('all');
+    setWardFilter('all');
     setPage(1);
   };
 
-  const hasFilters = debouncedSearch || statusFilter || wardFilter;
+  const hasFilters = debouncedSearch || (statusFilter && statusFilter !== 'all') || (wardFilter && wardFilter !== 'all');
 
   const getPageNumbers = () => {
     const pages: number[] = [];
@@ -407,7 +407,7 @@ export default function GroupBuyPage() {
                       <SelectValue placeholder={t('All Status', 'Tất cả TT')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">{t('All Status', 'Tất cả TT')}</SelectItem>
+                      <SelectItem value="all">{t('All Status', 'Tất cả TT')}</SelectItem>
                       <SelectItem value="ACTIVE">{t('Active', 'Hoạt động')}</SelectItem>
                       <SelectItem value="COMPLETED">{t('Completed', 'Hoàn thành')}</SelectItem>
                       <SelectItem value="EXPIRED">{t('Expired', 'Hết hạn')}</SelectItem>
@@ -419,7 +419,7 @@ export default function GroupBuyPage() {
                       <SelectValue placeholder={t('All Wards', 'Tất cả phường')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">{t('All Wards', 'Tất cả phường')}</SelectItem>
+                      <SelectItem value="all">{t('All Wards', 'Tất cả phường')}</SelectItem>
                       {wards.map((w) => (
                         <SelectItem key={w.id} value={w.id} className="text-xs">{w.name}</SelectItem>
                       ))}
