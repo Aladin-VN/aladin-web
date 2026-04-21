@@ -1,4 +1,5 @@
 'use client';
+import { useLocale } from '@/providers/app-provider';
 
 import { useState, useEffect, useCallback } from 'react';
 import {
@@ -59,7 +60,7 @@ interface TerritorySummary {
 }
 
 export default function BrokerTerritoriesPage() {
-  const [locale, setLocale] = useState('vi');
+  const { locale } = useLocale();
   const t = (en: string, vi: string) => locale === 'vi' ? vi : en;
 
   const [territories, setTerritories] = useState<Territory[]>([]);
@@ -97,7 +98,7 @@ export default function BrokerTerritoriesPage() {
     <div className="flex min-h-screen">
       <AdminSidebar locale={locale} userName="Quyet Dinh" userRole="ADMIN" />
       <SidebarInset>
-        <AdminHeader locale={locale} onLocaleChange={setLocale} />
+        <AdminHeader />
 
         <main className="flex-1 p-4 md:p-6 lg:p-8 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

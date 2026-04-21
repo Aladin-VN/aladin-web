@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { AdminSidebar } from '@/components/layout/admin-sidebar';
 import { AdminHeader } from '@/components/layout/admin-header';
 import { SidebarInset } from '@/components/ui/sidebar';
+import { useLocale } from '@/providers/app-provider';
 
 // ============================================
 // Trade Marketing Hub — Navigation Page
@@ -14,6 +15,8 @@ import { SidebarInset } from '@/components/ui/sidebar';
 
 export default function TradeMarketingPage() {
   const router = useRouter();
+  const { locale } = useLocale();
+  const t = (en: string, vi: string) => locale === 'vi' ? vi : en;
 
   const cards = [
     {
@@ -38,18 +41,18 @@ export default function TradeMarketingPage() {
 
   return (
     <div className="flex min-h-screen">
-      <AdminSidebar locale="vi" userName="Quyet Dinh" userRole="ADMIN" />
+      <AdminSidebar />
       <SidebarInset>
-        <AdminHeader locale="vi" onLocaleChange={() => {}} />
+        <AdminHeader />
 
         <main className="flex-1 p-4 md:p-6 lg:p-8 space-y-6">
           {/* Header */}
           <div>
             <h1 className="text-2xl font-bold tracking-tight">
-              Trade Marketing
+              {t('Trade Marketing', 'Trade Marketing')}
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Quan ly chuong trinh khuyen mai va kiem tra trung bay
+              {t('Manage promotions and merchandising audits', 'Quan ly chuong trinh khuyen mai va kiem tra trung bay')}
             </p>
           </div>
 

@@ -1,4 +1,5 @@
 'use client';
+import { useLocale } from '@/providers/app-provider';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
@@ -120,7 +121,7 @@ interface PromotionStats {
 // ============================================
 
 export default function PromotionsPage() {
-  const [locale, setLocale] = useState('vi');
+  const { locale } = useLocale();
   const t = (en: string, vi: string) => locale === 'vi' ? vi : en;
 
   // Data state
@@ -277,7 +278,7 @@ export default function PromotionsPage() {
     <div className="flex min-h-screen">
       <AdminSidebar locale={locale} userName="Quyet Dinh" userRole="ADMIN" />
       <SidebarInset>
-        <AdminHeader locale={locale} onLocaleChange={setLocale} />
+        <AdminHeader />
 
         <main className="flex-1 p-4 md:p-6 lg:p-8 space-y-6">
           {/* Header */}

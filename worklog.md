@@ -1076,4 +1076,24 @@ Stage Summary:
 - Conversation engine now consumes centralized i18n message files instead of hardcoded strings
 - All Sprint 3 order/credit/repay/payment strings externalized and maintainable
 - Quick reply labels remain inline for input matching purposes
-- Build passes clean — Sprint 3F complete
+- Build passes clean — Sprint 3F complete---
+Task ID: 5H-bugfix + 5H-settings-auth
+Agent: Main
+Task: Fix Reports JSON error, Trade Marketing blank page, add locale persistence, language toggle, logout
+
+Work Log:
+- Fixed 6 report API routes (overview, revenue, orders, products, shops-analytics, shipments-analytics) to use NextResponse.json() instead of returning plain objects
+- Created /trade-marketing/page.tsx index page with navigation cards
+- Created /src/providers/app-provider.tsx with LocaleContext (localStorage persistence) and AuthContext (login/logout)
+- Updated root layout.tsx to wrap with AppProvider, default lang="vi"
+- Rewrote AdminHeader: prominent VI/EN toggle button, user dropdown with Profile/Settings/Logout
+- Updated AdminSidebar: uses useAuth() for logout, reads user info from AuthContext
+- Updated 21 page files to use useLocale() from provider instead of per-page useState
+
+Stage Summary:
+- Build: 90+ routes, 0 errors, 0 warnings
+- Locale now persists across page navigations via localStorage
+- Language toggle is prominently visible in header (blue button with Globe icon)
+- Logout clears JWT tokens from localStorage and redirects to /auth/login
+- User menu dropdown accessible from header avatar
+

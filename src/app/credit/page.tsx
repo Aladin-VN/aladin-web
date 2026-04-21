@@ -1,4 +1,5 @@
 'use client';
+import { useLocale } from '@/providers/app-provider';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
@@ -106,7 +107,7 @@ type StatusTab = 'all' | 'active' | 'overdue' | 'locked';
 // ============================================
 
 export default function CreditPage() {
-  const [locale, setLocale] = useState('vi');
+  const { locale } = useLocale();
   const t = (en: string, vi: string) => locale === 'vi' ? vi : en;
 
   // Summary state
@@ -278,7 +279,7 @@ export default function CreditPage() {
     <div className="flex min-h-screen">
       <AdminSidebar locale={locale} userName="Quyet Dinh" userRole="ADMIN" />
       <SidebarInset>
-        <AdminHeader locale={locale} onLocaleChange={setLocale} />
+        <AdminHeader />
 
         <main className="flex-1 p-4 md:p-6 lg:p-8 space-y-6">
           {/* Page Header */}

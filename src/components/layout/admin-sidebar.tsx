@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAuth, useLocale } from '@/providers/app-provider';
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -165,8 +166,13 @@ interface AdminSidebarProps {
   userRole?: string;
 }
 
-export function AdminSidebar({ locale = 'en', userName = 'Admin User', userRole = 'ADMIN' }: AdminSidebarProps) {
+export function AdminSidebar({ locale: localeProp, userName: userNameProp, userRole: userRoleProp }: AdminSidebarProps) {
   const pathname = usePathname();
+  const { logout: authLogout, user: authUser } = useAuth();
+  const { locale: contextLocale } = useLocale();
+  const locale = localeProp || contextLocale;
+  const userName = userNameProp || authUser?.name || 'Admin User';
+  const userRole = userRoleProp || authUser?.role || 'ADMIN';
   const t = (title: string, titleVi: string) => locale === 'vi' ? titleVi : title;
 
   return (
@@ -278,11 +284,9 @@ export function AdminSidebar({ locale = 'en', userName = 'Admin User', userRole 
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/auth/login" className="text-red-600">
+                <DropdownMenuItem onClick={authLogout} className="text-red-600 focus:text-red-600">
                     <LogOut className="mr-2 h-4 w-4" />
                     {locale === 'vi' ? 'Dang xuat' : 'Logout'}
-                  </Link>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
