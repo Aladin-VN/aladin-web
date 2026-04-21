@@ -55,6 +55,7 @@ export async function GET(request: NextRequest) {
 
     // ---- Shop stats with user status ----
     const shops = await db.shop.findMany({
+      where: { deletedAt: null },
       select: {
         id: true, name: true, district: true, province: true,
         loyaltyTier: true, creditStatus: true, creditLimit: true,

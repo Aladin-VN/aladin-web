@@ -93,7 +93,8 @@ export async function GET(request: NextRequest) {
 
     // ---- Shops ----
     const shopStats = await db.shop.findMany({
-      select: { id: true, status: true as any, loyaltyTier: true, creditStatus: true, totalGmv: true, totalOrders: true, creditBalance: true, createdAt: true },
+      where: { deletedAt: null },
+      select: { id: true, userId: true, loyaltyTier: true, creditStatus: true, totalGmv: true, totalOrders: true, creditBalance: true, createdAt: true },
     });
 
     // Map User status to Shop status since Shop doesn't have a status field
@@ -103,7 +104,7 @@ export async function GET(request: NextRequest) {
     });
     const userStatusMap = new Map(shopUsers.map(u => [u.id, u.status]));
 
-    const activeShops = shopStats.filter(s => userStatusMap.get(s.id) === 'ACTIVE').length;
+    const activeShops = shopStats.filter(s => userStatusMap.get(s.userId) === 'ACTIVE').length;
     const newShops = shopStats.filter(s => s.createdAt >= start).length;
     const totalCreditExposure = shopStats.reduce((s, o) => s + o.creditBalance, 0);
     const overdueShops = shopStats.filter(s => s.creditStatus === 'OVERDUE').length;

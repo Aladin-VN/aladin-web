@@ -176,7 +176,7 @@ export async function GET(request: NextRequest) {
     const now2 = new Date();
     const thisMonthStart = new Date(now2.getFullYear(), now2.getMonth(), 1);
     const lastMonthStart = new Date(now2.getFullYear(), now2.getMonth() - 1, 1);
-    const lastMonthEnd = new Date(now2.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+    const lastMonthEnd = new Date(now2.getFullYear(), now2.getMonth(), 0, 23, 59, 59, 999);
 
     const [thisMonthOrders, lastMonthOrders] = await Promise.all([
       db.order.findMany({
