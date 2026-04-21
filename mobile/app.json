@@ -1,0 +1,105 @@
+{
+  "expo": {
+    "name": "ALADIN",
+    "slug": "aladin-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "aladin",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#2563EB"
+    },
+
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "vn.com.aladin.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "CFBundleDisplayName": "ALADIN",
+        "CFBundleName": "ALADIN",
+        "CFBundleShortVersionString": "1.0.0",
+        "LSApplicationQueriesSchemes": ["aladin"],
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": false
+        },
+        "UIBackgroundModes": ["fetch", "remote-notification"],
+        "UIStatusBarStyle": "default",
+        "UISupportedInterfaceOrientations": ["UIInterfaceOrientationPortrait"]
+      },
+      "configPlugins": [
+        [
+          "expo-localization",
+          {
+            "supportedLocales": ["vi", "en"]
+          }
+        ]
+      ]
+    },
+
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#2563EB"
+      },
+      "package": "vn.com.aladin.app",
+      "versionCode": 1,
+      "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "VIBRATE",
+        "RECEIVE_BOOT_COMPLETED",
+        "POST_NOTIFICATIONS",
+        "READ_PHONE_STATE"
+      ],
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "splash": {
+        "image": "./assets/images/splash-icon.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#2563EB",
+        "dark": {
+          "image": "./assets/images/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#1E3A8A"
+        }
+      }
+    },
+
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-localization",
+        {
+          "supportedLocales": ["vi", "en"]
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "enableBackgroundNotifications": true
+        }
+      ]
+    ],
+
+    "experiments": {
+      "typedRoutes": true
+    },
+
+    "extra": {
+      "apiBaseUrl": "http://localhost:3000",
+      "environment": "development"
+    }
+  }
+}
