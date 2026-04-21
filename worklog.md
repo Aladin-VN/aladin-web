@@ -1,4 +1,39 @@
 ---
+Task ID: 5H
+Agent: full-stack-developer
+Task: Sprint 5H — Settings & Auth Hardening
+
+Work Log:
+- Created `src/app/api/users/route.ts` — GET (paginated list with search name/phone/email, role filter 5 roles, status filter 3 statuses, sort by name/createdAt/lastLoginAt/role, includes shop info and broker info, excludes soft-deleted users) + POST (create admin/sales-rep/driver user, validates VN phone, password >= 8 chars, no duplicate phone, audit log USER_CREATED)
+- Created `src/app/api/users/[id]/route.ts` — GET (full detail with shop/broker/related counts) + PATCH (update name/nameEn/email/role/status, audit logs for role/status changes, cannot change own role) + DELETE (soft delete with deletedAt, cannot delete self, cannot delete users with active orders, audit log USER_DELETED)
+- Created `src/app/api/users/stats/route.ts` — Aggregate stats: totalUsers, activeUsers, suspendedUsers, pendingUsers, newThisMonth, newThisWeek, roleDistribution, statusDistribution, recentLogins (24h), per-role counts
+- Created `src/app/api/users/change-password/route.ts` — PATCH (auth required, verify current password, validate new >= 8 chars, hash and update, set mustChangePwd=false, audit log USER_PASSWORD_CHANGED)
+- Created `src/app/api/users/[id]/reset-password/route.ts` — PATCH (admin-only, validates >= 8 chars, hash and update, set mustChangePwd=true on target user, audit log USER_PASSWORD_RESET with adminId)
+- Created `src/app/api/settings/platform/route.ts` — GET (seed default settings via idempotent upsert, return grouped by category: general/credit/notification/security) + PATCH (update one or more settings, validate keys exist, audit log PLATFORM_SETTING_UPDATED per setting)
+- Created `src/app/api/settings/audit-log/route.ts` — GET (paginated with search, action/entity/userId/date-range filters, newest-first sort, includes user info, parsed JSON details, returns filter options from AUDIT_ACTIONS and AUDIT_ENTITIES)
+- Created `src/components/settings/user-role-badge.tsx` — Badge for 5 roles: ADMIN (red, Shield), SHOP_OWNER (emerald, Store), SALES_REP (blue, Users), DRIVER (amber, Truck), BROKER (purple, Megaphone), bilingual vi/en
+- Created `src/components/settings/user-status-badge.tsx` — Badge for 3 statuses: ACTIVE (emerald, CheckCircle), SUSPENDED (red, XCircle), PENDING_VERIFICATION (amber, Clock), bilingual vi/en
+- Created `src/components/settings/user-form-dialog.tsx` — Create/edit user dialog: create mode (phone, password, name, nameEn, email, role select ADMIN/SALES_REP/DRIVER), edit mode (name, nameEn, email, role, status), validation, toast feedback, calls POST/PATCH /api/users
+- Created `src/components/settings/user-detail-drawer.tsx` — Sheet drawer: user info card with role/status badges and SensitiveValue for phone, account details (created, last login, mustChangePwd indicator), related info (shop name, broker tier), statistics (orders/transactions count), quick actions (edit, reset password, suspend/activate, delete)
+- Created `src/components/settings/change-password-dialog.tsx` — Change password dialog: 3 fields (current, new, confirm) with show/hide toggle, password strength indicator (6-level bar: weak/medium/strong based on length/uppercase/lowercase/digits/special), validation (all required, >= 8 chars, confirm matches), calls PATCH /api/users/change-password
+- Created `src/app/settings/page.tsx` — Settings overview with 3 tabs: Platform Config (settings grouped by category, Switch for booleans, Input for numeric/text, save with change count badge), My Profile (user info card, edit name/email, change password button), Security (session timeout, password policy, rate limiting info cards, quick actions)
+- Created `src/app/settings/users/page.tsx` — Full user management: 5 stat cards (total, active, new this month, suspended, admins), role distribution chips, filters (search, role, status, sort), responsive table (user name+phone, email, role badge, status badge, shop/broker info, last login, actions), row click opens detail drawer, create/edit dialogs, reset password dialog, CSV export, pagination
+- Created `src/app/settings/audit-log/page.tsx` — Audit log viewer: 4 stat cards (total events, user actions, security events, settings events), filters (search, action type, entity type, date range), color-coded action badges (security=red, user=blue, settings=purple, orders=green), expandable rows with full JSON details, user agent display, auto-refresh every 30 seconds, pagination
+- Updated `src/components/layout/admin-sidebar.tsx` — Moved Settings from footer to main nav as parent item with 3 children: Platform Config, Users, Audit Log. Footer now only shows user dropdown (Profile, Logout). Removed unused Camera import.
+- Build result: ✅ Zero errors, compiled successfully
+
+Stage Summary:
+- Sprint 5H complete: Settings & Auth Hardening for ALADIN B2B Platform
+- 7 new API endpoints: GET+POST /api/users, GET+PATCH+DELETE /api/users/[id], GET /api/users/stats, PATCH /api/users/change-password, PATCH /api/users/[id]/reset-password, GET+PATCH /api/settings/platform, GET /api/settings/audit-log
+- 5 new UI components: UserRoleBadge (5 roles), UserStatusBadge (3 statuses), UserFormDialog (create/edit), UserDetailDrawer (detail+quick actions), ChangePasswordDialog (strength indicator)
+- 3 new admin pages: /settings (3-tab: config/profile/security), /settings/users (full user management with CRUD), /settings/audit-log (audit trail with expandable JSON)
+- Security features: password change with strength indicator, admin password reset (forces mustChangePwd=true), audit logging for all user/settings actions, soft delete protection, self-protection (cannot demote/delete self), active orders protection
+- Platform settings: 4 categories (general, credit, notification, security) with boolean switches, numeric inputs, and change tracking
+- Audit logging: non-blocking, captures IP/user-agent, before/after snapshots, all user CRUD, password changes, setting updates
+- Bilingual (vi/en) throughout with t() pattern
+- All phone numbers wrapped in SensitiveValue
+
+---
 Task ID: 5G
 Agent: main
 Task: Sprint 5G — Analytics & Reporting (Báo cáo & Phân tích)

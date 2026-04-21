@@ -12,11 +12,9 @@ import {
   CreditCard,
   Tag,
   Gift,
-  Factory,
   Warehouse,
   BarChart3,
   Settings,
-  Camera,
   ChevronDown,
   ChevronRight,
   LogOut,
@@ -148,6 +146,17 @@ const navItems: NavItem[] = [
       { title: 'Shipments', titleVi: 'Van chuyen', href: '/reports?tab=shipments' },
     ],
   },
+  {
+    title: 'Settings',
+    titleVi: 'Cai dat',
+    href: '/settings',
+    icon: <Settings className="h-4 w-4" />,
+    children: [
+      { title: 'Platform Config', titleVi: 'Cau hinh', href: '/settings' },
+      { title: 'Users', titleVi: 'Nguoi dung', href: '/settings/users' },
+      { title: 'Audit Log', titleVi: 'Nhat ky', href: '/settings/audit-log' },
+    ],
+  },
 ];
 
 interface AdminSidebarProps {
@@ -246,14 +255,6 @@ export function AdminSidebar({ locale = 'en', userName = 'Admin User', userRole 
 
       <SidebarFooter className="border-t p-3">
         <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip={locale === 'vi' ? 'Cai dat' : 'Settings'}>
-              <Link href="/settings">
-                <Settings className="h-4 w-4" />
-                <span>{locale === 'vi' ? 'Cai dat' : 'Settings'}</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

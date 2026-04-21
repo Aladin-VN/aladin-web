@@ -629,3 +629,37 @@ model Payment {
   @@index([gatewayTxId])
   @@index([status])
 }
+
+// ============================================================
+// SETTINGS & AUDIT: Platform Config + Audit Trail (Sprint 5H)
+// ============================================================
+
+model AuditLog {
+  id            String   @id @default(cuid())
+  userId        String?                                    // Admin who performed the action (null for system)
+  action        String                                     // e.g., USER_ROLE_CHANGED, ORDER_CANCELLED, PASSWORD_RESET
+  entity        String                                     // e.g., User, Order, Shop, PlatformSetting
+  entityId      String?                                    // ID of the affected entity
+  details       String?                                    // JSON: before/after snapshot, change details
+  ipAddress     String?
+  userAgent     String?
+
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([entity])
+  @@index([entityId])
+  @@index([createdAt])
+}
+
+model PlatformSetting {
+  id            String   @id @default(cuid())
+  key           String   @unique                           // e.g., credit.defaultLimit, platform.name
+  value         String                                     // JSON or plain string value
+  description   String?                                    // Human-readable description
+  category      String   @default("general")               // general, credit, notification, security
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
