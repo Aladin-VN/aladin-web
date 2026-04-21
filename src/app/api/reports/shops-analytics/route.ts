@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { successResponse, errorResponse, formatVND } from '@/lib/security';
 
@@ -200,7 +200,7 @@ export async function GET(request: NextRequest) {
       dailyNewShops.push({ date: dayStart.toISOString().split('T')[0], count });
     }
 
-    return successResponse({
+    return NextResponse.json(successResponse({
       period,
       kpis: {
         totalShops,
@@ -225,9 +225,9 @@ export async function GET(request: NextRequest) {
       trends: {
         dailyNewShops,
       },
-    });
+    }));
   } catch (error: any) {
     console.error('Shops analytics error:', error);
-    return errorResponse('REPORTS_ERROR', error.message || 'Failed to generate shops report');
+    return NextResponse.json(errorResponse('REPORTS_ERROR', error.message || 'Failed to generate shops report'), { status: 500 });
   }
 }

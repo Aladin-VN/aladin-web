@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { successResponse, errorResponse, formatVND } from '@/lib/security';
 
@@ -177,7 +177,7 @@ export async function GET(request: NextRequest) {
       ? Math.round(fulfillmentTimes.reduce((a, b) => a + b, 0) / fulfillmentTimes.length * 10) / 10
       : 0;
 
-    return successResponse({
+    return NextResponse.json(successResponse({
       period,
       kpis: {
         totalOrders,
@@ -214,9 +214,9 @@ export async function GET(request: NextRequest) {
         topShops,
         largestOrders,
       },
-    });
+    }));
   } catch (error: any) {
     console.error('Orders report error:', error);
-    return errorResponse('REPORTS_ERROR', error.message || 'Failed to generate orders report');
+    return NextResponse.json(errorResponse('REPORTS_ERROR', error.message || 'Failed to generate orders report'), { status: 500 });
   }
 }

@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { successResponse, errorResponse, formatVND } from '@/lib/security';
 
@@ -193,7 +193,7 @@ export async function GET(request: NextRequest) {
     const lastMonthRevenue = lastMonthOrders.reduce((s, o) => s + o.totalAmount, 0);
     const monthOverMonth = lastMonthRevenue > 0 ? ((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100 : null;
 
-    return successResponse({
+    return NextResponse.json(successResponse({
       period,
       kpis: {
         totalRevenue,
@@ -224,9 +224,9 @@ export async function GET(request: NextRequest) {
         weekly: weeklyTrend,
       },
       topShops,
-    });
+    }));
   } catch (error: any) {
     console.error('Revenue report error:', error);
-    return errorResponse('REPORTS_ERROR', error.message || 'Failed to generate revenue report');
+    return NextResponse.json(errorResponse('REPORTS_ERROR', error.message || 'Failed to generate revenue report'), { status: 500 });
   }
 }

@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { successResponse, errorResponse, formatVND } from '@/lib/security';
 
@@ -201,7 +201,7 @@ export async function GET(request: NextRequest) {
       .slice(0, 10)
       .map(([name, revenue]) => ({ name, revenue, revenueFormatted: formatVND(revenue) }));
 
-    return successResponse({
+    return NextResponse.json(successResponse({
       period,
       dateRange: { from: start.toISOString(), to: end.toISOString() },
       // KPIs
@@ -242,9 +242,9 @@ export async function GET(request: NextRequest) {
       // Trends
       dailyRevenue,
       topCategories,
-    });
+    }));
   } catch (error: any) {
     console.error('Reports overview error:', error);
-    return errorResponse('REPORTS_ERROR', error.message || 'Failed to generate overview report');
+    return NextResponse.json(errorResponse('REPORTS_ERROR', error.message || 'Failed to generate overview report'), { status: 500 });
   }
 }

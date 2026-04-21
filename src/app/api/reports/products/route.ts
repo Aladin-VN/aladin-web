@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { successResponse, errorResponse, formatVND } from '@/lib/security';
 
@@ -200,7 +200,7 @@ export async function GET(request: NextRequest) {
     const plRevenue = plItems.reduce((s, oi) => s + oi.totalPrice, 0);
     const regularRevenue = totalRevenue - plRevenue;
 
-    return successResponse({
+    return NextResponse.json(successResponse({
       period,
       kpis: {
         totalProducts: catalogStats._count.id,
@@ -233,9 +233,9 @@ export async function GET(request: NextRequest) {
         lowStock: lowStockProducts.map(p => ({ ...p, basePriceFormatted: formatVND(p.basePrice) })),
         outOfStock: outOfStockProducts.map(p => ({ ...p, basePriceFormatted: formatVND(p.basePrice) })),
       },
-    });
+    }));
   } catch (error: any) {
     console.error('Products report error:', error);
-    return errorResponse('REPORTS_ERROR', error.message || 'Failed to generate products report');
+    return NextResponse.json(errorResponse('REPORTS_ERROR', error.message || 'Failed to generate products report'), { status: 500 });
   }
 }
