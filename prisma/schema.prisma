@@ -3,7 +3,7 @@
 // B2B AI-Powered Commerce Platform for Vietnam
 // ============================================================
 // Architecture: Modular Monolith (Next.js App Router)
-// Database: SQLite (dev) → PostgreSQL (production)
+// Database: PostgreSQL (Neon)
 // Conventions: UTC timestamps, append-only ledger, soft deletes
 // ============================================================
 
@@ -12,8 +12,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
 }
 
 // ============================================================

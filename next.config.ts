@@ -1,8 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: "standalone",
-  /* config options here */
+  /* Netlify handles its own output format via @netlify/plugin-nextjs */
   typescript: {
     ignoreBuildErrors: true,
   },
