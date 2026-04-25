@@ -210,3 +210,38 @@ Stage Summary:
 - Full credit management flow: View balance → View transactions (filter by type) → Repay (Cash/Bank Transfer) → Confirmation → Success with updated balance
 - Digital repayment (ZaloPay/MoMo) shown as placeholder — requires payment model schema change (Payment.orderId is required FK)
 - Self-service repayment auto-records with user as collector, orderId defaults to 'SELF_SERVICE'
+---
+Task ID: M6
+Agent: Main Agent
+Task: Sprint M6 — Group Buy, Promotions, Merchandising Audits with Camera
+
+Work Log:
+- Pre-M6 audit: Fixed duplicate PAYMENT_METHOD_LABELS barrel export (transaction-row.tsx renamed to TX_PAYMENT_METHOD_LABELS)
+- Added POST /api/merchandising endpoint for mobile camera audit submission (auto-derives shopId from JWT for SHOP_OWNER)
+- Created 5 new mobile components:
+  - deal-card.tsx: Group deal card with progress bar, savings badge, time remaining, participant count, ward label
+  - promo-card.tsx: Promotion card with type badge (BUY_X_GET_Y/PERCENT_OFF/FIXED_DISCOUNT), manufacturer, budget progress, status
+  - audit-card.tsx: Merchandising audit card with photo thumbnail, shop/product/promotion info, status badge
+  - camera-capture.tsx: Camera/file input with preview, retake button, remove, auto-resize to maxKB, <input capture="environment"> for native camera
+  - audit-submit-form.tsx: 4-step audit submission (input→confirming→processing→success), product search with debounce, promotion search, notes, validation
+- Replaced group-buy placeholder with full list page: 4 status filter tabs (All/Active/Completed/Expired), search, DealCard grid, infinite scroll, skeleton/empty/error states
+- Created group-buy detail page (/m/group-buy/[id]): pricing card, progress bar, stats grid (product/participants/time), 3-tab navigation (overview/participants/orders), "Join Group Buy" sticky bottom action
+- Created promotions list page (/m/promotions): 4 status filter tabs (Active/Upcoming/Expired/All), search, PromoCard grid, infinite scroll
+- Created promotions detail page (/m/promotions/[id]): type + status badges, manufacturer card, budget progress, stats, validity dates, 3-tab navigation (overview/products/orders)
+- Created merchandising list page (/m/merchandising): 4 status filter tabs, search, AuditCard list with photo thumbnails, "Submit" button in header
+- Created merchandising submit page (/m/merchandising/submit): info banner, AuditSubmitForm with camera capture + product selection + promotion search + notes
+- Enhanced dashboard quick actions grid from 4→8 items: added Promos, Shelf Audit, Shipments, My Shop
+- Added rightAction prop to MobileHeader component
+- Added auto-titles for /m/promotions and /m/merchandising paths
+- Updated barrel exports with 5 new M6 component exports
+- Fixed all React 19 ESLint issues: moved inline components outside render (DealStatusBadge, PromoTypeLabel, PromoStatusBadge), wrapped setState in async IIFE for effect
+
+Stage Summary:
+- 12 new files: 5 components + 5 pages + 1 modified page (dashboard) + 1 modified backend
+- 2 enhanced files: mobile-header.tsx (rightAction prop), components/mobile/index.ts (barrel exports)
+- 1 modified backend file: merchandising/route.ts (POST endpoint)
+- 0 TypeScript errors, 0 ESLint errors in M6 files
+- 1 bug fixed from prior sprints: duplicate PAYMENT_METHOD_LABELS export
+- Full flows: Browse deals → View deal detail → Join group buy | Browse promos → View promo detail | Browse audits → Submit shelf photo with camera → Success
+- Camera capture uses native <input capture="environment"> for mobile camera, with auto-resize to fit bandwidth
+- Audit submission auto-derives shopId from JWT (SHOP_OWNER role)

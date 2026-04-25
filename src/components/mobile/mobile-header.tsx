@@ -21,6 +21,7 @@ interface MobileHeaderProps {
   transparent?: boolean;
   onBack?: () => void;
   onSearch?: () => void;
+  rightAction?: React.ReactNode;
 }
 
 export function MobileHeader({
@@ -32,6 +33,7 @@ export function MobileHeader({
   transparent = false,
   onBack,
   onSearch,
+  rightAction,
 }: MobileHeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -74,6 +76,7 @@ export function MobileHeader({
 
       {/* Right section */}
       <div className="flex items-center gap-1">
+        {rightAction}
         {showSearch && (
           <Button
             variant="ghost"
@@ -136,6 +139,8 @@ function getAutoTitle(pathname: string, locale: string): string | null {
     '/m/settings': { vi: 'Cài đặt', en: 'Settings' },
     '/m/shipments': { vi: 'Vận chuyển', en: 'Shipments' },
     '/m/group-buy': { vi: 'Mua chung', en: 'Group Buy' },
+    '/m/promotions': { vi: 'Khuyến mãi', en: 'Promotions' },
+    '/m/merchandising': { vi: 'Trung bay', en: 'Merchandising' },
     '/m/login': { vi: 'Đăng nhập', en: 'Login' },
     '/m/register': { vi: 'Đăng ký', en: 'Register' },
   };

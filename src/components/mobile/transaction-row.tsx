@@ -37,7 +37,7 @@ const TX_TYPE_CONFIG: Record<TransactionType, { vi: string; en: string; icon: ty
   CREDIT_LIMIT_DECREASE: { vi: 'Giảm hạn mức', en: 'Limit Decrease', icon: Receipt, color: 'text-slate-500' },
 };
 
-const PAYMENT_METHOD_LABELS: Record<string, { vi: string; en: string }> = {
+const TX_PAYMENT_METHOD_LABELS: Record<string, { vi: string; en: string }> = {
   CASH: { vi: 'Tiền mặt', en: 'Cash' },
   BANK_TRANSFER: { vi: 'Chuyển khoản', en: 'Bank Transfer' },
   DIGITAL: { vi: 'Điện tử', en: 'Digital' },
@@ -95,7 +95,7 @@ export function TransactionRow({
 
   // Payment method label
   const paymentLabel = paymentMethod
-    ? PAYMENT_METHOD_LABELS[paymentMethod]
+    ? TX_PAYMENT_METHOD_LABELS[paymentMethod]
     : null;
 
   // Description line
@@ -153,4 +153,4 @@ export function TransactionRow({
   );
 }
 
-export { TX_TYPE_CONFIG, PAYMENT_METHOD_LABELS };
+export { TX_TYPE_CONFIG, TX_PAYMENT_METHOD_LABELS };

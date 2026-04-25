@@ -3,29 +3,28 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { MobileHeader } from '@/components/mobile/mobile-header';
-import { PullToRefreshIndicator } from '@/components/mobile/pull-to-refresh-indicator';
-import { DealCard, type DealCardData } from '@/components/mobile/deal-card';
+import { AuditCard, type AuditCardData } from '@/components/mobile/audit-card';
 import { useAppStore } from '@/stores/app.store';
 import { api } from '@/lib/mobile/api';
-import { Search, Loader2, TrendingDown, Package } from 'lucide-react';
+import { Search, Loader2, Camera, ClipboardCheck } from 'lucide-react';
 
 // ============================================
-// Group Buy List Page — /m/group-buy
+// Merchandising Audit List Page — /m/merchandising
 // ============================================
 
 const STATUS_TABS = [
   { key: '', vi: 'Tất cả', en: 'All' },
-  { key: 'ACTIVE', vi: 'Hoạt động', en: 'Active' },
-  { key: 'COMPLETED', vi: 'Hoàn thành', en: 'Completed' },
-  { key: 'EXPIRED', vi: 'Hết hạn', en: 'Expired' },
+  { key: 'PENDING_REVIEW', vi: 'Chờ duyệt', en: 'Pending' },
+  { key: 'APPROVED', vi: 'Đã duyệt', en: 'Approved' },
+  { key: 'REJECTED', vi: 'Từ chối', en: 'Rejected' },
 ] as const;
 
-export default function MobileGroupBuyPage() {
+export default function MobileMerchandisingPage() {
   const locale = useAppStore((s) => s.locale);
   const t = (vi: string, en: string) => locale === 'vi' ? vi : en;
   const router = useRouter();
 
-  const [deals, setDeals] = useState<DealCardData[]>([]);
+  const [audits, setAudits] = useState<AuditCardData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('');
@@ -33,14 +32,11 @@ export default function MobileGroupBuyPage() {
   const [searchInput, setSearchInput] = useState('');
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const [pullDistance, setPullDistance] = useState(0);
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const observerRef = useRef<IntersectionObserver | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-  // Fetch deals
-  const fetchDeals = useCallback(async (pageNum: number, status: string, searchQuery: string, reset: boolean) => {
+  const fetchAudits = useCallback(async (pageNum: number, status: string, searchQuery: string, reset: boolean) => {
     try {
       if (pageNum === 1) setLoading(true);
       setError(null);
@@ -49,69 +45,58 @@ export default function MobileGroupBuyPage() {
       if (status) params.status = status;
       if (searchQuery) params.search = searchQuery;
 
-      const res = await api.get('/group-deals', params);
+      const res = await api.get('/merchandising', params);
       const raw = res.data as Record<string, unknown> | undefined;
       const items = (raw?.items as Record<string, unknown>[]) || [];
       const pagination = raw?.pagination as { page: number; total: number; totalPages: number } | undefined;
 
-      const mapped = (items as unknown as DealCardData[]).map((d) => ({
-        id: d.id,
-        title: d.title,
-        titleEn: d.titleEn,
-        status: d.status,
-        product: d.product || { id: '', name: '', sku: '', basePrice: 0 },
-        originalPriceFormatted: d.originalPriceFormatted || '',
-        discountPriceFormatted: d.discountPriceFormatted || '',
-        savingsPercent: d.savingsPercent || 0,
-        progressPercent: d.progressPercent || 0,
-        currentQty: d.currentQty || 0,
-        targetQty: d.targetQty || 0,
-        participantCount: d.participantCount || 0,
-        timeRemaining: d.timeRemaining || '',
-        expiresAt: d.expiresAt,
-        ward: d.ward,
+      const mapped = (items as unknown as AuditCardData[]).map((a) => ({
+        id: a.id,
+        photoUrl: a.photoUrl,
+        status: a.status,
+        reviewNotes: a.reviewNotes,
+        createdAt: a.createdAt,
+        shop: a.shop || { id: '', name: '', district: null, shopType: '' },
+        product: a.product || { id: '', name: '', sku: '', imageUrl: null },
+        promotion: a.promotion,
       }));
 
       if (reset) {
-        setDeals(mapped);
+        setAudits(mapped);
       } else {
-        setDeals((prev) => [...prev, ...mapped]);
+        setAudits((prev) => [...prev, ...mapped]);
       }
 
       setHasMore(pagination ? pageNum < pagination.totalPages : mapped.length >= 20);
     } catch {
-      setError(t('Không thể tải deal mua chung', 'Failed to load group deals'));
+      setError(t('Không thể tải danh sách', 'Failed to load audits'));
     } finally {
       setLoading(false);
-      setIsRefreshing(false);
     }
   }, [t]);
 
-  // Initial load + tab/search changes
   useEffect(() => {
     setPage(1);
     setHasMore(true);
-    fetchDeals(1, activeTab, search, true);
-  }, [activeTab, search, fetchDeals]);
+    fetchAudits(1, activeTab, search, true);
+  }, [activeTab, search, fetchAudits]);
 
   // Infinite scroll
   useEffect(() => {
     if (observerRef.current) observerRef.current.disconnect();
-
     observerRef.current = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && hasMore && !loading) {
           const nextPage = page + 1;
           setPage(nextPage);
-          fetchDeals(nextPage, activeTab, search, false);
+          fetchAudits(nextPage, activeTab, search, false);
         }
       },
       { threshold: 0.5 }
     );
-
     if (sentinelRef.current) observerRef.current.observe(sentinelRef.current);
     return () => observerRef.current?.disconnect();
-  }, [hasMore, loading, page, activeTab, search, fetchDeals]);
+  }, [hasMore, loading, page, activeTab, search, fetchAudits]);
 
   // Search debounce
   useEffect(() => {
@@ -119,39 +104,38 @@ export default function MobileGroupBuyPage() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  // Pull to refresh
-  const handlePullEnd = useCallback(() => {
-    if (pullDistance > 80) {
-      setIsRefreshing(true);
-      setPage(1);
-      setHasMore(true);
-      fetchDeals(1, activeTab, search, true);
-    }
-    setPullDistance(0);
-  }, [pullDistance, activeTab, search, fetchDeals]);
-
-  const handleDealClick = (id: string) => {
-    router.push(`/m/group-buy/${id}`);
+  const handleAuditClick = (id: string) => {
+    // Navigate to detail view (future enhancement, for now just log)
+    // For now we can show a toast or expand inline
   };
 
-  // Skeleton loading
   const skeletons = Array.from({ length: 3 }, (_, i) => i);
 
   return (
     <div className="min-h-screen bg-background">
-      <MobileHeader title={t('Mua chung', 'Group Buy')} showBack showNotifications={false} />
+      <MobileHeader
+        title={t('Trung bay', 'Merchandising')}
+        showBack={false}
+        showNotifications={false}
+        rightAction={
+          <button
+            onClick={() => router.push('/m/merchandising/submit')}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-600 text-white text-xs font-medium"
+          >
+            <Camera className="h-3.5 w-3.5" />
+            {t('Gửi ảnh', 'Submit')}
+          </button>
+        }
+      />
 
       <main className="pb-4">
-        {/* Pull to refresh */}
-        <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} threshold={80} />
-
-        {/* Search bar */}
+        {/* Search */}
         <div className="px-4 pb-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input
               type="text"
-              placeholder={t('Tìm deal mua chung...', 'Search group deals...')}
+              placeholder={t('Tìm kiểm tra trung bay...', 'Search audits...')}
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               className="w-full h-10 pl-9 pr-4 text-sm rounded-xl border bg-muted/30 outline-none focus:ring-2 focus:ring-primary/20"
@@ -180,65 +164,62 @@ export default function MobileGroupBuyPage() {
 
         {/* Content */}
         <div className="px-4 space-y-3">
-          {loading && deals.length === 0 ? (
+          {loading && audits.length === 0 ? (
             skeletons.map((i) => (
-              <div key={i} className="animate-pulse rounded-xl border p-4">
-                <div className="flex justify-between mb-3">
-                  <div className="h-5 w-16 rounded-full bg-muted" />
-                  <div className="h-5 w-16 rounded bg-muted" />
+              <div key={i} className="animate-pulse rounded-xl border overflow-hidden">
+                <div className="flex">
+                  <div className="w-24 h-24 bg-muted" />
+                  <div className="flex-1 p-3 space-y-2">
+                    <div className="flex justify-between">
+                      <div className="h-5 w-14 rounded-full bg-muted" />
+                      <div className="h-5 w-12 rounded bg-muted" />
+                    </div>
+                    <div className="h-3 w-3/4 bg-muted rounded" />
+                    <div className="h-3 w-1/2 bg-muted rounded" />
+                  </div>
                 </div>
-                <div className="h-4 w-3/4 bg-muted rounded mb-2" />
-                <div className="h-3 w-1/2 bg-muted rounded mb-3" />
-                <div className="flex gap-3 mb-3">
-                  <div className="h-6 w-20 bg-muted rounded" />
-                  <div className="h-6 w-16 bg-muted rounded" />
-                </div>
-                <div className="h-2 bg-muted rounded-full mb-2" />
-                <div className="h-3 w-2/3 bg-muted rounded" />
               </div>
             ))
           ) : error ? (
             <div className="text-center py-12">
-              <Package className="h-10 w-10 mx-auto mb-3 text-muted-foreground/50" />
+              <ClipboardCheck className="h-10 w-10 mx-auto mb-3 text-muted-foreground/50" />
               <p className="text-sm text-muted-foreground">{error}</p>
               <button
-                onClick={() => { setPage(1); setHasMore(true); fetchDeals(1, activeTab, search, true); }}
+                onClick={() => { setPage(1); setHasMore(true); fetchAudits(1, activeTab, search, true); }}
                 className="mt-3 px-4 py-2 text-xs rounded-lg bg-primary text-primary-foreground"
               >
                 {t('Thử lại', 'Retry')}
               </button>
             </div>
-          ) : deals.length === 0 ? (
+          ) : audits.length === 0 ? (
             <div className="text-center py-12">
-              <TrendingDown className="h-10 w-10 mx-auto mb-3 text-muted-foreground/50" />
-              <p className="text-sm font-medium">{t('Không có deal nào', 'No deals found')}</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {search
-                  ? t('Thử tìm từ khoá khác', 'Try a different search term')
-                  : t('Chưa có deal mua chung nào', 'No group buy deals available yet')
-                }
+              <Camera className="h-10 w-10 mx-auto mb-3 text-muted-foreground/50" />
+              <p className="text-sm font-medium">{t('Chưa có kiểm tra', 'No audits yet')}</p>
+              <p className="text-xs text-muted-foreground mt-1 mb-4">
+                {t('Chụp ảnh kệ hàng để kiểm tra trung bay', 'Take shelf photos for merchandising audit')}
               </p>
+              <button
+                onClick={() => router.push('/m/merchandising/submit')}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 text-white text-xs font-medium"
+              >
+                <Camera className="h-3.5 w-3.5" />
+                {t('Gửi ảnh đầu tiên', 'Submit First Photo')}
+              </button>
             </div>
           ) : (
             <>
-              {deals.map((deal) => (
-                <DealCard key={deal.id} deal={deal} onClick={handleDealClick} />
+              {audits.map((audit) => (
+                <AuditCard key={audit.id} audit={audit} onClick={handleAuditClick} />
               ))}
-
-              {/* Infinite scroll sentinel */}
               <div ref={sentinelRef} className="h-1" />
-
-              {/* Loading more indicator */}
-              {loading && deals.length > 0 && (
+              {loading && audits.length > 0 && (
                 <div className="flex justify-center py-4">
                   <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                 </div>
               )}
-
-              {/* End of list */}
-              {!hasMore && deals.length > 0 && (
+              {!hasMore && audits.length > 0 && (
                 <p className="text-center text-[10px] text-muted-foreground py-4">
-                  {t('Đã hiển thị tất cả', 'All deals shown')}
+                  {t('Đã hiển thị tất cả', 'All audits shown')}
                 </p>
               )}
             </>

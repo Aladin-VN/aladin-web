@@ -16,6 +16,8 @@ import {
   Package,
   Users,
   BarChart3,
+  Camera,
+  Gift,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -428,6 +430,35 @@ export default function MobileDashboardPage() {
               href="/m/group-buy"
               locale={locale}
               badge={stats?.activeGroupDeals}
+            />
+            <QuickAction
+              icon={<Gift className="h-5 w-5" />}
+              label="Promos"
+              labelVi="Khuyến mãi"
+              href="/m/promotions"
+              locale={locale}
+            />
+            <QuickAction
+              icon={<Camera className="h-5 w-5" />}
+              label="Shelf Audit"
+              labelVi="Trung bay"
+              href="/m/merchandising"
+              locale={locale}
+            />
+            <QuickAction
+              icon={<Truck className="h-5 w-5" />}
+              label="Shipments"
+              labelVi="Vận chuyển"
+              href="/m/shipments"
+              locale={locale}
+              badge={stats?.pendingShipments}
+            />
+            <QuickAction
+              icon={<Store className="h-5 w-5" />}
+              label="My Shop"
+              labelVi="Cửa hàng"
+              href="/m/shop"
+              locale={locale}
             />
           </div>
         </div>

@@ -21,6 +21,12 @@ export { ShipmentCard, ShipmentStatusBadge, SHIPMENT_STATUS_CONFIG, type Shipmen
 export { PodCapture } from './pod-capture';
 // Sprint M5 components
 export { CreditBalanceCard } from './credit-balance-card';
-export { TransactionRow, TX_TYPE_CONFIG, PAYMENT_METHOD_LABELS } from './transaction-row';
+export { TransactionRow, TX_TYPE_CONFIG, TX_PAYMENT_METHOD_LABELS } from './transaction-row';
 export { RepaymentForm } from './repayment-form';
+// Sprint M6 components
+export { DealCard, type DealCardData } from './deal-card';
+export { PromoCard, type PromoCardData } from './promo-card';
+export { AuditCard, type AuditCardData } from './audit-card';
+export { CameraCapture } from './camera-capture';
+export { AuditSubmitForm } from './audit-submit-form';
 
