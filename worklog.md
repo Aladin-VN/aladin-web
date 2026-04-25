@@ -69,3 +69,54 @@ Stage Summary:
 - Pure SVG charts (no recharts dependency on mobile - lighter bundle)
 - 0 TypeScript errors, 0 lint errors
 - All components fully i18n (Vietnamese/English)
+
+---
+Task ID: M3
+Agent: Main Agent
+Task: Sprint M3 — Product Catalog, Categories, Search, Cart, Order Placement
+
+Work Log:
+- Backend: Extended POST /api/orders to allow SHOP_OWNER role (was ADMIN + SALES_REP only)
+- Backend: Added auto-derive shopId from authenticated user for SHOP_OWNER (no need to pass shopId in mobile)
+- Backend: Added ownership validation — SHOP_OWNER can only create orders for their own shop
+- Created 8 new mobile components:
+  - product-card.tsx: 2-column grid card with image, brand, name, price, stock indicator, group buy badge, add-to-cart button
+  - category-chips.tsx: Horizontal scrollable filter chips with "All" option, product count badges
+  - quantity-stepper.tsx: Reusable +/- control with min/max bounds, number input, disabled states
+  - product-detail-sheet.tsx: Bottom sheet overlay with product image, full specs (SKU, barcode, manufacturer, distributor, weight, stock), quantity stepper, line total, add-to-cart
+  - cart-item-row.tsx: Cart line item with image, name, SKU, unit price, quantity stepper, line total, remove button
+  - order-summary-card.tsx: Order breakdown (subtotal, 2% digital discount, 15K COD delivery fee, total, confirm button)
+  - payment-method-selector.tsx: Credit/Digital/COD radio cards with descriptions, badges, credit locked warning
+  - order-success-screen.tsx: Success animation, order number, items count, payment method, continue shopping/view orders actions
+- Replaced products placeholder with full product catalog page:
+  - Debounced search (400ms) across name, SKU, barcode, brand
+  - Category horizontal filter chips (from GET /api/categories)
+  - Brand filter dropdown (from product filters API)
+  - Sort dropdown: Newest, A-Z, Price Low/High, Most Stock
+  - 2-column product grid with lazy-loaded images
+  - Infinite scroll pagination with IntersectionObserver
+  - Skeleton loading grid
+  - Empty state with clear filters CTA
+  - Product detail bottom sheet on tap
+  - "Added to cart" toast notification
+  - Outside-click dropdown dismissal
+- Replaced cart placeholder with full cart + checkout flow:
+  - Cart items list with quantity adjustment and remove (with slide animation)
+  - Clear all cart button
+  - Two-step flow: View → Checkout
+  - Payment method selector with credit lock detection
+  - Customer notes textarea (500 char limit, collapsible)
+  - Order summary with dynamic pricing (2% digital discount, 15K COD fee)
+  - Sticky bottom bar with subtotal/checkout in view mode, back/confirm in checkout mode
+  - Order placement with idempotency key (prevents double orders on flaky connections)
+  - Comprehensive error handling (INSUFFICIENT_CREDIT, CREDIT_LOCKED, VALIDATION_ERROR, network)
+  - Success screen with order number, totals, continue shopping / view orders buttons
+- Updated component barrel exports (index.ts) with all 8 new components
+- All components fully i18n (Vietnamese/English)
+
+Stage Summary:
+- 10 new files: 8 components + 2 replaced pages
+- 2 enhanced files: api/orders/route.ts (SHOP_OWNER access), components/mobile/index.ts (exports)
+- 0 TypeScript errors, 0 ESLint errors in M3 files
+- 1 pre-existing TS error in notifications page (M2)
+- Full e2e flow: Browse products → Filter/Search → View detail → Add to cart → Checkout → Select payment → Place order → Success

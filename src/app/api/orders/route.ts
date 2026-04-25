@@ -150,8 +150,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(errorResponse('UNAUTHORIZED', 'Authentication required'), { status: 401 });
     }
     const payload = verifyAccessToken(token);
-    if (!payload || !hasRole(payload.role, ['ADMIN', 'SALES_REP'])) {
-      return NextResponse.json(errorResponse('FORBIDDEN', 'Admin or Sales Rep access required'), { status: 403 });
+    if (!payload || !hasRole(payload.role, ['ADMIN', 'SALES_REP', 'SHOP_OWNER'])) {
+      return NextResponse.json(errorResponse('FORBIDDEN', 'Admin, Sales Rep, or Shop Owner access required'), { status: 403 });
     }
 
     // Rate limit
@@ -161,10 +161,19 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { shopId, items, paymentMethod, customerNotes, idempotencyKey } = body;
+    let { shopId, items, paymentMethod, customerNotes, idempotencyKey } = body;
 
     // --- Validation ---
     const errors: string[] = [];
+
+    // SHOP_OWNER: auto-derive shopId from their user record if not provided
+    if (payload.role === 'SHOP_OWNER' && !shopId) {
+      const ownerShop = await db.shop.findFirst({
+        where: { userId: payload.userId },
+        select: { id: true },
+      });
+      if (ownerShop) shopId = ownerShop.id;
+    }
 
     if (!shopId) errors.push('shopId is required');
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -176,6 +185,20 @@ export async function POST(request: NextRequest) {
 
     if (errors.length > 0) {
       return NextResponse.json(errorResponse('VALIDATION_ERROR', 'Validation failed', { errors }), { status: 400 });
+    }
+
+    // SHOP_OWNER: verify they own this shop
+    if (payload.role === 'SHOP_OWNER') {
+      const ownerShop = await db.shop.findFirst({
+        where: { id: shopId, userId: payload.userId },
+        select: { id: true },
+      });
+      if (!ownerShop) {
+        return NextResponse.json(
+          errorResponse('FORBIDDEN', 'You can only create orders for your own shop'),
+          { status: 403 }
+        );
+      }
     }
 
     // Validate individual items
