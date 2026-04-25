@@ -34,3 +34,38 @@ Stage Summary:
 - All bottom tabs functional with routing
 - Auth flow: login → dashboard, register → dashboard
 - PWA manifest ready for install
+
+---
+Task ID: M2
+Agent: Main Agent
+Task: Sprint M2 — Dashboard enhancements, Shop Profile, Notifications, Charts
+
+Work Log:
+- Enhanced dashboard page with pull-to-refresh gesture (touch-based, with threshold indicator)
+- Added revenue sparkline and order trend charts (pure SVG, no library dependency)
+- Added donut chart for top products revenue distribution
+- Added announcement banner component (info/promotion/warning/urgent types, dismissible)
+- Created full shop profile screen (/m/shop) with:
+  - Gradient header with shop name, location, tier badge, credit status
+  - Credit account card with available credit hero number, usage progress bar
+  - 7-day credit window info and pay-now discount callout
+  - 4 KPI stat cards (total orders, GMV, avg order, 30-day orders)
+  - 30-day summary with delivered/pending breakdown
+  - Loyalty tier progress visualization (Bronze → Silver → Gold → Platinum steps)
+  - Contact info section (phone, address, email)
+- Enhanced notifications page with 5 filter tabs (All, Orders, Shipments, Credit, Promos)
+- Notification type icons and color coding
+- Relative time formatting (Vietnamese)
+- Mark all read functionality
+- Pull-to-refresh hook (useSimplePullToRefresh) extracted for reuse
+- Created mobile chart components: SparklineChart, DonutChart, HorizontalBarChart
+- Updated profile page to link to shop profile (tappable shop card with chevron)
+- Dashboard quick actions now show badges for pending items
+- Added last refresh timestamp on dashboard
+
+Stage Summary:
+- 6 new files: shop profile page, charts module, announcement banner, pull-to-refresh indicator, pull-to-refresh hook
+- 3 enhanced files: dashboard (charts+PTR+announcements), notifications (filter tabs), profile (shop link)
+- Pure SVG charts (no recharts dependency on mobile - lighter bundle)
+- 0 TypeScript errors, 0 lint errors
+- All components fully i18n (Vietnamese/English)

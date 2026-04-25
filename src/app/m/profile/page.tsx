@@ -75,7 +75,10 @@ export default function MobileProfilePage() {
 
         {/* Shop info (if shop owner) */}
         {user?.shop && (
-          <Card>
+          <Card
+            className="cursor-pointer active:scale-[0.99] transition-transform"
+            onClick={() => router.push('/m/shop')}
+          >
             <CardContent className="p-4">
               <div className="flex items-start gap-3">
                 <div className="h-9 w-9 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
@@ -93,6 +96,7 @@ export default function MobileProfilePage() {
                     </Badge>
                   </div>
                 </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground mt-1" />
               </div>
             </CardContent>
           </Card>
