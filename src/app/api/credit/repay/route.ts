@@ -1,5 +1,6 @@
 // ALADIN Credit Repayment API
 // POST /api/credit/repay — Record a repayment against shop credit
+// Extended in M5: SHOP_OWNER can record self-service repayments
 
 import { NextRequest, NextResponse } from 'next/server';
 import { extractBearerToken, verifyAccessToken, hasRole } from '@/lib/auth';
@@ -17,10 +18,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(errorResponse('INVALID_TOKEN', 'Token expired or invalid'), { status: 401 });
     }
 
-    // Admin, Sales Rep, or Driver can record repayments
-    if (!hasRole(payload.role, ['ADMIN', 'SALES_REP', 'DRIVER'])) {
+    // Admin, Sales Rep, Driver, or Shop Owner (self-service) can record repayments
+    if (!hasRole(payload.role, ['ADMIN', 'SALES_REP', 'DRIVER', 'SHOP_OWNER'])) {
       return NextResponse.json(
-        errorResponse('FORBIDDEN', 'Admin, Sales Rep, or Driver access required'),
+        errorResponse('FORBIDDEN', 'Access denied'),
         { status: 403 }
       );
     }
@@ -28,12 +29,22 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { shopId, orderId, amount, paymentMethod, collectedBy } = body;
 
+    // For SHOP_OWNER: auto-derive shopId from token
+    const effectiveShopId = payload.role === 'SHOP_OWNER'
+      ? payload.shopId
+      : shopId;
+
     // Validation
     const errors: string[] = [];
-    if (!shopId) errors.push('shopId is required');
-    if (!orderId) errors.push('orderId is required');
+    if (!effectiveShopId) errors.push('shopId is required');
     if (!amount || amount <= 0) errors.push('amount must be a positive number');
-    if (!paymentMethod) errors.push('paymentMethod is required (CASH, DIGITAL, etc.)');
+    if (!paymentMethod) errors.push('paymentMethod is required (CASH, BANK_TRANSFER, DIGITAL, etc.)');
+
+    // orderId is optional for self-service repayment (shop owner repays general credit, not tied to specific order)
+    // But required for admin/driver (they collect for a specific order)
+    if (payload.role !== 'SHOP_OWNER' && !orderId) {
+      errors.push('orderId is required');
+    }
 
     if (errors.length > 0) {
       return NextResponse.json(
@@ -44,15 +55,15 @@ export async function POST(request: NextRequest) {
 
     // Record repayment
     const result = await repayCredit(
-      shopId,
-      orderId,
+      effectiveShopId,
+      orderId || 'SELF_SERVICE',
       Math.round(amount),
       paymentMethod,
       collectedBy || payload.userId
     );
 
     // Get updated credit info
-    const creditInfo = await getShopCreditInfo(shopId);
+    const creditInfo = await getShopCreditInfo(effectiveShopId);
 
     return NextResponse.json(
       successResponse({

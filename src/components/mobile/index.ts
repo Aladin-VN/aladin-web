@@ -19,4 +19,8 @@ export { StatusBadge, PaymentMethodLabel, getPaymentMethodLabel, ORDER_STATUS_CO
 export { OrderTimeline } from './order-timeline';
 export { ShipmentCard, ShipmentStatusBadge, SHIPMENT_STATUS_CONFIG, type ShipmentCardData } from './shipment-card';
 export { PodCapture } from './pod-capture';
+// Sprint M5 components
+export { CreditBalanceCard } from './credit-balance-card';
+export { TransactionRow, TX_TYPE_CONFIG, PAYMENT_METHOD_LABELS } from './transaction-row';
+export { RepaymentForm } from './repayment-form';
 

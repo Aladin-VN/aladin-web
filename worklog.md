@@ -163,3 +163,50 @@ Stage Summary:
 - Full driver POD flow: Capture photo → Update status to DELIVERED → Photo saved to shipment
 - Driver status transitions: PENDING → PICKED_UP → IN_TRANSIT → DELIVERED (with FAILED retry)
 - Shop owner cancel flow: Cancel order (PENDING/CONFIRMED only) → CONFIRM dialog → status updated
+
+---
+Task ID: M5
+Agent: Main Agent
+Task: Sprint M5 — Credit balance/ledger, self-service repayment, payment gateways
+
+Work Log:
+- Created GET /api/credit/my-info route: Shop owner credit summary (auto-derives shopId from JWT)
+  - Returns: credit snapshot (limit, used, available, status, utilization%, daysUntilDue), monthly stats (repaid/used), last 20 transactions
+  - Wraps existing getShopCreditInfo() from credit-engine.ts
+  - Only SHOP_OWNER role allowed, Vietnamese error messages
+- Extended POST /api/credit/repay route for self-service:
+  - Added SHOP_OWNER to allowed roles (was ADMIN/SALES_REP/DRIVER only)
+  - Auto-derives shopId from JWT token when role is SHOP_OWNER
+  - Made orderId optional for self-service repayment (defaults to 'SELF_SERVICE')
+  - Auto-sets collectedBy to authenticated user
+- Added 4 new TypeScript types to types/index.ts:
+  - CreditInfoData: limit, used, available, status, utilizationPercent, daysUntilDue
+  - CreditMonthlyStats: totalRepaid, totalCreditUsed
+  - CreditMyInfoResponse: shop info, credit info, monthly stats, transactions
+  - TransactionDetail: extends TransactionSummary with orderNumber, collectedByName, formattedBalance
+- Created 3 new mobile components:
+  - credit-balance-card.tsx: Hero credit display with dark gradient card, status badge (Active/Locked/Overdue), available credit hero number, utilization progress bar (color-coded), status-specific warnings (overdue/locked), days-until-due countdown, monthly stats (used/repaid), repay-now button, zero-balance state
+  - transaction-row.tsx: Ledger line item with type-specific icon (6 types), color-coded amounts (+red/-green), description with order number and collector name, payment method badge, relative time formatting (Vietnamese), running balance display
+  - repayment-form.tsx: Bottom sheet modal with 4-step flow (input→confirm→processing→success), current outstanding display, VND amount input with thousand separators, quick amount buttons (50K-1M + All), 3 payment methods (Cash, Bank Transfer, Digital/ZaloPay/MoMo shown as disabled placeholder), validation (amount > 0, <= outstanding), confirmation screen with balance preview, API call via api.post('/credit/repay'), success screen with remaining balance, error state with retry
+- Replaced credit placeholder with full credit page (/m/credit/page.tsx):
+  - Pull-to-refresh gesture (touch-based with 80px threshold)
+  - Manual refresh button
+  - CreditBalanceCard hero section
+  - Transaction history with 5 filter tabs (All, Credit Used, Repayment, Refund, Adjustments) with count badges
+  - Transaction list in rounded card container with TransactionRow components
+  - Empty states (no transactions, no transactions of selected type)
+  - Contextual info sections: overdue/locked warnings, credit management tips (when utilization >= 70%)
+  - Repayment modal integration (opens RepaymentForm)
+  - Skeleton loading state (card + tabs + rows)
+  - Error state with retry button
+  - Fully i18n (Vietnamese/English)
+- Updated component barrel exports (index.ts) with 3 new component exports + 2 config exports
+- Cleaned up all unused imports across M5 files
+
+Stage Summary:
+- 7 files: 1 new API route + 3 new components + 1 replaced page + 2 enhanced files (types, barrel exports)
+- 1 modified backend file: credit/repay/route.ts (SHOP_OWNER self-service)
+- 0 TypeScript errors, 0 ESLint errors in M5 files
+- Full credit management flow: View balance → View transactions (filter by type) → Repay (Cash/Bank Transfer) → Confirmation → Success with updated balance
+- Digital repayment (ZaloPay/MoMo) shown as placeholder — requires payment model schema change (Payment.orderId is required FK)
+- Self-service repayment auto-records with user as collector, orderId defaults to 'SELF_SERVICE'

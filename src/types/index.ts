@@ -349,3 +349,45 @@ export interface PaginatedResponse<T> {
     totalPages: number;
   };
 }
+
+// ============================================
+// CREDIT INFO TYPES (Sprint M5)
+// ============================================
+
+export interface CreditInfoData {
+  limit: number;
+  used: number;
+  available: number;
+  status: CreditStatus;
+  utilizationPercent: number;
+  daysUntilDue: number | null;
+}
+
+export interface CreditMonthlyStats {
+  totalRepaid: number;
+  totalCreditUsed: number;
+}
+
+export interface CreditMyInfoResponse {
+  shop: {
+    id: string;
+    name: string;
+    loyaltyTier: string;
+  };
+  credit: CreditInfoData;
+  monthly: CreditMonthlyStats;
+  transactions: TransactionDetail[];
+}
+
+export interface TransactionDetail {
+  id: string;
+  type: TransactionType;
+  amount: number;
+  runningBalance: number;
+  paymentMethod?: string | null;
+  description?: string | null;
+  orderNumber?: string | null;
+  collectedByName?: string | null;
+  formattedBalance?: string;
+  createdAt: Date;
+}
