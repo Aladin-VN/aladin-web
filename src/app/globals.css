@@ -120,3 +120,61 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ============================================
+   Mobile PWA Utilities
+   ============================================ */
+
+/* iOS safe area insets for notched devices */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Prevent pull-to-refresh on mobile PWA */
+html, body {
+  overscroll-behavior-y: contain;
+}
+
+/* Mobile viewport height fix (100vh includes browser chrome) */
+@supports (height: 100dvh) {
+  .min-h-screen {
+    min-height: 100dvh;
+  }
+}
+
+/* Smooth touch scrolling */
+@media (hover: none) and (pointer: coarse) {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  ::-webkit-scrollbar {
+    display: none;
+  }
+  * {
+    scrollbar-width: none;
+  }
+}
+
+/* Disable text selection on interactive elements (mobile UX) */
+button, a, [role="button"] {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Mobile input styling */
+@media (max-width: 768px) {
+  input[type="text"],
+  input[type="tel"],
+  input[type="password"],
+  input[type="email"],
+  input[type="search"],
+  input[type="number"],
+  textarea,
+  select {
+    font-size: 16px; /* Prevent iOS zoom on focus */
+  }
+}
