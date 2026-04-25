@@ -126,20 +126,40 @@ export interface OrderSummary {
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
   totalAmount: number;
+  totalAmountFormatted?: string;
   itemCount: number;
   createdAt: Date;
 }
 
 export interface OrderDetail extends OrderSummary {
   shopId: string;
+  shopPhone?: string;
+  shopAddress?: string;
+  shopDistrict?: string;
+  shopProvince?: string;
+  shopSnapshot?: string;
   subtotalAmount: number;
+  subtotalAmountFormatted?: string;
   discountAmount: number;
+  discountAmountFormatted?: string;
   deliveryFee: number;
+  deliveryFeeFormatted?: string;
   paidAmount: number;
+  paidAmountFormatted?: string;
   creditUsed: number;
+  creditUsedFormatted?: string;
   customerNotes?: string | null;
+  adminNotes?: string | null;
+  groupDealId?: string | null;
+  thirdPartyOrderId?: string | null;
+  confirmedAt?: Date | null;
+  packedAt?: Date | null;
+  deliveredAt?: Date | null;
+  cancelledAt?: Date | null;
+  cancelReason?: string | null;
   items: OrderItemDetail[];
-  shipment?: ShipmentSummary | null;
+  shipment?: ShipmentDetail | null;
+  transactions?: TransactionSummary[];
 }
 
 // ============================================
@@ -191,9 +211,58 @@ export interface ShipmentSummary {
   type: 'INTERNAL' | 'THIRD_PARTY';
   status: ShipmentStatus;
   assignedDriverName?: string | null;
+  assignedDriverPhone?: string | null;
   dropoffAddress: string;
+  pickupAddress?: string | null;
   deliveredAt?: Date | null;
   thirdPartyTrackingId?: string | null;
+  createdAt?: Date;
+}
+
+export interface ShipmentDetail extends ShipmentSummary {
+  orderId: string;
+  orderNumber?: string;
+  assignedDriverId?: string | null;
+  assignedDriver?: {
+    id: string;
+    name: string;
+    phone: string;
+    avatarUrl?: string | null;
+  } | null;
+  pickupLat?: number | null;
+  pickupLng?: number | null;
+  dropoffLat?: number | null;
+  dropoffLng?: number | null;
+  podPhotoUrl?: string | null;
+  podSignatureUrl?: string | null;
+  podOtp?: string | null;
+  thirdPartyStatus?: string | null;
+  updatedAt?: Date;
+  order?: {
+    id: string;
+    orderNumber: string;
+    orderStatus: string;
+    orderTotal: number;
+    orderTotalFormatted?: string;
+    paymentMethod: string;
+    items: Array<{
+      productName: string;
+      productSku: string;
+      quantity: number;
+      unitPrice: number;
+      unitPriceFormatted?: string;
+      totalPrice: number;
+      totalPriceFormatted?: string;
+    }>;
+    shop: {
+      id: string;
+      name: string;
+      phone: string;
+      address?: string;
+      district?: string;
+      province: string;
+    };
+  };
 }
 
 // ============================================

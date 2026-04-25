@@ -14,3 +14,9 @@ export { CartItemRow } from './cart-item-row';
 export { OrderSummaryCard } from './order-summary-card';
 export { PaymentMethodSelector } from './payment-method-selector';
 export { OrderSuccessScreen } from './order-success-screen';
+// Sprint M4 components
+export { StatusBadge, PaymentMethodLabel, getPaymentMethodLabel, ORDER_STATUS_CONFIG, PAYMENT_STATUS_CONFIG, PAYMENT_METHOD_LABELS } from './order-status-badge';
+export { OrderTimeline } from './order-timeline';
+export { ShipmentCard, ShipmentStatusBadge, SHIPMENT_STATUS_CONFIG, type ShipmentCardData } from './shipment-card';
+export { PodCapture } from './pod-capture';
+

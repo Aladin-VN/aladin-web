@@ -120,3 +120,46 @@ Stage Summary:
 - 0 TypeScript errors, 0 ESLint errors in M3 files
 - 1 pre-existing TS error in notifications page (M2)
 - Full e2e flow: Browse products → Filter/Search → View detail → Add to cart → Checkout → Select payment → Place order → Success
+
+---
+Task ID: M3-AUDIT
+Agent: Main Agent
+Task: Pre-M4 audit — verify M1+M2+M3, fix all bugs
+
+Work Log:
+- Full file inventory: 41 mobile files audited (35 real, 5 planned placeholders)
+- Fixed M2 bug: `Notification` interface not exported from app.store.ts → added `export` keyword
+- Fixed M1 bug: circular charts/index.ts → charts/index.tsx re-export → deleted redundant index.ts
+- Removed unused use-pull-to-refresh.ts hook (duplicate of dashboard inline version)
+- Fixed M2 bug: actionHref possibly undefined in announcement-banner.tsx → added null guard
+
+Stage Summary:
+- 4 bugs found and fixed
+- 0 TypeScript errors across ALL mobile files (M1-M4)
+- 0 ESLint errors across ALL mobile files (M1-M4)
+- All barrel exports verified (zero dangling exports)
+
+---
+Task ID: M4
+Agent: Main Agent
+Task: Sprint M4 — Orders list/detail, Shipments tracking, Driver POD
+
+Work Log:
+- Extended TypeScript types: OrderDetail (+18 fields: shopPhone, shopAddress, timestamps, transactions, etc.), ShipmentSummary (+4 fields: phone, pickupAddress, createdAt), new ShipmentDetail interface with POD fields (podPhotoUrl, podSignatureUrl, podOtp) and nested order data
+- Created 4 new mobile components:
+  - order-status-badge.tsx: StatusBadge for order/payment statuses with color-coded dots, PaymentMethodLabel, exported config maps
+  - order-timeline.tsx: Vertical timeline with 6 pipeline steps (PENDING→DELIVERED), terminal states (CANCELLED/REFUNDED), shipment status mapping
+  - shipment-card.tsx: ShipmentCard with order number, status badge, driver info, dropoff address, tracking ID; ShipmentStatusBadge
+  - pod-capture.tsx: Camera/file input for POD photo with preview, remove, upload state; OTP display section; signature display
+- Replaced orders placeholder with full orders list: 8 status filter tabs, debounced search, order cards with status/payment badges, item count, payment method, total, infinite scroll, empty state
+- Created order detail page (/m/orders/[id]): status header with OrderTimeline, item list with SKU/price/qty/free qty, payment breakdown (subtotal/discount/delivery/total/credit), payment method + status, customer notes, shipment card with link to detail, delivery address, cancel action (PENDING/CONFIRMED only)
+- Replaced shipments placeholder with full shipments list: 6 status filter tabs, debounced search, ShipmentCard components, infinite scroll, empty state
+- Created shipment detail page (/m/shipments/[id]): status timeline (4 steps + failed state), driver info card with phone call, pickup/dropoff addresses with visual connector, order items summary, POD capture section (for driver role), third-party tracking ID, driver/admin status transition buttons (PICKED_UP→IN_TRANSIT→DELIVERED, FAILED retry), view order link
+
+Stage Summary:
+- 8 new files: 4 components + 2 replaced pages + 2 detail pages (new directories)
+- 2 enhanced files: types/index.ts (OrderDetail, ShipmentDetail), components/mobile/index.ts (exports)
+- 0 TypeScript errors, 0 ESLint errors in M4 files
+- Full driver POD flow: Capture photo → Update status to DELIVERED → Photo saved to shipment
+- Driver status transitions: PENDING → PICKED_UP → IN_TRANSIT → DELIVERED (with FAILED retry)
+- Shop owner cancel flow: Cancel order (PENDING/CONFIRMED only) → CONFIRM dialog → status updated

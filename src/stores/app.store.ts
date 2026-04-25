@@ -5,7 +5,7 @@ import { persist } from 'zustand/middleware';
 // App-wide state (locale, notifications, etc.)
 // ============================================
 
-interface Notification {
+export interface Notification {
   id: string;
   title: string;
   titleVi?: string;

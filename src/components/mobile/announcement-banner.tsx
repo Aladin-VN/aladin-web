@@ -81,7 +81,7 @@ export function AnnouncementBanner({ announcements, onDismiss, className }: Anno
                     <Button
                       variant="link"
                       className="h-auto p-0 mt-1 text-xs"
-                      onClick={() => window.location.href = ann.actionHref}
+                      onClick={() => { if (ann.actionHref) window.location.href = ann.actionHref; }}
                     >
                       {locale === 'vi' && ann.actionLabelVi ? ann.actionLabelVi : ann.actionLabel || 'Xem chi tiết'}
                     </Button>
