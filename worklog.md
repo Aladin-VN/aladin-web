@@ -288,3 +288,103 @@ Stage Summary:
 - Reports hub: 4 report types with period selectors, KPIs, charts (pure CSS), rankings, stock alerts
 - All 5 report APIs consumed: overview, revenue, orders, products, shops-analytics
 - All 3 broker APIs consumed: stats, commissions, territories
+
+---
+Task ID: M8
+Agent: Main Agent
+Task: Sprint M8 — Settings, Profile, Language, Password, Logout, PWA Install + Offline
+
+Work Log:
+- Generated PWA app icons using z-ai-generate (ALADIN B2B branded icon, blue-purple gradient):
+  - 512x512 PNG (primary icon for manifest + splash screen)
+  - 192x192 PNG (resized via sharp for favicon + Android)
+  - Saved to public/icons/icon-512x512.png and public/icons/icon-192x192.png
+- Created offline fallback page (/m/offline):
+  - Centered layout with WifiOff icon, retry button, cache refresh button
+  - Live connection status indicator (green/red dot)
+  - Contextual Vietnamese/English text based on locale
+- Created service worker (public/sw.js):
+  - Install: Pre-caches offline page, manifest, icon
+  - Activate: Cleans old caches, takes control immediately (skipWaiting + clients.claim)
+  - Fetch strategy:
+    - /api/ routes: Network-first (no cache, 503 offline response)
+    - Static assets (images, fonts, /_next/static/): Cache-first
+    - /m/ HTML pages: Network-first with cache fallback to offline page
+    - Everything else: Network-first with cache fallback
+  - Message handler: CLEAR_CACHE and SKIP_WAITING commands
+- Created useServiceWorker hook (src/hooks/useServiceWorker.ts):
+  - Registers sw.js with scope '/'
+  - Handles updatefound events and controller changes
+  - Exposes: registerSW(), clearCache(), unregisterSW()
+  - Also manages network online/offline listeners
+- Enhanced MobileShell (src/app/m/mobile-shell.tsx):
+  - Integrated service worker registration on mount
+  - Added update-available banner (emerald, with Reload button)
+  - Removed duplicate network listeners (now handled by useServiceWorker hook)
+- Built full Settings page (/m/settings) — replaced M1 placeholder:
+  - 4 sections: Account, Preferences, App, Support
+  - Account: Edit Profile link, Change Password link
+  - Preferences: Language (links to /m/settings/language), Notifications (links to /m/settings/notifications)
+  - App: PWA Install button (triggers beforeinstallprompt), Data & Storage link
+  - Support: Help & FAQ, Terms of Service, About (v1.0.0)
+  - Logout button at bottom
+  - Version footer (v1.0.0 — Build 2025.04.25)
+  - Reusable SettingsSection and SettingsRow sub-components
+- Built Profile Edit page (/m/profile/edit):
+  - Avatar with camera overlay button (placeholder for future upload)
+  - Editable: Display name (required), Email (validated), Phone (disabled — contact support)
+  - Read-only: Role display
+  - Change detection (save button disabled when no changes)
+  - API call to PATCH /users/profile with updateProfile() store sync
+  - Error/success messages, loading state
+  - Cancel button returns to profile
+- Built Change Password page (/m/profile/password):
+  - Security shield icon + warning about re-login on all devices
+  - 3 fields: Current password, New password, Confirm password
+  - Show/hide toggle on all 3 fields (eye icon)
+  - Real-time password strength meter (4 segments: Weak/Fair/Good/Strong)
+  - 4 requirement checks: ≥8 chars, uppercase, lowercase, number
+  - Match validation between new and confirm
+  - Prevents using same password as current
+  - Minimum strength of "Fair" required to submit
+  - API call to PATCH /auth/password
+- Built Language Settings page (/m/settings/language):
+  - 2 language cards: Vietnamese (🇻🇳) and English (🇬🇧)
+  - Active indicator with primary ring + checkmark
+  - "Active" badge on selected language
+  - Live preview section showing all 5 tab labels in selected language
+  - Immediate locale switch via setLocale()
+- Built Notification Preferences page (/m/settings/notifications):
+  - 6 notification categories: Orders, Shipments, Credit, Promotions, Messages, System
+  - Each with icon, label (bilingual), description (bilingual)
+  - Custom ToggleSwitch component (role="switch", aria-checked)
+  - Preferences persisted to localStorage (aladin-notif-prefs key)
+  - Summary counter (e.g., "5 / 6 notification types")
+  - Note about future push notification permissions
+- Built Data & Storage page (/m/settings/data):
+  - PWA installation status check (display-mode: standalone)
+  - Storage usage calculation via navigator.storage.estimate() with localStorage fallback
+  - Storage breakdown: App data, Cache, Total quota with progress bar
+  - Actions: Clear cache (clears SW + notifications + cart), Clear notifications
+  - Danger zone: Reset All Data (clears everything + redirects to login)
+  - Logout with confirmation dialog
+- Enhanced Profile page (/m/profile):
+  - Profile card now clickable → navigates to /m/profile/edit
+  - Added UserPen icon + ChevronRight to profile card
+  - Added "Edit Profile" menu item (first in menu, before "Change Password")
+  - Added "Change Password" menu item with Lock icon
+- Updated components/mobile/index.ts barrel export with M8 comment
+
+Stage Summary:
+- 10 new files: 1 SW (sw.js), 1 hook (useServiceWorker.ts), 7 pages + 2 icons
+- 3 modified files: mobile-shell.tsx (SW registration + update banner), profile/page.tsx (edit links), index.ts (barrel)
+- 0 TypeScript errors, 0 build errors
+- Total mobile pages (M1-M8): 36 pages across 38 routes
+- Total mobile components (M1-M7): 31 components
+- PWA complete: manifest.json ✓, icons ✓, service worker ✓, install prompt ✓, offline fallback ✓
+- Settings hub with 4 sections and 5 sub-pages fully functional
+- Profile management: view, edit, change password
+- Language: instant VI/EN switch with live preview
+- Notification preferences: 6 categories with persistent toggles
+- Data management: storage info, cache clearing, full reset
+- All 8 sprints (M1→M8) COMPLETED — ALADIN Mobile PWA feature-complete

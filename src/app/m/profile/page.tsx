@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation';
 import { MobileHeader } from '@/components/mobile/mobile-header';
 import { useAuthStore } from '@/stores/auth.store';
 import { useAppStore } from '@/stores/app.store';
-import { useCartStore } from '@/stores/cart.store';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -20,10 +19,12 @@ import {
   LogOut,
   ChevronRight,
   ShieldCheck,
+  UserPen,
+  Lock,
 } from 'lucide-react';
 
 // ============================================
-// Profile / Account Page
+// Profile / Account Page (Enhanced for M8)
 // ============================================
 
 export default function MobileProfilePage() {
@@ -52,8 +53,11 @@ export default function MobileProfilePage() {
       <MobileHeader title={t('Tài khoản', 'Account')} showNotifications={false} />
 
       <main className="px-4 pb-4 pt-3 space-y-4">
-        {/* Profile card */}
-        <Card>
+        {/* Profile card — clickable to edit */}
+        <Card
+          className="cursor-pointer active:scale-[0.99] transition-transform"
+          onClick={() => router.push('/m/profile/edit')}
+        >
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <Avatar className="h-14 w-14">
@@ -68,6 +72,10 @@ export default function MobileProfilePage() {
                 <Badge variant="secondary" className="mt-1 text-[10px]">
                   {roleLabels[user?.role || 'SHOP_OWNER'] || user?.role}
                 </Badge>
+              </div>
+              <div className="flex flex-col items-center gap-1">
+                <UserPen className="h-4 w-4 text-muted-foreground" />
+                <ChevronRight className="h-4 w-4 text-muted-foreground/60" />
               </div>
             </div>
           </CardContent>
@@ -106,6 +114,22 @@ export default function MobileProfilePage() {
 
         {/* Menu items */}
         <Card className="overflow-hidden">
+          <ProfileMenuItem
+            icon={<UserPen className="h-4 w-4" />}
+            label={t('Chỉnh sửa hồ sơ', 'Edit Profile')}
+            labelVi="Chỉnh sửa hồ sơ"
+            onClick={() => router.push('/m/profile/edit')}
+            locale={locale}
+          />
+          <Separator />
+          <ProfileMenuItem
+            icon={<Lock className="h-4 w-4" />}
+            label={t('Đổi mật khẩu', 'Change Password')}
+            labelVi="Đổi mật khẩu"
+            onClick={() => router.push('/m/profile/password')}
+            locale={locale}
+          />
+          <Separator />
           <ProfileMenuItem
             icon={<CreditCard className="h-4 w-4" />}
             label={t('Công nợ', 'Credit')}

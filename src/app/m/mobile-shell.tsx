@@ -1,13 +1,14 @@
 'use client';
 
-import { useEffect, useRef, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useSyncExternalStore, useState } from 'react';
 import { useAppStore } from '@/stores/app.store';
 import { useAuthStore } from '@/stores/auth.store';
-import { X, WifiOff, Download } from 'lucide-react';
+import { useServiceWorker } from '@/hooks/useServiceWorker';
+import { X, WifiOff, Download, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 // ============================================
-// Mobile Shell — Network status, install prompt, hydration
+// Mobile Shell — Network status, install prompt, hydration, SW registration
 // ============================================
 
 export function MobileShell() {
@@ -18,6 +19,8 @@ export function MobileShell() {
   const hydrate = useAuthStore((s) => s.hydrate);
   const dismissInstallPrompt = useAppStore((s) => s.dismissInstallPrompt);
   const locale = useAppStore((s) => s.locale);
+  const { registerSW } = useServiceWorker();
+  const [updateAvailable, setUpdateAvailable] = useState(false);
 
   // Client-only rendering via useSyncExternalStore
   const mounted = useSyncExternalStore(
@@ -39,13 +42,6 @@ export function MobileShell() {
       useAppStore.getState().setLocale(savedLocale);
     }
 
-    // Network status listeners
-    const handleOnline = () => setOnline(true);
-    const handleOffline = () => setOnline(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
     // PWA install prompt
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
@@ -54,12 +50,20 @@ export function MobileShell() {
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
+    // Register service worker
+    registerSW();
+
+    // Listen for SW updates
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        setUpdateAvailable(true);
+      });
+    }
+
     return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
-  }, [hydrate, setOnline]);
+  }, [hydrate, setOnline, registerSW]);
 
   if (!mounted) return null;
 
@@ -70,6 +74,23 @@ export function MobileShell() {
         <div className="fixed top-0 left-0 right-0 z-[100] bg-amber-500 text-white text-center py-2 px-4 text-xs font-medium flex items-center justify-center gap-2">
           <WifiOff className="h-3.5 w-3.5" />
           {locale === 'vi' ? 'Mất kết nối mạng' : 'No internet connection'}
+        </div>
+      )}
+
+      {/* Update available banner */}
+      {updateAvailable && (
+        <div className="fixed top-0 left-0 right-0 z-[100] bg-emerald-600 text-white text-center py-2 px-4 text-xs font-medium flex items-center justify-center gap-2">
+          <RefreshCw className="h-3.5 w-3.5" />
+          {locale === 'vi' ? 'Cập nhật mới sẵn sàng' : 'Update available'}
+          <button
+            onClick={() => window.location.reload()}
+            className="ml-2 underline font-semibold"
+          >
+            {locale === 'vi' ? 'Tải lại' : 'Reload'}
+          </button>
+          <button onClick={() => setUpdateAvailable(false)} className="ml-1">
+            <X className="h-3 w-3" />
+          </button>
         </div>
       )}
 

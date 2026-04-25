@@ -34,4 +34,5 @@ export { ChatBubble, type ChatMessageData } from './chat-bubble';
 export { ChatInputBar } from './chat-input-bar';
 export { PeriodSelector } from './period-selector';
 export { ReportKPIRow } from './report-kpi-row';
+// Sprint M8 components (no new UI components — settings pages use existing shadcn/ui)
 
