@@ -18,6 +18,8 @@ import {
   BarChart3,
   Camera,
   Gift,
+  MessageCircle,
+  FileText,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -458,6 +460,20 @@ export default function MobileDashboardPage() {
               label="My Shop"
               labelVi="Cửa hàng"
               href="/m/shop"
+              locale={locale}
+            />
+            <QuickAction
+              icon={<MessageCircle className="h-5 w-5" />}
+              label="Support"
+              labelVi="Hỗ trợ"
+              href="/m/chat"
+              locale={locale}
+            />
+            <QuickAction
+              icon={<FileText className="h-5 w-5" />}
+              label="Reports"
+              labelVi="Báo cáo"
+              href="/m/reports"
               locale={locale}
             />
           </div>

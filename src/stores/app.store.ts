@@ -11,7 +11,7 @@ export interface Notification {
   titleVi?: string;
   body: string;
   bodyVi?: string;
-  type: 'order' | 'shipment' | 'credit' | 'promotion' | 'system';
+  type: 'order' | 'shipment' | 'credit' | 'promotion' | 'system' | 'chat';
   read: boolean;
   createdAt: string;
   actionUrl?: string;

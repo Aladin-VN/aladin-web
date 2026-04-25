@@ -663,3 +663,28 @@ model PlatformSetting {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
+
+// ============================================================
+// CHAT: In-app messaging between users and ALADIN support
+// Sprint M7 — Zalo Chat integration layer
+// ============================================================
+
+model ChatMessage {
+  id              String   @id @default(cuid())
+  userId          String                                       // Sender (shop owner / broker)
+  conversationId  String                                       // Thread ID (user-specific, one conversation per user)
+  
+  direction       String   @default("OUTGOING")                // OUTGOING (user → support), INCOMING (support → user)
+  messageType     String   @default("TEXT")                    // TEXT, IMAGE, QUICK_REPLY, SYSTEM
+  content         String                                        // Message text content
+  imageUrl        String?                                       // Image attachment URL
+  metadata        String?                                       // JSON: quick reply options, etc.
+  
+  isRead          Boolean  @default(false)                     // Read by recipient
+  
+  createdAt       DateTime @default(now())
+
+  @@index([userId])
+  @@index([conversationId])
+  @@index([createdAt])
+}

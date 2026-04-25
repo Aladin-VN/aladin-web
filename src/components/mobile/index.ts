@@ -29,4 +29,9 @@ export { PromoCard, type PromoCardData } from './promo-card';
 export { AuditCard, type AuditCardData } from './audit-card';
 export { CameraCapture } from './camera-capture';
 export { AuditSubmitForm } from './audit-submit-form';
+// Sprint M7 components
+export { ChatBubble, type ChatMessageData } from './chat-bubble';
+export { ChatInputBar } from './chat-input-bar';
+export { PeriodSelector } from './period-selector';
+export { ReportKPIRow } from './report-kpi-row';
 

@@ -245,3 +245,46 @@ Stage Summary:
 - Full flows: Browse deals → View deal detail → Join group buy | Browse promos → View promo detail | Browse audits → Submit shelf photo with camera → Success
 - Camera capture uses native <input capture="environment"> for mobile camera, with auto-resize to fit bandwidth
 - Audit submission auto-derives shopId from JWT (SHOP_OWNER role)
+---
+Task ID: M7
+Agent: Main Agent
+Task: Sprint M7 — Zalo Chat, Broker Dashboard, Reports Mobile
+
+Work Log:
+- Added ChatMessage model to Prisma schema (SQLite): id, userId, conversationId, direction, messageType, content, imageUrl, metadata, isRead, createdAt
+- Ran prisma db push + generate to sync schema and client
+- Created GET/POST /api/chat API route:
+  - GET: Fetches up to 100 messages for authenticated user (conversationId = conv-{userId}), marks INCOMING as read
+  - POST: Sends OUTGOING message, auto-generates INCOMING bot response with keyword-based replies (orders/credit/products/default)
+  - Bot responses stored with Vietnamese content + English content in metadata JSON
+- Created 4 new mobile components:
+  - chat-bubble.tsx: Message bubble with OUTGOING (right/primary), INCOMING (left/muted), SYSTEM (centered pill) styling, image support, relative timestamps
+  - chat-input-bar.tsx: Auto-resizing textarea (max 120px), Enter-to-send, auto-focus, sticky bottom bar with safe-area padding
+  - period-selector.tsx: Horizontal scrollable filter chips for 7d/30d/90d/thisMonth/lastMonth with Vietnamese labels
+  - report-kpi-row.tsx: Compact KPI row with icon, label, trend arrow, value, variant support
+- Created chat page (/m/chat): Full-height chat interface with MobileHeader, quick reply chips (4 options), message list, typing indicator (bouncing dots), loading skeleton, empty/welcome state, auto-scroll to bottom
+- Created broker dashboard page (/m/broker) with 3-tab navigation:
+  - Overview tab: 2x2 KPI grid (commission/GMV/brokers/coverage), horizontal scrollable top performers, CSS bar chart (6-month trend), tier distribution badges
+  - Commissions tab: Summary banner, broker commission cards with infinite scroll, sort by commission earned
+  - Territory tab: Dual coverage progress bars, district filter dropdown, ward cards with broker assignments
+- Created 5 reports pages:
+  - Reports hub (/m/reports): Quick summary KPIs + 4 navigation cards (Overview, Revenue, Orders, Products)
+  - Overview report (/m/reports/overview): 6 KPI cards, order status stacked bar, payment method bars, top 5 categories
+  - Revenue report (/m/reports/revenue): 4 KPIs, monthly comparison, revenue by payment/tier, daily trend bar chart, top 10 shops
+  - Orders report (/m/reports/orders): 6 KPIs, status distribution, payment breakdown, top ordering shops, largest orders
+  - Products report (/m/reports/products): 4 KPIs, stock alerts (low/out-of-stock), top 10 products, top 8 categories, top 5 brands
+- Enhanced app.store.ts: Added 'chat' to notification type union
+- Enhanced dashboard (m/page.tsx): Added 2 quick actions — Support (/m/chat) and Reports (/m/reports) — grid now 10 items
+- Updated barrel exports with 4 new M7 component exports
+- Fixed 3 TypeScript errors: null-to-undefined coercion for trend props (revenueGrowth, orderGrowth in overview and orders reports)
+
+Stage Summary:
+- 12 new files: 1 API route + 4 components + 7 pages (chat, broker, 5 reports)
+- 4 modified files: prisma/schema.prisma, app.store.ts, components/mobile/index.ts, m/page.tsx
+- 0 TypeScript errors, 0 ESLint errors in all M7 files
+- Total mobile files (M1-M7): 29 pages + 31 components
+- Full chat flow: Open chat → See welcome message → Quick reply or type → Bot auto-responds → Message history persisted
+- Broker dashboard: 3-tab view with stats, commissions ledger, territory coverage
+- Reports hub: 4 report types with period selectors, KPIs, charts (pure CSS), rankings, stock alerts
+- All 5 report APIs consumed: overview, revenue, orders, products, shops-analytics
+- All 3 broker APIs consumed: stats, commissions, territories
