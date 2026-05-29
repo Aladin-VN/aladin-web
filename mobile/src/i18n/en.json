@@ -1,0 +1,98 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "search": "Search",
+    "filter": "Filter",
+    "noResults": "No results",
+    "all": "All",
+    "back": "Back",
+    "next": "Next",
+    "done": "Done",
+    "error": "Error",
+    "success": "Success",
+    "warning": "Warning",
+    "somethingWentWrong": "Something went wrong",
+    "pleaseTryAgain": "Please try again"
+  },
+  "tabs": {
+    "home": "Home",
+    "products": "Products",
+    "orders": "Orders",
+    "credit": "Credit",
+    "more": "More"
+  },
+  "buttons": {
+    "placeOrder": "Place Order",
+    "addToCart": "Add to Cart",
+    "buyNow": "Buy Now",
+    "viewDetails": "View Details",
+    "contactSupport": "Contact Support"
+  },
+  "empty": {
+    "noOrders": "No orders yet",
+    "noOrdersDesc": "Your orders will appear here",
+    "noProducts": "No products found",
+    "noProductsDesc": "Try adjusting your filters or search keywords",
+    "noNotifications": "No notifications",
+    "noNotificationsDesc": "You've read all your notifications"
+  },
+  "errors": {
+    "networkError": "Network Error",
+    "networkErrorDesc": "Unable to connect to the server. Please check your internet connection.",
+    "serverError": "Server Error",
+    "serverErrorDesc": "The server is currently experiencing issues. Please try again later.",
+    "sessionExpired": "Session Expired",
+    "sessionExpiredDesc": "Please log in again to continue."
+  },
+  "orderStatus": {
+    "PENDING": "Pending",
+    "CONFIRMED": "Confirmed",
+    "PROCESSING": "Processing",
+    "SHIPPED": "Shipped",
+    "DELIVERED": "Delivered",
+    "CANCELLED": "Cancelled",
+    "RETURNED": "Returned",
+    "PARTIAL_DELIVERED": "Partially Delivered"
+  },
+  "shipmentStatus": {
+    "PENDING": "Pending Pickup",
+    "PICKED_UP": "Picked Up",
+    "IN_TRANSIT": "In Transit",
+    "DELIVERED": "Delivered",
+    "FAILED": "Failed"
+  },
+  "creditStatus": {
+    "HEALTHY": "Healthy",
+    "WARNING": "Warning",
+    "OVERDUE": "Overdue",
+    "LOCKED": "Locked"
+  },
+  "paymentMethod": {
+    "CREDIT": "Credit",
+    "DIGITAL": "Digital Payment",
+    "COD": "COD"
+  },
+  "stats": {
+    "revenue": "Revenue",
+    "orders": "Orders",
+    "products": "Products",
+    "customers": "Customers",
+    "creditLimit": "Credit Limit",
+    "outstandingDebt": "Outstanding Debt"
+  },
+  "input": {
+    "phone": "Phone number",
+    "email": "Email",
+    "password": "Password",
+    "name": "Full name",
+    "address": "Address",
+    "search": "Search..."
+  }
+}
