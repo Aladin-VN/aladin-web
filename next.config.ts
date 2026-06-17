@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* Netlify handles its own output format via @netlify/plugin-nextjs */
+  // Vercel deployment optimizations
+  serverExternalPackages: ['@libsql/client'],
   typescript: {
     ignoreBuildErrors: true,
   },
