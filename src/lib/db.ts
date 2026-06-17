@@ -27,6 +27,11 @@ function createPrismaClient() {
 
   // SQLite file (local dev or Vercel /tmp)
   return new PrismaClient({
+    datasources: {
+      db: {
+        url,
+      },
+    },
     log: process.env.NODE_ENV === 'development' ? ['query'] : ['error'],
   })
 }
