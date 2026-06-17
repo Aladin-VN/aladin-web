@@ -50,6 +50,7 @@ interface DashboardStats {
   overdueAccounts: number;
   pendingShipments: number;
   activeGroupDeals: number;
+  pipeline: { status: string; count: number }[];
   recentOrders: {
     id: string;
     orderNumber: string;
@@ -102,13 +103,13 @@ function StatCard({
   const t = locale === 'vi' ? titleVi : title;
 
   return (
-    <Card className={variant === 'danger' ? 'border-red-200 bg-red-50/50 dark:border-red-900 dark:bg-red-950/30' : variant === 'warning' ? 'border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/30' : ''}>
+    <Card className={variant === 'danger' ? 'border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950/40' : variant === 'warning' ? 'border-yellow-300 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950/40' : 'border-yellow-100 hover:border-yellow-200 transition-colors'}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">{t}</CardTitle>
         <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${
           variant === 'danger' ? 'bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-400' :
-          variant === 'warning' ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400' :
-          'bg-yellow-50 text-red-600 dark:bg-red-900/50 dark:text-yellow-500'
+          variant === 'warning' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-400' :
+          'bg-red-50 text-red-600 dark:bg-red-900/40 dark:text-red-400'
         }`}>
           {icon}
         </div>
@@ -124,11 +125,11 @@ function StatCard({
         {trend !== undefined && (
           <div className="flex items-center mt-1">
             {trend >= 0 ? (
-              <ArrowUpRight className="h-3.5 w-3.5 text-red-600 mr-1" />
+              <ArrowUpRight className="h-3.5 w-3.5 text-green-600 mr-1" />
             ) : (
-              <ArrowDownRight className="h-3.5 w-3.5 text-red-600 mr-1" />
+              <ArrowDownRight className="h-3.5 w-3.5 text-red-500 mr-1" />
             )}
-            <span className={`text-xs font-medium ${trend >= 0 ? 'text-red-600' : 'text-red-600'}`}>
+            <span className={`text-xs font-medium ${trend >= 0 ? 'text-green-600' : 'text-red-500'}`}>
               {Math.abs(trend)}%
             </span>
             {trendLabel && <span className="text-xs text-muted-foreground ml-1">{trendLabel}</span>}
@@ -136,6 +137,72 @@ function StatCard({
         )}
       </CardContent>
     </Card>
+  );
+}
+
+// ============================================
+// Pipeline Bar Component
+// ============================================
+
+const PIPELINE_STAGES = [
+  { key: 'pending', label: 'Pending', labelVi: 'Cho XL', color: 'bg-gray-200 dark:bg-gray-700', textColor: 'text-gray-700 dark:text-gray-300', icon: Clock },
+  { key: 'confirmed', label: 'Confirmed', labelVi: 'Da XL', color: 'bg-blue-100 dark:bg-blue-900/50', textColor: 'text-blue-700 dark:text-blue-300', icon: ShieldCheck },
+  { key: 'processing', label: 'Processing', labelVi: 'Dang XL', color: 'bg-indigo-100 dark:bg-indigo-900/50', textColor: 'text-indigo-700 dark:text-indigo-300', icon: Package },
+  { key: 'packed', label: 'Packed', labelVi: 'Dong goi', color: 'bg-purple-100 dark:bg-purple-900/50', textColor: 'text-purple-700 dark:text-purple-300', icon: Package },
+  { key: 'outForDelivery', label: 'Out for Delivery', labelVi: 'Dang giao', color: 'bg-yellow-100 dark:bg-yellow-900/50', textColor: 'text-yellow-700 dark:text-yellow-300', icon: Truck },
+  { key: 'delivered', label: 'Delivered', labelVi: 'Da giao', color: 'bg-green-100 dark:bg-green-900/50', textColor: 'text-green-700 dark:text-green-300', icon: DollarSign },
+];
+
+function PipelineBar({ stats, locale, t }: { stats: DashboardStats; locale: string; t: (en: string, vi: string) => string }) {
+  const pipeline = stats.pipeline || [];
+  const total = pipeline.reduce((sum, s) => sum + s.count, 0) || 1;
+
+  return (
+    <div className="space-y-4">
+      {/* Visual Pipeline Bar */}
+      <div className="flex h-10 rounded-lg overflow-hidden border border-yellow-200 dark:border-yellow-800">
+        {pipeline.map((stage, i) => {
+          const widthPct = Math.max((stage.count / total) * 100, stage.count > 0 ? 3 : 0);
+          const stageConfig = PIPELINE_STAGES[i] || PIPELINE_STAGES[0];
+          return (
+            <div
+              key={stage.status}
+              className="relative flex items-center justify-center transition-all duration-500 group cursor-default"
+              style={{ width: `${widthPct}%` }}
+              title={`${stageConfig.key === 'outForDelivery' ? (locale === 'vi' ? 'Dang giao' : 'Out for Delivery') : stage.status.replace(/_/g, ' ')}: ${stage.count}`}
+            >
+              <div className={`absolute inset-0 ${stageConfig.color}`} />
+              {stage.count > 0 && (
+                <span className={`relative text-[11px] font-bold ${stageConfig.textColor}`}>
+                  {stage.count}
+                </span>
+              )}
+              {i < pipeline.length - 1 && widthPct > 0 && (
+                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-0 h-0 border-l-[4px] border-l-white dark:border-l-gray-900 border-y-[5px] border-y-transparent z-10" />
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Stage Legend */}
+      <div className="flex flex-wrap gap-3">
+        {pipeline.map((stage, i) => {
+          const stageConfig = PIPELINE_STAGES[i] || PIPELINE_STAGES[0];
+          const Icon = stageConfig.icon;
+          return (
+            <div key={stage.status} className="flex items-center gap-1.5">
+              <div className={`h-2.5 w-2.5 rounded-full ${stageConfig.color} ring-1 ring-inset ring-black/10`} />
+              <Icon className={`h-3 w-3 ${stageConfig.textColor}`} />
+              <span className="text-xs text-muted-foreground">
+                {locale === 'vi' ? stageConfig.labelVi : stageConfig.label}
+              </span>
+              <span className="text-xs font-bold text-foreground">{stage.count}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -334,6 +401,31 @@ export default function DashboardPage() {
             </div>
           ) : null}
 
+          {/* Order Pipeline Overview */}
+          {!loading && stats && (
+            <Card className="border-yellow-200 dark:border-yellow-900">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Package className="h-4 w-4 text-red-600" />
+                      {t('Order Pipeline', 'Luong Don hang')}
+                    </CardTitle>
+                    <CardDescription>
+                      {t('B2B fulfillment pipeline — orders by status', 'Luong thuc thi B2B — don hang theo trang thai')}
+                    </CardDescription>
+                  </div>
+                  <Badge className="bg-red-600 hover:bg-red-600 text-white font-mono">
+                    {stats.monthlyOrderCount} {t('orders', 'don')}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <PipelineBar stats={stats} locale={locale} t={t} />
+              </CardContent>
+            </Card>
+          )}
+
           {/* Bottom Section: Recent Orders + Top Products */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Recent Orders */}
@@ -452,7 +544,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Platform Rules Footer */}
-          <Card className="border-dashed">
+          <Card className="border-dashed border-yellow-200 dark:border-yellow-800">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4 text-red-600" />
@@ -462,7 +554,7 @@ export default function DashboardPage() {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-red-100 text-red-600 flex items-center justify-center shrink-0 mt-0.5">
+                  <div className="h-8 w-8 rounded-lg bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-400 flex items-center justify-center shrink-0 mt-0.5">
                     <Lock className="h-4 w-4" />
                   </div>
                   <div>
@@ -478,7 +570,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center shrink-0 mt-0.5">
+                  <div className="h-8 w-8 rounded-lg bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-400 flex items-center justify-center shrink-0 mt-0.5">
                     <Clock className="h-4 w-4" />
                   </div>
                   <div>
@@ -494,7 +586,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 mt-0.5">
+                  <div className="h-8 w-8 rounded-lg bg-red-50 text-red-600 dark:bg-red-900/40 dark:text-red-400 flex items-center justify-center shrink-0 mt-0.5">
                     <Truck className="h-4 w-4" />
                   </div>
                   <div>

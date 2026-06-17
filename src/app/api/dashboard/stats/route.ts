@@ -168,6 +168,22 @@ export async function GET(request: NextRequest) {
       take: 5,
     });
 
+    // Pipeline: count orders by status (all orders, not just monthly, for full pipeline visibility)
+    const pipelineRaw = await db.order.groupBy({
+      by: ['status'],
+      where: {
+        ...orderWhere,
+        status: { not: 'CANCELLED' },
+      },
+      _count: { id: true },
+    });
+
+    const PIPELINE_ORDER = ['PENDING', 'CONFIRMED', 'PROCESSING', 'PACKED', 'OUT_FOR_DELIVERY', 'DELIVERED'];
+    const pipeline = PIPELINE_ORDER.map((status) => ({
+      status,
+      count: pipelineRaw.find((p) => p.status === status)?._count.id || 0,
+    }));
+
     return NextResponse.json({
       success: true,
       data: {
@@ -185,6 +201,7 @@ export async function GET(request: NextRequest) {
         overdueAccounts,
         pendingShipments,
         activeGroupDeals,
+        pipeline,
         recentOrders: recentOrders.map((o) => ({
           id: o.id,
           orderNumber: o.orderNumber,

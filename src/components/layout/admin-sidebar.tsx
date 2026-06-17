@@ -189,21 +189,22 @@ export function AdminSidebar() {
   const roleLabel = userRole ? (ROLE_LABELS[userRole] || ROLE_LABELS.SHOP_OWNER) : null;
   const initials = userName.split(' ').map((n) => n[0]).join('').slice(0, 2);
 
-  // Filter nav items by role (wait for auth hydration)
+  // Filter nav items by role
+  // During hydration (no userRole yet), show all items to avoid flash of empty sidebar
   const visibleItems = userRole
     ? navItems.filter((item) => !item.roles || item.roles.includes(userRole))
-    : [];
+    : navItems;
 
   return (
     <Sidebar>
-      <SidebarHeader className="border-b px-6 py-4">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-yellow-400 to-yellow-500 text-red-700 font-bold text-sm">
+      <SidebarHeader className="border-b border-sidebar-border px-6 py-4">
+        <Link href="/" className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-yellow-400 to-yellow-500 shadow-lg shadow-yellow-500/20 text-red-700 font-bold text-base">
             A
           </div>
           <div>
-            <h1 className="text-lg font-bold tracking-tight">ALADIN</h1>
-            <p className="text-[10px] text-muted-foreground leading-tight">
+            <h1 className="text-lg font-extrabold tracking-tight text-yellow-400">ALADIN</h1>
+            <p className="text-[10px] text-sidebar-foreground/60 leading-tight font-medium">
               {locale === 'vi' ? 'AI Thương mại B2B' : 'AI B2B Commerce'}
             </p>
           </div>

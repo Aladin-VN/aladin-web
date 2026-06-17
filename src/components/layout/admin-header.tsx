@@ -39,7 +39,7 @@ export function AdminHeader() {
   const initials = displayName.split(' ').map((n: string) => n[0]).join('').slice(0, 2);
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60 px-4">
       <SidebarTrigger className="-ml-1" />
       <Separator orientation="vertical" className="h-6" />
 
@@ -61,7 +61,7 @@ export function AdminHeader() {
           variant="outline"
           size="sm"
           onClick={toggleLocale}
-          className="h-8 px-2.5 gap-1.5 text-xs font-semibold border-blue-200 bg-blue-50/50 hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-950/30"
+          className="h-8 px-2.5 gap-1.5 text-xs font-semibold border-yellow-300 bg-yellow-50 hover:bg-yellow-100 dark:border-yellow-700 dark:bg-yellow-950/30"
         >
           <Globe className="h-3.5 w-3.5" />
           {locale === 'vi' ? 'VI' : 'EN'}
@@ -115,7 +115,7 @@ export function AdminHeader() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="h-9 gap-2 px-2">
               <Avatar className="h-7 w-7">
-                <AvatarFallback className="bg-yellow-50 text-red-700 text-xs font-bold">
+                <AvatarFallback className="bg-yellow-100 text-red-700 text-xs font-bold">
                   {initials}
                 </AvatarFallback>
               </Avatar>
