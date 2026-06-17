@@ -10,5 +10,11 @@ export async function POST() {
     maxAge: 0,
     path: '/',
   });
+  response.cookies.set('aladin-access-token', '', {
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 0,
+    path: '/',
+  });
   return response;
 }
