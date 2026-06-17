@@ -19,6 +19,7 @@ import {
   ChevronDown,
   ChevronRight,
   LogOut,
+  User,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -44,6 +45,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
+import { ROLES } from '@/lib/security';
 
 interface NavItem {
   title: string;
@@ -52,6 +54,8 @@ interface NavItem {
   icon: React.ReactNode;
   badge?: number;
   children?: { title: string; titleVi: string; href: string }[];
+  /** Which roles can see this item. Empty = all roles */
+  roles?: string[];
 }
 
 const navItems: NavItem[] = [
@@ -72,6 +76,7 @@ const navItems: NavItem[] = [
     titleVi: 'San pham',
     href: '/products',
     icon: <Package className="h-4 w-4" />,
+    roles: [ROLES.ADMIN, ROLES.SALES_REP],
     children: [
       { title: 'Product Catalog', titleVi: 'Danh muc SP', href: '/products' },
       { title: 'Categories', titleVi: 'Danh muc', href: '/products/categories' },
@@ -82,7 +87,7 @@ const navItems: NavItem[] = [
     titleVi: 'Cua hang',
     href: '/shops',
     icon: <Store className="h-4 w-4" />,
-    badge: 0,
+    roles: [ROLES.ADMIN, ROLES.SALES_REP, ROLES.BROKER],
   },
   {
     title: 'Group Buy',
@@ -95,6 +100,7 @@ const navItems: NavItem[] = [
     titleVi: 'Cong no',
     href: '/credit',
     icon: <CreditCard className="h-4 w-4" />,
+    roles: [ROLES.ADMIN, ROLES.SALES_REP, ROLES.SHOP_OWNER],
   },
   {
     title: 'Logistics',
@@ -107,6 +113,7 @@ const navItems: NavItem[] = [
     titleVi: 'Chuoi cung ung',
     href: '/supply-chain',
     icon: <Warehouse className="h-4 w-4" />,
+    roles: [ROLES.ADMIN],
     children: [
       { title: 'Manufacturers', titleVi: 'Nha SX', href: '/supply-chain/manufacturers' },
       { title: 'Distributors', titleVi: 'Nha PP', href: '/supply-chain/distributors' },
@@ -117,6 +124,7 @@ const navItems: NavItem[] = [
     titleVi: 'Trade Marketing',
     href: '/trade-marketing',
     icon: <Gift className="h-4 w-4" />,
+    roles: [ROLES.ADMIN],
     children: [
       { title: 'Promotions', titleVi: 'Khuyen mai', href: '/trade-marketing/promotions' },
       { title: 'Merchandising', titleVi: 'Trung bay', href: '/trade-marketing/merchandising' },
@@ -127,6 +135,7 @@ const navItems: NavItem[] = [
     titleVi: 'Dai ly',
     href: '/brokers',
     icon: <Users className="h-4 w-4" />,
+    roles: [ROLES.ADMIN, ROLES.BROKER],
     children: [
       { title: 'All Brokers', titleVi: 'Dai ly', href: '/brokers' },
       { title: 'Commissions', titleVi: 'Hoa hong', href: '/brokers/commissions' },
@@ -138,13 +147,12 @@ const navItems: NavItem[] = [
     titleVi: 'Bao cao',
     href: '/reports',
     icon: <BarChart3 className="h-4 w-4" />,
+    roles: [ROLES.ADMIN, ROLES.SALES_REP],
     children: [
       { title: 'Overview', titleVi: 'Tong quan', href: '/reports' },
       { title: 'Revenue', titleVi: 'Doanh thu', href: '/reports?tab=revenue' },
       { title: 'Orders', titleVi: 'Don hang', href: '/reports?tab=orders' },
       { title: 'Products', titleVi: 'San pham', href: '/reports?tab=products' },
-      { title: 'Shops', titleVi: 'Cua hang', href: '/reports?tab=shops' },
-      { title: 'Shipments', titleVi: 'Van chuyen', href: '/reports?tab=shipments' },
     ],
   },
   {
@@ -152,6 +160,7 @@ const navItems: NavItem[] = [
     titleVi: 'Cai dat',
     href: '/settings',
     icon: <Settings className="h-4 w-4" />,
+    roles: [ROLES.ADMIN],
     children: [
       { title: 'Platform Config', titleVi: 'Cau hinh', href: '/settings' },
       { title: 'Users', titleVi: 'Nguoi dung', href: '/settings/users' },
@@ -160,20 +169,28 @@ const navItems: NavItem[] = [
   },
 ];
 
-interface AdminSidebarProps {
-  locale?: string;
-  userName?: string;
-  userRole?: string;
-}
+/** Role display labels */
+const ROLE_LABELS: Record<string, { en: string; vi: string; color: string }> = {
+  ADMIN: { en: 'Admin', vi: 'Quan tri', color: 'bg-emerald-100 text-emerald-700' },
+  SHOP_OWNER: { en: 'Shop Owner', vi: 'Chu cua hang', color: 'bg-blue-100 text-blue-700' },
+  SALES_REP: { en: 'Sales Rep', vi: 'Nhan vien ban', color: 'bg-purple-100 text-purple-700' },
+  DRIVER: { en: 'Driver', vi: 'Tai xe', color: 'bg-orange-100 text-orange-700' },
+  BROKER: { en: 'Broker', vi: 'Dai ly', color: 'bg-amber-100 text-amber-700' },
+};
 
-export function AdminSidebar({ locale: localeProp, userName: userNameProp, userRole: userRoleProp }: AdminSidebarProps) {
+export function AdminSidebar() {
   const pathname = usePathname();
-  const { logout: authLogout, user: authUser } = useAuth();
-  const { locale: contextLocale } = useLocale();
-  const locale = localeProp || contextLocale;
-  const userName = userNameProp || authUser?.name || 'Admin User';
-  const userRole = userRoleProp || authUser?.role || 'ADMIN';
+  const { user, logout } = useAuth();
+  const { locale } = useLocale();
   const t = (title: string, titleVi: string) => locale === 'vi' ? titleVi : title;
+
+  const userName = user?.name || 'User';
+  const userRole = user?.role || 'SHOP_OWNER';
+  const roleLabel = ROLE_LABELS[userRole] || ROLE_LABELS.SHOP_OWNER;
+  const initials = userName.split(' ').map((n) => n[0]).join('').slice(0, 2);
+
+  // Filter nav items by role
+  const visibleItems = navItems.filter((item) => !item.roles || item.roles.includes(userRole));
 
   return (
     <Sidebar>
@@ -198,7 +215,7 @@ export function AdminSidebar({ locale: localeProp, userName: userNameProp, userR
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.map((item) => {
+              {visibleItems.map((item) => {
                 const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
                 const hasChildren = item.children && item.children.length > 0;
                 const isChildActive = hasChildren && item.children?.some((c) => pathname === c.href);
@@ -266,27 +283,30 @@ export function AdminSidebar({ locale: localeProp, userName: userNameProp, userR
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton size="lg" className="data-[state=open]:bg-sidebar-accent">
                   <Avatar className="h-7 w-7">
-                    <AvatarFallback className="bg-emerald-100 text-emerald-700 text-xs">
-                      {userName.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+                    <AvatarFallback className={`${roleLabel.color.split(' ')[0]} text-xs`}>
+                      {initials}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col items-start text-sm">
-                    <span>{userName}</span>
-                    <span className="text-[10px] text-muted-foreground">{userRole}</span>
+                    <span className="truncate max-w-[120px]">{userName}</span>
+                    <Badge variant="secondary" className={`text-[9px] px-1 py-0 ${roleLabel.color} border-0`}>
+                      {locale === 'vi' ? roleLabel.vi : roleLabel.en}
+                    </Badge>
                   </div>
                   <ChevronDown className="ml-auto h-4 w-4" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-56">
                 <DropdownMenuItem asChild>
-                  <Link href="/profile">
+                  <Link href="/m/profile">
+                    <User className="mr-2 h-4 w-4" />
                     {locale === 'vi' ? 'Ho so' : 'Profile'}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={authLogout} className="text-red-600 focus:text-red-600">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    {locale === 'vi' ? 'Dang xuat' : 'Logout'}
+                <DropdownMenuItem onClick={logout} className="text-red-600 focus:text-red-600">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  {locale === 'vi' ? 'Dang xuat' : 'Logout'}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

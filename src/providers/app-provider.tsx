@@ -25,12 +25,24 @@ export function useLocale() {
 // Auth Context — persists to localStorage
 // ============================================
 
+interface ShopInfo {
+  id: string;
+  name: string;
+  district?: string;
+  province: string;
+  loyaltyTier: string;
+  creditLimit: number;
+  creditBalance: number;
+  creditStatus: string;
+}
+
 interface UserInfo {
   userId: string;
   phone: string;
   name: string;
   role: string;
   shopId?: string;
+  shop?: ShopInfo | null;
 }
 
 interface AuthContextType {
@@ -106,14 +118,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setUser(userInfo);
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    // Clear localStorage
     try {
       localStorage.removeItem('aladin-access-token');
       localStorage.removeItem('aladin-refresh-token');
       localStorage.removeItem('aladin-user');
     } catch {}
+
+    // Clear server-side cookie
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch {}
+
     setUser(null);
-    router.push('/auth/login');
+    router.replace('/auth/login');
   }, [router]);
 
   return (

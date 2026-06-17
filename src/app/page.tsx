@@ -1,11 +1,11 @@
 'use client';
-import { useLocale } from '@/providers/app-provider';
+import { useLocale, useAuth } from '@/providers/app-provider';
+import { AuthGuard } from '@/components/auth/auth-guard';
 
 import { useState, useEffect, useCallback } from 'react';
 import {
   Store,
   ShoppingCart,
-  TrendingUp,
   CreditCard,
   AlertTriangle,
   Truck,
@@ -18,6 +18,7 @@ import {
   Users,
   ShieldCheck,
   Clock,
+  Lock,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -28,7 +29,7 @@ import { AdminHeader } from '@/components/layout/admin-header';
 import { SensitiveValue } from '@/components/shared/sensitive-value';
 import { SidebarInset } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
-import { formatVND } from '@/lib/security';
+import { formatVND, ROLES } from '@/lib/security';
 
 // ============================================
 // Types
@@ -175,14 +176,18 @@ function PaymentMethodBadge({ method }: { method: string }) {
 // ============================================
 
 export default function DashboardPage() {
-  const { locale } = useLocale();
+  const { locale, user } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const userRole = user?.role || 'SHOP_OWNER';
 
   const fetchStats = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/dashboard/stats');
+      const token = localStorage.getItem('aladin-access-token');
+      const res = await fetch('/api/dashboard/stats', {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      });
       const json = await res.json();
       if (json.success) {
         setStats(json.data);
@@ -200,9 +205,22 @@ export default function DashboardPage() {
 
   const t = (en: string, vi: string) => locale === 'vi' ? vi : en;
 
+  // Role-specific dashboard title
+  const getGreeting = () => {
+    switch (userRole) {
+      case ROLES.ADMIN: return t('Dashboard Overview', 'Tong quan');
+      case ROLES.SHOP_OWNER: return t('My Shop Dashboard', 'Tong quan cua hang');
+      case ROLES.SALES_REP: return t('Sales Dashboard', 'Tong quan ban hang');
+      case ROLES.DRIVER: return t('Delivery Dashboard', 'Tong quan giao hang');
+      case ROLES.BROKER: return t('Broker Dashboard', 'Tong quan dai ly');
+      default: return t('Dashboard', 'Tong quan');
+    }
+  };
+
   return (
+    <AuthGuard>
     <div className="flex min-h-screen">
-      <AdminSidebar locale={locale} userName="Quyet Dinh" userRole="ADMIN" />
+      <AdminSidebar />
       <SidebarInset>
         <AdminHeader />
 
@@ -211,7 +229,7 @@ export default function DashboardPage() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold tracking-tight">
-                {t('Dashboard Overview', 'Tong quan')}
+                {getGreeting()}
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
                 {t('Real-time business metrics and KPIs', 'Chi so kinh doanh va KPI theo thoi gian thuc')}
@@ -497,8 +515,6 @@ export default function DashboardPage() {
         </main>
       </SidebarInset>
     </div>
+    </AuthGuard>
   );
 }
-
-// Need Lock icon
-import { Lock } from 'lucide-react';

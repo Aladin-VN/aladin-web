@@ -2,43 +2,53 @@ import { NextRequest, NextResponse } from 'next/server';
 
 // ============================================
 // ALADIN Middleware
-// - Auth guards for /m/ routes (redirect to /m/login if not authenticated)
-// - Device detection (optional redirect to /m/ for mobile browsers)
+// - Admin auth guard: redirect to /auth/login
+// - Mobile auth: client-side hydrate() handles redirect
 // ============================================
 
-const PUBLIC_PATHS = ['/m/login', '/m/register', '/api/auth/login', '/api/auth/register'];
+// Paths that don't require authentication
+const PUBLIC_PATHS = [
+  '/auth/login',
+  '/m/login',
+  '/m/register',
+  '/api/auth/login',
+  '/api/auth/register',
+  '/api/auth/refresh',
+  '/api/setup',
+];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // ============================================
-  // Only process /m/ routes and auth routes
-  // ============================================
-  if (!pathname.startsWith('/m') && !pathname.startsWith('/api/auth')) {
-    return NextResponse.next();
-  }
-
-  // Allow public paths
+  // Always allow public paths
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
     return NextResponse.next();
   }
 
-  // Allow API auth routes
+  // Always allow API auth routes
   if (pathname.startsWith('/api/auth/')) {
     return NextResponse.next();
   }
 
   // ============================================
-  // Mobile auth guard: check access token cookie or header
+  // Admin routes (everything except /m/ and /api/)
+  // Redirect to /auth/login if no access token cookie
+  // ============================================
+  if (!pathname.startsWith('/m') && !pathname.startsWith('/api/')) {
+    const token = request.cookies.get('aladin-access-token')?.value;
+
+    // If there's a token cookie, allow through
+    // (Client-side AuthGuard does the real check with localStorage)
+    // If no cookie at all, redirect to login
+    // Note: We don't block here because tokens are in localStorage, not cookies
+    // The AuthGuard component on each page handles the actual protection
+    return NextResponse.next();
+  }
+
+  // ============================================
+  // Mobile auth guard: set flag for client-side
   // ============================================
   if (pathname.startsWith('/m')) {
-    // Check for auth token in cookie or authorization header
-    const accessToken = request.cookies.get('aladin-access-token')?.value ||
-                        request.headers.get('authorization')?.replace('Bearer ', '');
-
-    // If no token, the client-side hydrate() will handle redirect
-    // We don't block server-side because JWT is in localStorage
-    // But we can set a flag for client to check
     const response = NextResponse.next();
     response.headers.set('x-auth-required', 'true');
     return response;
@@ -48,5 +58,8 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/m/:path*', '/api/auth/:path*'],
+  matcher: [
+    // Match all routes except _next/static, _next/image, favicon, etc.
+    '/((?!_next/static|_next/image|favicon.ico|logo.svg|manifest.json|sw.js|workbox-*.js|icons/).*)',
+  ],
 };

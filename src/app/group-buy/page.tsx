@@ -283,7 +283,7 @@ export default function GroupBuyPage() {
 
   return (
     <div className="flex min-h-screen">
-      <AdminSidebar locale={locale} userName="Quyết Định" userRole="ADMIN" />
+      <AdminSidebar />
       <SidebarInset>
         <AdminHeader />
 

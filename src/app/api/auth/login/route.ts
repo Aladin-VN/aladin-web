@@ -25,15 +25,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(result, { status });
     }
 
+    const data = result.data as Record<string, unknown>;
     const response = NextResponse.json(result, { status: 200 });
-    if (result.data && 'refreshToken' in result.data) {
-      response.cookies.set('aladin-refresh-token', (result.data as Record<string, unknown>).refreshToken as string, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 7 * 24 * 60 * 60,
-        path: '/',
-      });
+    if (data) {
+      // Set refresh token as httpOnly cookie
+      if ('refreshToken' in data) {
+        response.cookies.set('aladin-refresh-token', data.refreshToken as string, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 7 * 24 * 60 * 60,
+          path: '/',
+        });
+      }
+      // Set access token as cookie (non-httpOnly, needed for middleware redirect check)
+      if ('accessToken' in data) {
+        response.cookies.set('aladin-access-token', data.accessToken as string, {
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 15 * 60,
+          path: '/',
+        });
+      }
     }
 
     return response;

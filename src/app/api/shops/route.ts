@@ -4,9 +4,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { extractBearerToken, verifyAccessToken } from '@/lib/auth';
-import { successResponse, errorResponse, formatVND } from '@/lib/security';
+import { getShopFilter, type AuthUser } from '@/lib/get-auth-user';
+import { successResponse, errorResponse, formatVND, ROLES } from '@/lib/security';
 
-// GET /api/shops — paginated shop list with filters
+// GET /api/shops — paginated shop list with filters (role-filtered)
 export async function GET(request: NextRequest) {
   try {
     const token = extractBearerToken(request.headers.get('authorization'));
@@ -17,6 +18,15 @@ export async function GET(request: NextRequest) {
     if (!payload) {
       return NextResponse.json(errorResponse('INVALID_TOKEN', 'Token expired or invalid'), { status: 401 });
     }
+
+    // Build auth user for role filtering
+    const authUser: AuthUser = {
+      userId: payload.userId,
+      phone: payload.phone,
+      name: '',
+      role: payload.role,
+      shopId: payload.shopId,
+    };
 
     const { searchParams } = new URL(request.url);
     const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
@@ -29,8 +39,9 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get('sortBy') || 'createdAt';
     const sortOrder = searchParams.get('sortOrder') || 'desc';
 
-    // Build WHERE clause
-    const where: Record<string, unknown> = { deletedAt: null };
+    // Build WHERE clause — start with role filter
+    const roleFilter = getShopFilter(authUser);
+    const where: Record<string, unknown> = { deletedAt: null, ...roleFilter };
 
     if (search) {
       where.OR = [

@@ -277,7 +277,7 @@ export default function CreditPage() {
 
   return (
     <div className="flex min-h-screen">
-      <AdminSidebar locale={locale} userName="Quyet Dinh" userRole="ADMIN" />
+      <AdminSidebar />
       <SidebarInset>
         <AdminHeader />
 

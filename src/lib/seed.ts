@@ -118,7 +118,7 @@ export async function seedDatabase() {
     data: {
       phone: '0901234567', name: 'Admin ALADIN', nameEn: 'Admin ALADIN',
       role: 'ADMIN', status: 'ACTIVE',
-      passwordHash: '$2b$10$K7L1OJ45/4Y2nIvhRVpCe.FSmhDdWoXehVzJptJ/op0lSsvqNu6GK', // password: "aladin123"
+      passwordHash: '8fc022ea8c4aa394ddc9115d7f8808e1:6530711c8439cc9fee88067eea16f152fafb06b00242992000d4dc6bc0081098733af4a32f8fd6d15e98838744579c6d7bad7285d9dd8e6715fc7ec900627b01', // password: "aladin123" (scrypt)
     },
   });
 
@@ -126,7 +126,7 @@ export async function seedDatabase() {
     data: {
       phone: '0911111111', name: 'Nguyễn Văn An', nameEn: 'Nguyen Van An',
       role: 'SALES_REP', status: 'ACTIVE',
-      passwordHash: '$2b$10$K7L1OJ45/4Y2nIvhRVpCe.FSmhDdWoXehVzJptJ/op0lSsvqNu6GK',
+      passwordHash: '8fc022ea8c4aa394ddc9115d7f8808e1:6530711c8439cc9fee88067eea16f152fafb06b00242992000d4dc6bc0081098733af4a32f8fd6d15e98838744579c6d7bad7285d9dd8e6715fc7ec900627b01',
     },
   });
 
@@ -135,14 +135,14 @@ export async function seedDatabase() {
       data: {
         phone: '0922222222', name: 'Trần Văn B driver', nameEn: 'Tran Van B driver',
         role: 'DRIVER', status: 'ACTIVE',
-        passwordHash: '$2b$10$K7L1OJ45/4Y2nIvhRVpCe.FSmhDdWoXehVzJptJ/op0lSsvqNu6GK',
+        passwordHash: '8fc022ea8c4aa394ddc9115d7f8808e1:6530711c8439cc9fee88067eea16f152fafb06b00242992000d4dc6bc0081098733af4a32f8fd6d15e98838744579c6d7bad7285d9dd8e6715fc7ec900627b01',
       },
     }),
     db.user.create({
       data: {
         phone: '0922333333', name: 'Lê Văn C driver', nameEn: 'Le Van C driver',
         role: 'DRIVER', status: 'ACTIVE',
-        passwordHash: '$2b$10$K7L1OJ45/4Y2nIvhRVpCe.FSmhDdWoXehVzJptJ/op0lSsvqNu6GK',
+        passwordHash: '8fc022ea8c4aa394ddc9115d7f8808e1:6530711c8439cc9fee88067eea16f152fafb06b00242992000d4dc6bc0081098733af4a32f8fd6d15e98838744579c6d7bad7285d9dd8e6715fc7ec900627b01',
       },
     }),
   ]);
@@ -151,7 +151,7 @@ export async function seedDatabase() {
     data: {
       phone: '0933333333', name: 'Phạm Thị D broker', nameEn: 'Pham Thi D broker',
       role: 'BROKER', status: 'ACTIVE',
-      passwordHash: '$2b$10$K7L1OJ45/4Y2nIvhRVpCe.FSmhDdWoXehVzJptJ/op0lSsvqNu6GK',
+      passwordHash: '8fc022ea8c4aa394ddc9115d7f8808e1:6530711c8439cc9fee88067eea16f152fafb06b00242992000d4dc6bc0081098733af4a32f8fd6d15e98838744579c6d7bad7285d9dd8e6715fc7ec900627b01',
     },
   });
 
@@ -176,7 +176,7 @@ export async function seedDatabase() {
       data: {
         phone, name: `Chủ ${sd.name}`, nameEn: `Owner ${sd.nameEn}`,
         role: 'SHOP_OWNER', status: i === 4 ? 'SUSPENDED' : 'ACTIVE',
-        passwordHash: '$2b$10$K7L1OJ45/4Y2nIvhRVpCe.FSmhDdWoXehVzJptJ/op0lSsvqNu6GK',
+        passwordHash: '8fc022ea8c4aa394ddc9115d7f8808e1:6530711c8439cc9fee88067eea16f152fafb06b00242992000d4dc6bc0081098733af4a32f8fd6d15e98838744579c6d7bad7285d9dd8e6715fc7ec900627b01',
       },
     });
     shopUsers.push(user);

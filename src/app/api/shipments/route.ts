@@ -5,18 +5,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { extractBearerToken, verifyAccessToken, hasRole } from '@/lib/auth';
+import { getShipmentFilter, type AuthUser } from '@/lib/get-auth-user';
 import {
   sanitizeInput,
   successResponse,
   errorResponse,
   rateLimit,
   formatVND,
+  ROLES,
   SHIPMENT_STATUS,
   ORDER_STATUS,
 } from '@/lib/security';
 
 // ============================================
-// GET /api/shipments — List Shipments
+// GET /api/shipments — List Shipments (role-filtered)
 // ============================================
 
 export async function GET(request: NextRequest) {
@@ -29,6 +31,15 @@ export async function GET(request: NextRequest) {
     if (!payload) {
       return NextResponse.json(errorResponse('INVALID_TOKEN', 'Token expired or invalid'), { status: 401 });
     }
+
+    // Build auth user for role filtering
+    const authUser: AuthUser = {
+      userId: payload.userId,
+      phone: payload.phone,
+      name: '',
+      role: payload.role,
+      shopId: payload.shopId,
+    };
 
     // Parse query params
     const { searchParams } = new URL(request.url);
@@ -43,8 +54,9 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get('sortBy') || 'createdAt';
     const sortOrder = searchParams.get('sortOrder') === 'asc' ? 'asc' : 'desc';
 
-    // Build WHERE clause
-    const where: Record<string, unknown> = {};
+    // Build WHERE clause — start with role filter
+    const roleFilter = getShipmentFilter(authUser);
+    const where: Record<string, unknown> = { ...roleFilter };
 
     if (search) {
       where.OR = [
