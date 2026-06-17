@@ -109,7 +109,7 @@ const STATUS_BADGE: Record<string, { label: string; color: string }> = {
   PROCESSING: { label: 'Đang xử lý', color: 'bg-indigo-100 text-indigo-700' },
   PACKED: { label: 'Đã đóng gói', color: 'bg-purple-100 text-purple-700' },
   OUT_FOR_DELIVERY: { label: 'Đang giao hàng', color: 'bg-orange-100 text-orange-700' },
-  DELIVERED: { label: 'Đã giao', color: 'bg-emerald-100 text-emerald-700' },
+  DELIVERED: { label: 'Đã giao', color: 'bg-yellow-50 text-red-700' },
 };
 
 // ============================================
@@ -242,7 +242,7 @@ export default function InvestorDemoPage() {
             <ArrowLeft className="w-4 h-4" />
             <span>Quay lại</span>
           </Link>
-          <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">
+          <span className="text-xs font-semibold text-red-600 bg-yellow-50 px-2.5 py-1 rounded-full">
             DEMO MODE
           </span>
         </div>
@@ -278,14 +278,14 @@ export default function InvestorDemoPage() {
                   {/* Step Circle */}
                   <div className="flex-shrink-0 mt-0.5">
                     {state === 'completed' ? (
-                      <div className="w-9 h-9 rounded-full bg-emerald-500 flex items-center justify-center shadow-sm">
+                      <div className="w-9 h-9 rounded-full bg-red-500 flex items-center justify-center shadow-sm">
                         <CheckCircle2 className="w-5 h-5 text-white" />
                       </div>
                     ) : state === 'current' ? (
-                      <div className="relative w-9 h-9 rounded-full bg-emerald-500 flex items-center justify-center shadow-sm shadow-emerald-200">
+                      <div className="relative w-9 h-9 rounded-full bg-red-500 flex items-center justify-center shadow-sm shadow-yellow-100">
                         <span className="text-white text-sm font-bold">{step.step}</span>
-                        <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-emerald-400 rounded-full animate-ping opacity-75" />
-                        <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-emerald-300 rounded-full" />
+                        <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-yellow-500 rounded-full animate-ping opacity-75" />
+                        <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-yellow-400 rounded-full" />
                       </div>
                     ) : (
                       <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center">
@@ -312,7 +312,7 @@ export default function InvestorDemoPage() {
                       </span>
                     )}
                     {state === 'completed' && (
-                      <span className="inline-block mt-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                      <span className="inline-block mt-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-yellow-50 text-red-700">
                         Hoàn thành
                       </span>
                     )}
@@ -334,7 +334,7 @@ export default function InvestorDemoPage() {
             <button
               onClick={handleCreateOrder}
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-semibold text-base py-3.5 px-6 rounded-xl shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-semibold text-base py-3.5 px-6 rounded-xl shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -350,7 +350,7 @@ export default function InvestorDemoPage() {
         {message && (
           <div className={`mt-4 px-4 py-3 rounded-xl text-sm font-medium leading-relaxed ${
             isDelivered
-              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+              ? 'bg-yellow-50 text-red-800 border border-yellow-100'
               : 'bg-blue-50 text-blue-800 border border-blue-200'
           }`}>
             {message}
@@ -368,7 +368,7 @@ export default function InvestorDemoPage() {
             {/* Order Header Card */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
               {/* Green accent bar */}
-              <div className="h-1 bg-gradient-to-r from-emerald-400 to-emerald-600" />
+              <div className="h-1 bg-gradient-to-r from-yellow-500 to-red-600" />
 
               <div className="px-4 pt-4 pb-3">
                 <div className="flex items-center justify-between">
@@ -428,7 +428,7 @@ export default function InvestorDemoPage() {
                   <span>{formatVND(order.subtotalAmount)}</span>
                 </div>
                 {order.discountAmount > 0 && (
-                  <div className="flex justify-between text-xs text-emerald-600">
+                  <div className="flex justify-between text-xs text-red-600">
                     <span>Giảm giá</span>
                     <span>-{formatVND(order.discountAmount)}</span>
                   </div>
@@ -530,8 +530,8 @@ export default function InvestorDemoPage() {
         {/* ========== EMPTY STATE ========== */}
         {!order && !loading && (
           <section className="mt-8 text-center">
-            <div className="w-20 h-20 mx-auto bg-emerald-50 rounded-2xl flex items-center justify-center mb-4">
-              <Truck className="w-10 h-10 text-emerald-400" />
+            <div className="w-20 h-20 mx-auto bg-yellow-50 rounded-2xl flex items-center justify-center mb-4">
+              <Truck className="w-10 h-10 text-yellow-500" />
             </div>
             <p className="text-sm text-gray-500 max-w-xs mx-auto leading-relaxed">
               Nhấn nút bên trên để tạo một đơn hàng demo và trải nghiệm toàn bộ quy trình B2B từ đặt hàng đến giao hàng.
@@ -563,7 +563,7 @@ function TimelineEntry({
       {/* Dot / Check */}
       <div className="flex flex-col items-center">
         {done ? (
-          <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0">
+          <div className="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center flex-shrink-0">
             <CheckCircle2 className="w-4 h-4 text-white" />
           </div>
         ) : (
@@ -572,7 +572,7 @@ function TimelineEntry({
           </div>
         )}
         {!isLast && (
-          <div className={`w-0.5 h-6 mt-1 ${done ? 'bg-emerald-200' : 'bg-gray-100'}`} />
+          <div className={`w-0.5 h-6 mt-1 ${done ? 'bg-yellow-100' : 'bg-gray-100'}`} />
         )}
       </div>
 

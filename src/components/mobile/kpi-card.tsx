@@ -33,7 +33,7 @@ export function MobileKpiCard({
 
   const variantClasses = {
     default: 'border-border',
-    success: 'border-emerald-200 bg-emerald-50/50 dark:border-emerald-900 dark:bg-emerald-950/30',
+    success: 'border-yellow-100 bg-yellow-50/50 dark:border-red-900 dark:bg-emerald-950/30',
     warning: 'border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/30',
     danger: 'border-red-200 bg-red-50/50 dark:border-red-900 dark:bg-red-950/30',
   };
@@ -51,7 +51,7 @@ export function MobileKpiCard({
           <div
             className={cn(
               'h-9 w-9 rounded-lg flex items-center justify-center shrink-0 ml-2',
-              variant === 'success' && 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-400',
+              variant === 'success' && 'bg-yellow-50 text-red-600 dark:bg-red-900/50 dark:text-yellow-500',
               variant === 'warning' && 'bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400',
               variant === 'danger' && 'bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-400',
               variant === 'default' && 'bg-muted text-muted-foreground'
@@ -63,11 +63,11 @@ export function MobileKpiCard({
         {trend !== undefined && (
           <div className="flex items-center mt-1.5">
             {trend >= 0 ? (
-              <TrendingUp className="h-3 w-3 text-emerald-600 mr-0.5" />
+              <TrendingUp className="h-3 w-3 text-red-600 mr-0.5" />
             ) : (
               <TrendingDown className="h-3 w-3 text-red-600 mr-0.5" />
             )}
-            <span className={`text-[11px] font-medium ${trend >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+            <span className={`text-[11px] font-medium ${trend >= 0 ? 'text-red-600' : 'text-red-600'}`}>
               {Math.abs(trend)}%
             </span>
             {trendLabel && (

@@ -120,7 +120,7 @@ export default function MobileMerchandisingPage() {
         rightAction={
           <button
             onClick={() => router.push('/m/merchandising/submit')}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-600 text-white text-xs font-medium"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-600 text-white text-xs font-medium"
           >
             <Camera className="h-3.5 w-3.5" />
             {t('Gửi ảnh', 'Submit')}
@@ -152,7 +152,7 @@ export default function MobileMerchandisingPage() {
                 onClick={() => setActiveTab(tab.key)}
                 className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
                   activeTab === tab.key
-                    ? 'bg-emerald-600 text-white'
+                    ? 'bg-red-600 text-white'
                     : 'bg-muted text-muted-foreground hover:bg-muted/80'
                 }`}
               >
@@ -200,7 +200,7 @@ export default function MobileMerchandisingPage() {
               </p>
               <button
                 onClick={() => router.push('/m/merchandising/submit')}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 text-white text-xs font-medium"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-red-600 text-white text-xs font-medium"
               >
                 <Camera className="h-3.5 w-3.5" />
                 {t('Gửi ảnh đầu tiên', 'Submit First Photo')}

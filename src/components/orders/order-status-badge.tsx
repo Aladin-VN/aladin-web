@@ -12,7 +12,7 @@ const STATUS_COLORS: Record<string, string> = {
   PROCESSING: 'bg-indigo-100 text-indigo-700 hover:bg-indigo-100',
   PACKED: 'bg-purple-100 text-purple-700 hover:bg-purple-100',
   OUT_FOR_DELIVERY: 'bg-cyan-100 text-cyan-700 hover:bg-cyan-100',
-  DELIVERED: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100',
+  DELIVERED: 'bg-yellow-50 text-red-700 hover:bg-yellow-50',
   CANCELLED: 'bg-red-100 text-red-700 hover:bg-red-100',
   REFUNDED: 'bg-gray-100 text-gray-700 hover:bg-gray-100',
 };
@@ -71,7 +71,7 @@ export function OrderStatusBadge({
 
 const PAYMENT_COLORS: Record<string, string> = {
   CREDIT: 'bg-blue-100 text-blue-700 hover:bg-blue-100',
-  DIGITAL: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100',
+  DIGITAL: 'bg-yellow-50 text-red-700 hover:bg-yellow-50',
   COD: 'bg-orange-100 text-orange-700 hover:bg-orange-100',
 };
 
@@ -113,7 +113,7 @@ export function PaymentMethodBadge({
 
 const PAYMENT_STATUS_COLORS: Record<string, string> = {
   PENDING: 'bg-yellow-100 text-yellow-700 hover:bg-yellow-100',
-  PAID: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100',
+  PAID: 'bg-yellow-50 text-red-700 hover:bg-yellow-50',
   FAILED: 'bg-red-100 text-red-700 hover:bg-red-100',
   REFUNDED: 'bg-gray-100 text-gray-700 hover:bg-gray-100',
 };

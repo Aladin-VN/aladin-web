@@ -343,7 +343,7 @@ export function ShopEditDialog({
                   <SelectContent>
                     <SelectItem value="ACTIVE">
                       <span className="flex items-center gap-1.5">
-                        <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                        <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
                         {t('Active', 'Hoat dong')}
                       </span>
                     </SelectItem>
@@ -373,7 +373,7 @@ export function ShopEditDialog({
           <Button
             onClick={handleSave}
             disabled={saving || !name.trim() || loading}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            className="bg-red-600 hover:bg-red-700 text-white"
           >
             {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
             <Save className="h-4 w-4 mr-1" />

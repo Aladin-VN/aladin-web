@@ -127,7 +127,7 @@ export function OrderTimeline({
                 </p>
               )}
               {isCompleted && step.status === 'DELIVERED' && deliveredAt && (
-                <p className="text-[10px] text-emerald-600 mt-0.5">
+                <p className="text-[10px] text-red-600 mt-0.5">
                   {new Date(deliveredAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                 </p>
               )}

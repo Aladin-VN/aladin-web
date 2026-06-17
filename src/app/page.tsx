@@ -108,7 +108,7 @@ function StatCard({
         <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${
           variant === 'danger' ? 'bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-400' :
           variant === 'warning' ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400' :
-          'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-400'
+          'bg-yellow-50 text-red-600 dark:bg-red-900/50 dark:text-yellow-500'
         }`}>
           {icon}
         </div>
@@ -124,11 +124,11 @@ function StatCard({
         {trend !== undefined && (
           <div className="flex items-center mt-1">
             {trend >= 0 ? (
-              <ArrowUpRight className="h-3.5 w-3.5 text-emerald-600 mr-1" />
+              <ArrowUpRight className="h-3.5 w-3.5 text-red-600 mr-1" />
             ) : (
               <ArrowDownRight className="h-3.5 w-3.5 text-red-600 mr-1" />
             )}
-            <span className={`text-xs font-medium ${trend >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+            <span className={`text-xs font-medium ${trend >= 0 ? 'text-red-600' : 'text-red-600'}`}>
               {Math.abs(trend)}%
             </span>
             {trendLabel && <span className="text-xs text-muted-foreground ml-1">{trendLabel}</span>}
@@ -150,7 +150,7 @@ function OrderStatusBadge({ status }: { status: string }) {
     PROCESSING: 'bg-indigo-100 text-indigo-700 hover:bg-indigo-100',
     PACKED: 'bg-purple-100 text-purple-700 hover:bg-purple-100',
     OUT_FOR_DELIVERY: 'bg-cyan-100 text-cyan-700 hover:bg-cyan-100',
-    DELIVERED: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100',
+    DELIVERED: 'bg-yellow-50 text-red-700 hover:bg-yellow-50',
     CANCELLED: 'bg-red-100 text-red-700 hover:bg-red-100',
     REFUNDED: 'bg-gray-100 text-gray-700 hover:bg-gray-100',
   };
@@ -455,7 +455,7 @@ export default function DashboardPage() {
           <Card className="border-dashed">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                <ShieldCheck className="h-4 w-4 text-red-600" />
                 {t('Active Automation Rules', 'Quy tac Tu dong hoa Dang hoat dong')}
               </CardTitle>
             </CardHeader>

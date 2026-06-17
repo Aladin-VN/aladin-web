@@ -241,7 +241,7 @@ export default function DistributorsPage() {
                 <RefreshCw className="h-4 w-4 mr-1" />
                 {t('Refresh', 'Lam moi')}
               </Button>
-              <Button size="sm" onClick={handleCreate} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              <Button size="sm" onClick={handleCreate} className="bg-red-600 hover:bg-red-700 text-white">
                 <Plus className="h-4 w-4 mr-1" />
                 {t('Add Distributor', 'Them nha PP')}
               </Button>
@@ -259,7 +259,7 @@ export default function DistributorsPage() {
                     <p className="text-xs text-muted-foreground font-medium">{t('Total Distributors', 'Tong nha PP')}</p>
                     <p className="text-xl font-bold mt-1">{totalCount}</p>
                   </div>
-                  <div className="h-9 w-9 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                  <div className="h-9 w-9 rounded-lg bg-yellow-50 text-red-600 flex items-center justify-center">
                     <Warehouse className="h-4 w-4" />
                   </div>
                 </div>
@@ -270,7 +270,7 @@ export default function DistributorsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs text-muted-foreground font-medium">{t('Active', 'Hoat dong')}</p>
-                    <p className="text-xl font-bold mt-1 text-emerald-600">{activeCount}</p>
+                    <p className="text-xl font-bold mt-1 text-red-600">{activeCount}</p>
                   </div>
                   <div className="h-9 w-9 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
                     <MapPinned className="h-4 w-4" />
@@ -307,17 +307,17 @@ export default function DistributorsPage() {
           </div>
 
           {/* Smart Sourcing Info Banner */}
-          <Card className="border-emerald-200 bg-emerald-50/50 dark:border-emerald-900 dark:bg-emerald-950/30">
+          <Card className="border-yellow-100 bg-yellow-50/50 dark:border-red-900 dark:bg-emerald-950/30">
             <CardContent className="p-4">
               <div className="flex items-start gap-3">
-                <div className="h-9 w-9 rounded-lg bg-emerald-200 text-emerald-700 flex items-center justify-center shrink-0">
+                <div className="h-9 w-9 rounded-lg bg-yellow-100 text-red-700 flex items-center justify-center shrink-0">
                   <MapPinned className="h-4 w-4" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
+                  <h4 className="text-sm font-semibold text-red-700 dark:text-yellow-500">
                     {t('Smart Sourcing', 'Tim nguon thong minh')}
                   </h4>
-                  <p className="text-xs text-emerald-600/80 dark:text-emerald-400/80 mt-0.5">
+                  <p className="text-xs text-red-600/80 dark:text-yellow-500/80 mt-0.5">
                     {t(
                       'AI auto-selects optimal distributor based on margin + logistics cost. Add latitude/longitude to distributor profiles to enable distance-based routing.',
                       'AI tu dong chon NPP toi uu dua tren lai nhuong + chi phi van chuyen. Them vi do/kinh do vao ho so NPP de bat dau tuyen duong theo khoang cach.'
@@ -350,7 +350,7 @@ export default function DistributorsPage() {
                     <SelectItem value="all">{t('All', 'Tat ca')}</SelectItem>
                     <SelectItem value="active">
                       <span className="flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                        <span className="h-2 w-2 rounded-full bg-red-500" />
                         {t('Active', 'Hoat dong')}
                       </span>
                     </SelectItem>
@@ -391,7 +391,7 @@ export default function DistributorsPage() {
                   <p className="text-sm text-muted-foreground mt-1">
                     {t('Add your first distributor to build the supply chain', 'Them nha phan phoi dau tien de xay dung chuoi cung ung')}
                   </p>
-                  <Button className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleCreate}>
+                  <Button className="mt-4 bg-red-600 hover:bg-red-700 text-white" onClick={handleCreate}>
                     <Plus className="h-4 w-4 mr-2" />
                     {t('Add First Distributor', 'Them nha PP dau tien')}
                   </Button>
@@ -417,7 +417,7 @@ export default function DistributorsPage() {
                             <div className="flex items-center gap-2">
                               <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${
                                 dist.isActive
-                                  ? 'bg-emerald-100 text-emerald-600'
+                                  ? 'bg-yellow-50 text-red-600'
                                   : 'bg-gray-100 text-gray-400'
                               }`}>
                                 <Warehouse className="h-4 w-4" />
@@ -434,7 +434,7 @@ export default function DistributorsPage() {
                           <TableCell>
                             <Badge variant="secondary" className={
                               dist.isActive
-                                ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100 text-[10px]'
+                                ? 'bg-yellow-50 text-red-700 hover:bg-yellow-50 text-[10px]'
                                 : 'bg-gray-100 text-gray-500 hover:bg-gray-100 text-[10px]'
                             }>
                               {dist.isActive ? t('Active', 'HD') : t('Inactive', 'Ngung')}
@@ -494,7 +494,7 @@ export default function DistributorsPage() {
                                 onClick={() => toggleActive(dist)}
                                 title={dist.isActive ? t('Deactivate', 'Ngung HD') : t('Activate', 'Kich hoat')}>
                                 {(dist.isActive
-                                  ? <span key="on" className="h-3.5 w-3.5 rounded-full bg-emerald-500 inline-block" />
+                                  ? <span key="on" className="h-3.5 w-3.5 rounded-full bg-red-500 inline-block" />
                                   : <span key="off" className="h-3.5 w-3.5 rounded-full bg-gray-300 inline-block" />
                                 )}
                               </Button>
@@ -527,7 +527,7 @@ export default function DistributorsPage() {
                         </Button>
                         {getPageNumbers().map((p) => (
                           <Button key={p} variant={p === page ? 'default' : 'outline'} size="icon"
-                            className={`h-8 w-8 text-xs ${p === page ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''}`}
+                            className={`h-8 w-8 text-xs ${p === page ? 'bg-red-600 hover:bg-red-700 text-white' : ''}`}
                             onClick={() => setPage(p)}>{p}</Button>
                         ))}
                         <Button variant="outline" size="icon" className="h-8 w-8" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>

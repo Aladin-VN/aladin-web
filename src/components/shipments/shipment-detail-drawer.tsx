@@ -103,7 +103,7 @@ const NEXT_STATUS_OPTIONS: Record<string, { value: string; labelEn: string; labe
     { value: 'FAILED', labelEn: 'Failed', labelVi: 'Giao thất bại', color: 'bg-red-600 hover:bg-red-700' },
   ],
   IN_TRANSIT: [
-    { value: 'DELIVERED', labelEn: 'Delivered', labelVi: 'Đã giao hàng', color: 'bg-emerald-600 hover:bg-emerald-700' },
+    { value: 'DELIVERED', labelEn: 'Delivered', labelVi: 'Đã giao hàng', color: 'bg-red-600 hover:bg-red-700' },
     { value: 'FAILED', labelEn: 'Failed', labelVi: 'Giao thất bại', color: 'bg-red-600 hover:bg-red-700' },
   ],
   DELIVERED: [],
@@ -246,19 +246,19 @@ export function ShipmentDetailDrawer({
                     <div key={step.key} className="flex flex-col items-center flex-1">
                       <div className="flex items-center w-full">
                         {i > 0 && (
-                          <div className={`flex-1 h-0.5 mx-1 ${step.completed ? 'bg-emerald-500' : 'bg-muted'}`} />
+                          <div className={`flex-1 h-0.5 mx-1 ${step.completed ? 'bg-red-500' : 'bg-muted'}`} />
                         )}
                         <div className={`h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
                           step.isFailed
                             ? 'bg-red-100 text-red-600'
                             : step.completed
-                              ? 'bg-emerald-100 text-emerald-600'
+                              ? 'bg-yellow-50 text-red-600'
                               : 'bg-muted text-muted-foreground'
                         }`}>
                           {step.isFailed ? <XCircle className="h-3.5 w-3.5" /> : step.completed ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Clock className="h-3 w-3" />}
                         </div>
                         {i < getTimelineSteps().length - 1 && (
-                          <div className={`flex-1 h-0.5 mx-1 ${step.completed ? 'bg-emerald-500' : 'bg-muted'}`} />
+                          <div className={`flex-1 h-0.5 mx-1 ${step.completed ? 'bg-red-500' : 'bg-muted'}`} />
                         )}
                       </div>
                       <span className={`text-[10px] mt-1.5 text-center ${
@@ -359,8 +359,8 @@ export function ShipmentDetailDrawer({
                 </h4>
                 <div className="rounded-md border p-3 space-y-3">
                   <div className="flex items-start gap-2">
-                    <div className="h-5 w-5 rounded-full bg-emerald-100 flex items-center justify-center mt-0.5 shrink-0">
-                      <div className="h-2 w-2 rounded-full bg-emerald-600" />
+                    <div className="h-5 w-5 rounded-full bg-yellow-50 flex items-center justify-center mt-0.5 shrink-0">
+                      <div className="h-2 w-2 rounded-full bg-red-600" />
                     </div>
                     <div>
                       <p className="text-[10px] text-muted-foreground">{t('Pickup', 'Lấy hàng')}</p>
@@ -407,11 +407,11 @@ export function ShipmentDetailDrawer({
                   <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                     {t('Proof of Delivery', 'Xác nhận giao hàng')}
                   </h4>
-                  <div className="rounded-md border border-emerald-200 bg-emerald-50/50 p-3 space-y-2">
+                  <div className="rounded-md border border-yellow-100 bg-yellow-50/50 p-3 space-y-2">
                     {shipment.deliveredAt && (
                       <div className="flex items-center gap-2">
-                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                        <span className="text-xs text-emerald-700">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-red-600" />
+                        <span className="text-xs text-red-700">
                           {t('Delivered at', 'Giao lúc')} {new Date(shipment.deliveredAt).toLocaleString('vi-VN')}
                         </span>
                       </div>
@@ -459,7 +459,7 @@ export function ShipmentDetailDrawer({
                       disabled={updating || !nextStatus || nextStatus === 'all'}
                       size="sm"
                       className={`h-9 text-xs text-white ${
-                        nextOptions.find(o => o.value === nextStatus)?.color || 'bg-emerald-600 hover:bg-emerald-700'
+                        nextOptions.find(o => o.value === nextStatus)?.color || 'bg-red-600 hover:bg-red-700'
                       }`}
                     >
                       {updating && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />}

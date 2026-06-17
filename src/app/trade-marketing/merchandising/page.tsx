@@ -253,7 +253,7 @@ export default function MerchandisingPage() {
                     <p className="text-xs text-muted-foreground font-medium">{t('Approved', 'Da duyet')}</p>
                     <p className="text-xl font-bold mt-1">{stats.approved}</p>
                   </div>
-                  <div className="h-9 w-9 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                  <div className="h-9 w-9 rounded-lg bg-yellow-50 text-red-600 flex items-center justify-center">
                     <CheckCircle className="h-4 w-4" />
                   </div>
                 </div>
@@ -353,7 +353,7 @@ export default function MerchandisingPage() {
                         <TableRow key={audit.id} className="hover:bg-muted/50 transition-colors">
                           <TableCell>
                             <div className="flex items-center gap-2">
-                              <div className="h-8 w-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                              <div className="h-8 w-8 rounded-lg bg-yellow-50 text-red-600 flex items-center justify-center shrink-0">
                                 <Store className="h-4 w-4" />
                               </div>
                               <div>
@@ -422,7 +422,7 @@ export default function MerchandisingPage() {
                               {audit.status === 'PENDING_REVIEW' && (
                                 <Button
                                   variant="default" size="sm"
-                                  className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                                  className="h-8 text-xs bg-red-600 hover:bg-red-700 text-white"
                                   onClick={() => handleReview(audit)}
                                 >
                                   {t('Review', 'Duyet')}
@@ -453,7 +453,7 @@ export default function MerchandisingPage() {
                         </Button>
                         {getPageNumbers().map((p) => (
                           <Button key={p} variant={p === page ? 'default' : 'outline'} size="icon"
-                            className={`h-8 w-8 text-xs ${p === page ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''}`}
+                            className={`h-8 w-8 text-xs ${p === page ? 'bg-red-600 hover:bg-red-700 text-white' : ''}`}
                             onClick={() => setPage(p)}>{p}</Button>
                         ))}
                         <Button variant="outline" size="icon" className="h-8 w-8" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>

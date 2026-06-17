@@ -46,7 +46,7 @@ export function ReportKPIRow({
             className={cn(
               'h-8 w-8 rounded-lg flex items-center justify-center shrink-0',
               variant === 'success'
-                ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400'
+                ? 'bg-yellow-50 text-red-600 dark:bg-red-900/40 dark:text-yellow-500'
                 : variant === 'danger'
                   ? 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400'
                   : 'bg-muted text-muted-foreground'
@@ -62,7 +62,7 @@ export function ReportKPIRow({
               className={cn(
                 'flex items-center gap-0.5 text-[11px] font-medium',
                 trend >= 0
-                  ? 'text-emerald-600 dark:text-emerald-400'
+                  ? 'text-red-600 dark:text-yellow-500'
                   : 'text-red-600 dark:text-red-400'
               )}
             >

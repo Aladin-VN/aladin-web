@@ -26,7 +26,7 @@ export default function TradeMarketingPage() {
       descriptionVi: 'Quan ly chuong trinh khuyen mai tu nha san xuat, theo doi ap dung va ngan sach',
       href: '/trade-marketing/promotions',
       icon: <Gift className="h-8 w-8" />,
-      color: 'bg-emerald-100 text-emerald-600',
+      color: 'bg-yellow-50 text-red-600',
     },
     {
       title: 'Merchandising Audits',
@@ -61,7 +61,7 @@ export default function TradeMarketingPage() {
             {cards.map((card) => (
               <Card
                 key={card.href}
-                className="cursor-pointer hover:shadow-md hover:border-emerald-300 transition-all group"
+                className="cursor-pointer hover:shadow-md hover:border-yellow-400 transition-all group"
                 onClick={() => router.push(card.href)}
               >
                 <CardContent className="p-6">
@@ -70,7 +70,7 @@ export default function TradeMarketingPage() {
                       {card.icon}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-semibold group-hover:text-emerald-700 transition-colors">
+                      <h3 className="text-lg font-semibold group-hover:text-red-700 transition-colors">
                         {card.title}
                       </h3>
                       <p className="text-sm text-muted-foreground mt-0.5">

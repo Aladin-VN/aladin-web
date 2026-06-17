@@ -141,7 +141,7 @@ const DEFAULT_PREFS: NotifPref[] = [
   },
   {
     type: 'shipment',
-    icon: <Truck className="h-4 w-4 text-emerald-500" />,
+    icon: <Truck className="h-4 w-4 text-red-500" />,
     labelVi: 'Vận chuyển',
     labelEn: 'Shipments',
     descVi: 'Cập nhật vận đơn, giao hàng',

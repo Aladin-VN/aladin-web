@@ -171,11 +171,11 @@ const navItems: NavItem[] = [
 
 /** Role display labels */
 const ROLE_LABELS: Record<string, { en: string; vi: string; color: string }> = {
-  ADMIN: { en: 'Admin', vi: 'Quan tri', color: 'bg-emerald-100 text-emerald-700' },
-  SHOP_OWNER: { en: 'Shop Owner', vi: 'Chu cua hang', color: 'bg-blue-100 text-blue-700' },
-  SALES_REP: { en: 'Sales Rep', vi: 'Nhan vien ban', color: 'bg-purple-100 text-purple-700' },
-  DRIVER: { en: 'Driver', vi: 'Tai xe', color: 'bg-orange-100 text-orange-700' },
-  BROKER: { en: 'Broker', vi: 'Dai ly', color: 'bg-amber-100 text-amber-700' },
+  ADMIN: { en: 'Admin', vi: 'Quan tri', color: 'bg-yellow-100 text-yellow-700' },
+  SHOP_OWNER: { en: 'Shop Owner', vi: 'Chu cua hang', color: 'bg-red-50 text-red-700' },
+  SALES_REP: { en: 'Sales Rep', vi: 'Nhan vien ban', color: 'bg-orange-100 text-orange-700' },
+  DRIVER: { en: 'Driver', vi: 'Tai xe', color: 'bg-blue-100 text-blue-700' },
+  BROKER: { en: 'Broker', vi: 'Dai ly', color: 'bg-purple-100 text-purple-700' },
 };
 
 export function AdminSidebar() {
@@ -185,18 +185,20 @@ export function AdminSidebar() {
   const t = (title: string, titleVi: string) => locale === 'vi' ? titleVi : title;
 
   const userName = user?.name || 'User';
-  const userRole = user?.role || 'SHOP_OWNER';
-  const roleLabel = ROLE_LABELS[userRole] || ROLE_LABELS.SHOP_OWNER;
+  const userRole = user?.role;
+  const roleLabel = userRole ? (ROLE_LABELS[userRole] || ROLE_LABELS.SHOP_OWNER) : null;
   const initials = userName.split(' ').map((n) => n[0]).join('').slice(0, 2);
 
-  // Filter nav items by role
-  const visibleItems = navItems.filter((item) => !item.roles || item.roles.includes(userRole));
+  // Filter nav items by role (wait for auth hydration)
+  const visibleItems = userRole
+    ? navItems.filter((item) => !item.roles || item.roles.includes(userRole))
+    : [];
 
   return (
     <Sidebar>
       <SidebarHeader className="border-b px-6 py-4">
         <Link href="/" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white font-bold text-sm">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-yellow-400 to-yellow-500 text-red-700 font-bold text-sm">
             A
           </div>
           <div>
@@ -283,15 +285,17 @@ export function AdminSidebar() {
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton size="lg" className="data-[state=open]:bg-sidebar-accent">
                   <Avatar className="h-7 w-7">
-                    <AvatarFallback className={`${roleLabel.color.split(' ')[0]} text-xs`}>
+                    <AvatarFallback className={`${roleLabel ? roleLabel.color.split(' ')[0] : 'bg-yellow-100'} text-xs`}>
                       {initials}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col items-start text-sm">
                     <span className="truncate max-w-[120px]">{userName}</span>
-                    <Badge variant="secondary" className={`text-[9px] px-1 py-0 ${roleLabel.color} border-0`}>
-                      {locale === 'vi' ? roleLabel.vi : roleLabel.en}
-                    </Badge>
+                    {roleLabel && (
+                      <Badge variant="secondary" className={`text-[9px] px-1 py-0 ${roleLabel.color} border-0`}>
+                        {locale === 'vi' ? roleLabel.vi : roleLabel.en}
+                      </Badge>
+                    )}
                   </div>
                   <ChevronDown className="ml-auto h-4 w-4" />
                 </SidebarMenuButton>

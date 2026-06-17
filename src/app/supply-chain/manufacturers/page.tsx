@@ -213,7 +213,7 @@ export default function ManufacturersPage() {
                 <RefreshCw className="h-4 w-4 mr-1" />
                 {t('Refresh', 'Lam moi')}
               </Button>
-              <Button size="sm" onClick={handleCreate} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              <Button size="sm" onClick={handleCreate} className="bg-red-600 hover:bg-red-700 text-white">
                 <Plus className="h-4 w-4 mr-1" />
                 {t('Add Manufacturer', 'Them nha SX')}
               </Button>
@@ -231,7 +231,7 @@ export default function ManufacturersPage() {
                     <p className="text-xs text-muted-foreground font-medium">{t('Total Manufacturers', 'Tong nha SX')}</p>
                     <p className="text-xl font-bold mt-1">{totalCount}</p>
                   </div>
-                  <div className="h-9 w-9 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                  <div className="h-9 w-9 rounded-lg bg-yellow-50 text-red-600 flex items-center justify-center">
                     <Factory className="h-4 w-4" />
                   </div>
                 </div>
@@ -308,7 +308,7 @@ export default function ManufacturersPage() {
                   <p className="text-sm text-muted-foreground mt-1">
                     {t('Add your first manufacturer to get started', 'Them nha san xuat dau tien de bat dau')}
                   </p>
-                  <Button className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleCreate}>
+                  <Button className="mt-4 bg-red-600 hover:bg-red-700 text-white" onClick={handleCreate}>
                     <Plus className="h-4 w-4 mr-2" />
                     {t('Add First Manufacturer', 'Them nha SX dau tien')}
                   </Button>
@@ -332,7 +332,7 @@ export default function ManufacturersPage() {
                         <TableRow key={mfg.id} className="hover:bg-muted/50 transition-colors">
                           <TableCell>
                             <div className="flex items-center gap-2">
-                              <div className="h-8 w-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                              <div className="h-8 w-8 rounded-lg bg-yellow-50 text-red-600 flex items-center justify-center shrink-0">
                                 <Factory className="h-4 w-4" />
                               </div>
                               <div>
@@ -419,7 +419,7 @@ export default function ManufacturersPage() {
                         </Button>
                         {getPageNumbers().map((p) => (
                           <Button key={p} variant={p === page ? 'default' : 'outline'} size="icon"
-                            className={`h-8 w-8 text-xs ${p === page ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''}`}
+                            className={`h-8 w-8 text-xs ${p === page ? 'bg-red-600 hover:bg-red-700 text-white' : ''}`}
                             onClick={() => setPage(p)}>{p}</Button>
                         ))}
                         <Button variant="outline" size="icon" className="h-8 w-8" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>

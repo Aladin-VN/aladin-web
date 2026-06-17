@@ -461,7 +461,7 @@ export default function MobileProductsPage() {
 
       {/* Added to cart toast */}
       {addedToast && (
-        <div className="fixed top-4 left-4 right-4 z-[70] bg-emerald-600 text-white rounded-xl px-4 py-3 shadow-lg text-sm font-medium text-center animate-in slide-in-from-top-2 duration-300">
+        <div className="fixed top-4 left-4 right-4 z-[70] bg-red-600 text-white rounded-xl px-4 py-3 shadow-lg text-sm font-medium text-center animate-in slide-in-from-top-2 duration-300">
           + {addedToast}
         </div>
       )}

@@ -34,7 +34,7 @@ interface DealCardProps {
 function DealStatusBadge({ status, locale }: { status: string; locale: string }) {
   const t = (vi: string, en: string) => locale === 'vi' ? vi : en;
   const config: Record<string, { label: string; cls: string }> = {
-    ACTIVE: { label: t('Hoạt động', 'Active'), cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' },
+    ACTIVE: { label: t('Hoạt động', 'Active'), cls: 'bg-yellow-50 text-red-700 dark:bg-red-900/30 dark:text-yellow-500' },
     COMPLETED: { label: t('Hoàn thành', 'Completed'), cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
     EXPIRED: { label: t('Hết hạn', 'Expired'), cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
     CANCELLED: { label: t('Đã hủy', 'Cancelled'), cls: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
@@ -42,7 +42,7 @@ function DealStatusBadge({ status, locale }: { status: string; locale: string })
   const c = config[status] || { label: status, cls: 'bg-gray-100 text-gray-700' };
   return (
     <span className={cn('inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium', c.cls)}>
-      {status === 'ACTIVE' && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 mr-1 animate-pulse" />}
+      {status === 'ACTIVE' && <span className="h-1.5 w-1.5 rounded-full bg-red-500 mr-1 animate-pulse" />}
       {c.label}
     </span>
   );
@@ -53,7 +53,7 @@ export function DealCard({ deal, onClick }: DealCardProps) {
   const t = (vi: string, en: string) => locale === 'vi' ? vi : en;
 
   const progressColor = deal.progressPercent >= 100
-    ? 'bg-emerald-500'
+    ? 'bg-red-500'
     : deal.progressPercent >= 50
       ? 'bg-blue-500'
       : 'bg-amber-500';
@@ -87,7 +87,7 @@ export function DealCard({ deal, onClick }: DealCardProps) {
 
       {/* Pricing */}
       <div className="flex items-center gap-3 mb-3">
-        <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+        <span className="text-lg font-bold text-red-600 dark:text-yellow-500">
           {deal.discountPriceFormatted}
         </span>
         <span className="text-sm text-muted-foreground line-through">

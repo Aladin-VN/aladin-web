@@ -329,7 +329,7 @@ export default function CategoriesPage() {
               <Button
                 size="sm"
                 onClick={handleCreate}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="bg-red-600 hover:bg-red-700 text-white"
               >
                 <Plus className="h-4 w-4 mr-1" />
                 {t('Add Category', 'Thêm danh mục')}
@@ -344,7 +344,7 @@ export default function CategoriesPage() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <FolderOpen className="h-4 w-4 text-emerald-600" />
+                  <FolderOpen className="h-4 w-4 text-red-600" />
                   {t('All Categories', 'Tất cả danh mục')}
                 </CardTitle>
                 <Badge variant="outline" className="font-mono">
@@ -375,7 +375,7 @@ export default function CategoriesPage() {
                     )}
                   </p>
                   <Button
-                    className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white"
+                    className="mt-4 bg-red-600 hover:bg-red-700 text-white"
                     onClick={handleCreate}
                   >
                     <Plus className="h-4 w-4 mr-2" />
@@ -467,7 +467,7 @@ export default function CategoriesPage() {
                             checked={cat.isActive}
                             onCheckedChange={() => handleToggleActive(cat)}
                             disabled={togglingId === cat.id}
-                            className="data-[state=checked]:bg-emerald-600"
+                            className="data-[state=checked]:bg-red-600"
                           />
                         </div>
 
@@ -504,7 +504,7 @@ export default function CategoriesPage() {
           <Card className="border-dashed">
             <CardContent className="p-4">
               <div className="flex items-start gap-3">
-                <div className="h-8 w-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                <div className="h-8 w-8 rounded-lg bg-yellow-50 text-red-600 flex items-center justify-center shrink-0 mt-0.5">
                   <FolderOpen className="h-4 w-4" />
                 </div>
                 <div>
@@ -548,7 +548,7 @@ export default function CategoriesPage() {
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <FolderOpen className="h-5 w-5 text-emerald-600" />
+                <FolderOpen className="h-5 w-5 text-red-600" />
                 {editingCategory
                   ? t('Edit Category', 'Chỉnh sửa danh mục')
                   : t('Create Category', 'Tạo danh mục')}
@@ -655,7 +655,7 @@ export default function CategoriesPage() {
               <Button
                 onClick={handleSubmit}
                 disabled={submitting}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="bg-red-600 hover:bg-red-700 text-white"
               >
                 {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 {submitting

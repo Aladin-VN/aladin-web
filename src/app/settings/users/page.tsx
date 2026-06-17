@@ -290,7 +290,7 @@ export default function UsersPage() {
                 <Download className="h-4 w-4 mr-1" />
                 {t('Export', 'Xuat')}
               </Button>
-              <Button size="sm" onClick={() => setCreateDialogOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              <Button size="sm" onClick={() => setCreateDialogOpen(true)} className="bg-red-600 hover:bg-red-700 text-white">
                 <Plus className="h-4 w-4 mr-1" />
                 {t('Create User', 'Tao nguoi dung')}
               </Button>
@@ -314,15 +314,15 @@ export default function UsersPage() {
                 </div>
               </CardContent>
             </Card>
-            <Card className="border-emerald-200 bg-emerald-50/50 dark:border-emerald-900 dark:bg-emerald-950/30">
+            <Card className="border-yellow-100 bg-yellow-50/50 dark:border-red-900 dark:bg-emerald-950/30">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs text-muted-foreground font-medium">{t('Active', 'Hoat dong')}</p>
                     <p className="text-xl font-bold mt-1">{stats?.activeUsers || 0}</p>
                   </div>
-                  <div className="h-9 w-9 rounded-lg bg-emerald-100 flex items-center justify-center">
-                    <UserCheck className="h-4 w-4 text-emerald-600" />
+                  <div className="h-9 w-9 rounded-lg bg-yellow-50 flex items-center justify-center">
+                    <UserCheck className="h-4 w-4 text-red-600" />
                   </div>
                 </div>
               </CardContent>
@@ -469,7 +469,7 @@ export default function UsersPage() {
                       : t('Create the first user to get started.', 'Tao nguoi dung dau tien de bat dau.')}
                   </p>
                   {!hasActiveFilters && (
-                    <Button className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => setCreateDialogOpen(true)}>
+                    <Button className="mt-4 bg-red-600 hover:bg-red-700 text-white" onClick={() => setCreateDialogOpen(true)}>
                       <Plus className="h-4 w-4 mr-2" />{t('Create First User', 'Tao nguoi dung dau tien')}
                     </Button>
                   )}
@@ -565,7 +565,7 @@ export default function UsersPage() {
                             key={p}
                             variant={p === page ? 'default' : 'outline'}
                             size="icon"
-                            className={`h-8 w-8 text-xs ${p === page ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''}`}
+                            className={`h-8 w-8 text-xs ${p === page ? 'bg-red-600 hover:bg-red-700 text-white' : ''}`}
                             onClick={() => setPage(p)}
                           >
                             {p}

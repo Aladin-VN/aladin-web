@@ -23,7 +23,7 @@ function TrendIndicator({ growth }: { growth: number | null }) {
   return (
     <div className={`flex items-center gap-0.5 text-[10px] font-medium ${
       isNeutral ? 'text-muted-foreground' :
-      isPositive ? 'text-emerald-600' : 'text-red-600'
+      isPositive ? 'text-red-600' : 'text-red-600'
     }`}>
       {isNeutral ? (
         <Minus className="h-3 w-3" />
@@ -47,7 +47,7 @@ export function KpiCard({
     <Card className={
       variant === 'danger' ? 'border-red-200 bg-red-50/50 dark:border-red-900 dark:bg-red-950/30' :
       variant === 'warning' ? 'border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/30' :
-      variant === 'success' ? 'border-emerald-200 bg-emerald-50/50 dark:border-emerald-900 dark:bg-emerald-950/30' :
+      variant === 'success' ? 'border-yellow-100 bg-yellow-50/50 dark:border-red-900 dark:bg-emerald-950/30' :
       variant === 'info' ? 'border-blue-200 bg-blue-50/50 dark:border-blue-900 dark:bg-blue-950/30' :
       ''
     }>
@@ -68,7 +68,7 @@ export function KpiCard({
           <div className={`h-9 w-9 rounded-lg flex items-center justify-center shrink-0 ml-3 ${
             variant === 'danger' ? 'bg-red-100 text-red-600' :
             variant === 'warning' ? 'bg-amber-100 text-amber-600' :
-            variant === 'success' ? 'bg-emerald-100 text-emerald-600' :
+            variant === 'success' ? 'bg-yellow-50 text-red-600' :
             variant === 'info' ? 'bg-blue-100 text-blue-600' :
             'bg-muted text-muted-foreground'
           }`}>

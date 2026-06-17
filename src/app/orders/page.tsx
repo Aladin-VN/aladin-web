@@ -108,7 +108,7 @@ function StatCardMini({
     <Card className={
       variant === 'danger' ? 'border-red-200 bg-red-50/50 dark:border-red-900 dark:bg-red-950/30' :
       variant === 'warning' ? 'border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/30' :
-      variant === 'success' ? 'border-emerald-200 bg-emerald-50/50 dark:border-emerald-900 dark:bg-emerald-950/30' :
+      variant === 'success' ? 'border-yellow-100 bg-yellow-50/50 dark:border-red-900 dark:bg-emerald-950/30' :
       ''
     }>
       <CardContent className="p-4">
@@ -126,7 +126,7 @@ function StatCardMini({
           <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${
             variant === 'danger' ? 'bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-400' :
             variant === 'warning' ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400' :
-            variant === 'success' ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-400' :
+            variant === 'success' ? 'bg-yellow-50 text-red-600 dark:bg-red-900/50 dark:text-yellow-500' :
             'bg-muted text-muted-foreground'
           }`}>
             {icon}
@@ -320,7 +320,7 @@ export default function OrdersPage() {
               <Button
                 size="sm"
                 onClick={() => setCreateDialogOpen(true)}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="bg-red-600 hover:bg-red-700 text-white"
               >
                 <Plus className="h-4 w-4 mr-1" />
                 {t('Create Order', 'Tạo đơn hàng')}
@@ -421,7 +421,7 @@ export default function OrdersPage() {
                     </SelectItem>
                     <SelectItem value="DELIVERED">
                       <span className="flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                        <span className="h-2 w-2 rounded-full bg-red-500" />
                         {t('Delivered', 'Đã giao')}
                       </span>
                     </SelectItem>
@@ -531,7 +531,7 @@ export default function OrdersPage() {
                   </p>
                   {!hasActiveFilters && (
                     <Button
-                      className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white"
+                      className="mt-4 bg-red-600 hover:bg-red-700 text-white"
                       onClick={() => setCreateDialogOpen(true)}
                     >
                       <Plus className="h-4 w-4 mr-2" />
@@ -660,7 +660,7 @@ export default function OrdersPage() {
                             key={p}
                             variant={p === page ? 'default' : 'outline'}
                             size="icon"
-                            className={`h-8 w-8 text-xs ${p === page ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''}`}
+                            className={`h-8 w-8 text-xs ${p === page ? 'bg-red-600 hover:bg-red-700 text-white' : ''}`}
                             onClick={() => setPage(p)}
                           >
                             {p}

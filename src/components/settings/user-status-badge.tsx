@@ -15,7 +15,7 @@ const statusConfig: Record<string, {
 }> = {
   ACTIVE: {
     label: { en: 'Active', vi: 'Hoat dong' },
-    color: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800',
+    color: 'bg-yellow-50 text-red-700 border-yellow-100 dark:bg-emerald-950 dark:text-yellow-500 dark:border-red-800',
     icon: <CheckCircle className="h-3 w-3" />,
   },
   SUSPENDED: {

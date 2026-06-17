@@ -53,7 +53,7 @@ export default function ChangePasswordPage() {
       ? 'bg-amber-500'
       : strengthScore === 3
       ? 'bg-blue-500'
-      : 'bg-emerald-500';
+      : 'bg-red-500';
 
   const canSubmit =
     currentPassword &&
@@ -245,7 +245,7 @@ export default function ChangePasswordPage() {
 
         {/* Success message */}
         {success && (
-          <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 text-sm">
+          <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-yellow-50 dark:bg-emerald-950/30 text-red-600 text-sm">
             <Check className="h-4 w-4 shrink-0" />
             {t('Đổi mật khẩu thành công!', 'Password changed successfully!')}
           </div>
@@ -280,10 +280,10 @@ function Requirement({ met, label }: { met: boolean; label: string }) {
     <div className="flex items-center gap-1.5 text-[11px]">
       <div
         className={`h-1.5 w-1.5 rounded-full ${
-          met ? 'bg-emerald-500' : 'bg-muted-foreground/30'
+          met ? 'bg-red-500' : 'bg-muted-foreground/30'
         }`}
       />
-      <span className={met ? 'text-emerald-600' : 'text-muted-foreground'}>
+      <span className={met ? 'text-red-600' : 'text-muted-foreground'}>
         {label}
       </span>
     </div>

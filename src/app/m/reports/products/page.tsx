@@ -426,7 +426,7 @@ export default function MobileProductsReportPage() {
                         {product.sku} · {product.qty} {t('bán', 'sold')} · {product.category}
                       </p>
                     </div>
-                    <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
+                    <span className="text-xs font-bold text-red-600 dark:text-yellow-500 shrink-0">
                       {product.revenueFormatted}
                     </span>
                   </div>

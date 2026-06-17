@@ -60,7 +60,7 @@ export function LoyaltyTierBadge({
 // ============================================
 
 const CREDIT_STATUS_COLORS: Record<string, string> = {
-  ACTIVE: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100',
+  ACTIVE: 'bg-yellow-50 text-red-700 hover:bg-yellow-50',
   LOCKED: 'bg-red-100 text-red-700 hover:bg-red-100',
   OVERDUE: 'bg-amber-100 text-amber-700 hover:bg-amber-100',
 };

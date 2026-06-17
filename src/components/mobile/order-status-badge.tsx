@@ -13,14 +13,14 @@ const ORDER_STATUS_CONFIG: Record<OrderStatus, { vi: string; en: string; bg: str
   PROCESSING:       { vi: 'Đang xử lý',         en: 'Processing',       bg: 'bg-indigo-100 dark:bg-indigo-900/30', text: 'text-indigo-700 dark:text-indigo-400', dot: 'bg-indigo-500' },
   PACKED:           { vi: 'Đóng gói',           en: 'Packed',           bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-700 dark:text-purple-400', dot: 'bg-purple-500' },
   OUT_FOR_DELIVERY: { vi: 'Đang giao',          en: 'Out for Delivery', bg: 'bg-cyan-100 dark:bg-cyan-900/30',     text: 'text-cyan-700 dark:text-cyan-400',     dot: 'bg-cyan-500' },
-  DELIVERED:        { vi: 'Đã giao',            en: 'Delivered',        bg: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-700 dark:text-emerald-400', dot: 'bg-emerald-500' },
+  DELIVERED:        { vi: 'Đã giao',            en: 'Delivered',        bg: 'bg-yellow-50 dark:bg-red-900/30', text: 'text-red-700 dark:text-yellow-500', dot: 'bg-red-500' },
   CANCELLED:        { vi: 'Đã hủy',             en: 'Cancelled',        bg: 'bg-red-100 dark:bg-red-900/30',       text: 'text-red-700 dark:text-red-400',       dot: 'bg-red-500' },
   REFUNDED:         { vi: 'Đã hoàn',            en: 'Refunded',         bg: 'bg-gray-100 dark:bg-gray-800',        text: 'text-gray-600 dark:text-gray-400',     dot: 'bg-gray-500' },
 };
 
 const PAYMENT_STATUS_CONFIG: Record<PaymentStatus, { vi: string; en: string; bg: string; text: string }> = {
   PENDING:           { vi: 'Chờ thanh toán', en: 'Pending',       bg: 'bg-amber-100 dark:bg-amber-900/30', text: 'text-amber-700 dark:text-amber-400' },
-  PAID:              { vi: 'Đã thanh toán', en: 'Paid',          bg: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-700 dark:text-emerald-400' },
+  PAID:              { vi: 'Đã thanh toán', en: 'Paid',          bg: 'bg-yellow-50 dark:bg-red-900/30', text: 'text-red-700 dark:text-yellow-500' },
   FAILED:            { vi: 'Thất bại',     en: 'Failed',        bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-400' },
   REFUNDED:          { vi: 'Đã hoàn',      en: 'Refunded',      bg: 'bg-gray-100 dark:bg-gray-800', text: 'text-gray-600 dark:text-gray-400' },
   PARTIALLY_REFUNDED:{ vi: 'Hoàn 1 phần',  en: 'Partial',       bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-400' },

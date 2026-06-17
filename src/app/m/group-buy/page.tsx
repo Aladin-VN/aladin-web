@@ -168,7 +168,7 @@ export default function MobileGroupBuyPage() {
                 onClick={() => setActiveTab(tab.key)}
                 className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
                   activeTab === tab.key
-                    ? 'bg-emerald-600 text-white'
+                    ? 'bg-red-600 text-white'
                     : 'bg-muted text-muted-foreground hover:bg-muted/80'
                 }`}
               >

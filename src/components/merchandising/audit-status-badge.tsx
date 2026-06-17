@@ -21,7 +21,7 @@ export function AuditStatusBadge({ status, locale = 'vi' }: AuditStatusBadgeProp
       );
     case 'APPROVED':
       return (
-        <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 text-xs gap-1 border-0">
+        <Badge className="bg-yellow-50 text-red-700 hover:bg-yellow-50 text-xs gap-1 border-0">
           <CheckCircle className="h-3 w-3" />
           {t('Approved', 'Da duyet')}
         </Badge>

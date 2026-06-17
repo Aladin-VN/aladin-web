@@ -123,7 +123,7 @@ export function PaymentMethodSelector({ value, onChange }: PaymentMethodSelector
                     className={cn(
                       'text-[10px] px-1.5 py-0.5 rounded-full font-medium',
                       option.id === 'DIGITAL'
-                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300'
+                        ? 'bg-yellow-50 text-red-700 dark:bg-red-900 dark:text-yellow-400'
                         : option.id === 'COD'
                         ? 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300'
                         : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'

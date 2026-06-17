@@ -56,8 +56,8 @@ export function OrderSuccessScreen({
     <div className="flex flex-col items-center justify-center min-h-[70vh] px-6 text-center">
       {/* Success animation */}
       <div className="relative mb-6">
-        <div className="h-20 w-20 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center animate-bounce-once">
-          <CheckCircle2 className="h-12 w-12 text-emerald-600" />
+        <div className="h-20 w-20 rounded-full bg-yellow-50 dark:bg-red-900/30 flex items-center justify-center animate-bounce-once">
+          <CheckCircle2 className="h-12 w-12 text-red-600" />
         </div>
       </div>
 

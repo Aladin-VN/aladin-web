@@ -168,8 +168,8 @@ function StatusTimeline({
               <div className={`rounded-full flex items-center justify-center ${
                 isCompleted
                   ? isCurrent
-                    ? 'bg-emerald-100 text-emerald-600'
-                    : 'bg-emerald-500 text-white'
+                    ? 'bg-yellow-50 text-red-600'
+                    : 'bg-red-500 text-white'
                   : 'bg-muted text-muted-foreground'
               }`}>
                 {isCompleted
@@ -179,13 +179,13 @@ function StatusTimeline({
               </div>
               {idx < STATUS_FLOW.length - 1 && (
                 <div className={`w-0.5 h-4 ${
-                  idx < currentIdx ? 'bg-emerald-300' : 'bg-muted'
+                  idx < currentIdx ? 'bg-yellow-400' : 'bg-muted'
                 }`} />
               )}
             </div>
             <div className="flex-1 min-w-0 pb-1">
               <p className={`text-xs font-medium ${
-                isCurrent ? 'text-emerald-700' : isCompleted ? 'text-foreground' : 'text-muted-foreground'
+                isCurrent ? 'text-red-700' : isCompleted ? 'text-foreground' : 'text-muted-foreground'
               }`}>
                 <OrderStatusBadge status={step} locale={locale} />
               </p>
@@ -422,7 +422,7 @@ export function OrderDetailDrawer({
                             <p className="text-xs font-medium">{item.productName}</p>
                             <p className="text-[10px] text-muted-foreground font-mono">{item.productSku}</p>
                             {item.freeQty > 0 && (
-                              <Badge variant="secondary" className="text-[9px] px-1 py-0 bg-emerald-50 text-emerald-600 mt-0.5">
+                              <Badge variant="secondary" className="text-[9px] px-1 py-0 bg-yellow-50 text-red-600 mt-0.5">
                                 +{item.freeQty} {t('free', 'tặng')}
                               </Badge>
                             )}
@@ -463,7 +463,7 @@ export function OrderDetailDrawer({
                     <span><SensitiveValue value={order.subtotalAmount} maskType="amount" formatOptions={{ formatCurrency: true }} /></span>
                   </div>
                   {order.discountAmount > 0 && (
-                    <div className="flex justify-between text-xs text-emerald-600">
+                    <div className="flex justify-between text-xs text-red-600">
                       <span>{t('Discount (2% pay now)', 'Giảm giá (2% trả ngay)')}</span>
                       <span>-{formatVND(order.discountAmount)}</span>
                     </div>
@@ -477,7 +477,7 @@ export function OrderDetailDrawer({
                   <Separator />
                   <div className="flex justify-between text-sm font-bold">
                     <span>{t('Total', 'Tổng thanh tiền')}</span>
-                    <span className="text-emerald-700">
+                    <span className="text-red-700">
                       <SensitiveValue value={order.totalAmount} maskType="amount" formatOptions={{ formatCurrency: true }} />
                     </span>
                   </div>
@@ -534,7 +534,7 @@ export function OrderDetailDrawer({
                 <div className="flex gap-2">
                   {nextAction && (
                     <Button
-                      className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                      className="flex-1 bg-red-600 hover:bg-red-700 text-white"
                       size="sm"
                       onClick={handleAdvanceStatus}
                       disabled={actionLoading}

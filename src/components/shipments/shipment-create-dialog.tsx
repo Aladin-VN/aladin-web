@@ -230,7 +230,7 @@ export function ShipmentCreateDialog({
               </>
             ) : (
               <div className="flex items-center gap-2 p-2 rounded-md border bg-muted/50">
-                <Package className="h-4 w-4 text-emerald-600 shrink-0" />
+                <Package className="h-4 w-4 text-red-600 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-mono font-medium">{selectedOrder.orderNumber}</p>
                   <p className="text-[10px] text-muted-foreground">
@@ -281,7 +281,7 @@ export function ShipmentCreateDialog({
                   <SelectItem key={d.id} value={d.id} className="text-xs">
                     <span className="flex items-center justify-between w-full gap-2">
                       <span>{d.name}</span>
-                      <span className={`text-[10px] ${d.isAvailable ? 'text-emerald-600' : 'text-red-500'}`}>
+                      <span className={`text-[10px] ${d.isAvailable ? 'text-red-600' : 'text-red-500'}`}>
                         ({d.activeShipments} {t('active', 'đang giao')})
                       </span>
                     </span>
@@ -321,7 +321,7 @@ export function ShipmentCreateDialog({
             <Button
               onClick={handleSubmit}
               disabled={saving || !form.orderId || !form.dropoffAddress}
-              className="h-9 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="h-9 text-xs bg-red-600 hover:bg-red-700 text-white"
             >
               {saving && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />}
               {t('Create Shipment', 'Tạo chuyến giao')}

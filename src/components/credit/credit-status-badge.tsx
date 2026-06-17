@@ -9,8 +9,8 @@ interface CreditStatusBadgeProps {
 
 const statusConfig: Record<string, { bg: string; text: string; dot: string }> = {
   ACTIVE: {
-    bg: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-400',
-    dot: 'bg-emerald-500',
+    bg: 'bg-yellow-50 text-red-700 hover:bg-yellow-50 dark:bg-red-900/40 dark:text-yellow-500',
+    dot: 'bg-red-500',
   },
   OVERDUE: {
     bg: 'bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-900/40 dark:text-red-400',

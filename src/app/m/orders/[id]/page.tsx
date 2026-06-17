@@ -163,7 +163,7 @@ export default function MobileOrderDetailPage() {
                     <p className="text-xs text-muted-foreground mt-0.5">
                       SKU: {item.productSku}
                       {item.freeQty > 0 && (
-                        <span className="ml-2 text-emerald-600">
+                        <span className="ml-2 text-red-600">
                           +{item.freeQty} {t('miễn phí', 'free')}
                         </span>
                       )}
@@ -199,8 +199,8 @@ export default function MobileOrderDetailPage() {
 
             {order.discountAmount > 0 && (
               <div className="flex justify-between text-sm">
-                <span className="text-emerald-600">{t('Giảm giá', 'Discount')}</span>
-                <span className="text-emerald-600">-{order.discountAmountFormatted || formatVND(order.discountAmount)}</span>
+                <span className="text-red-600">{t('Giảm giá', 'Discount')}</span>
+                <span className="text-red-600">-{order.discountAmountFormatted || formatVND(order.discountAmount)}</span>
               </div>
             )}
 

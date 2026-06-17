@@ -76,7 +76,7 @@ export function PodCapture({
               <X className="h-4 w-4 text-white" />
             </button>
             <div className="absolute bottom-2 left-2">
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-medium">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-600 text-white text-[10px] font-medium">
                 <Check className="h-3 w-3" /> {t('Đã chụp', 'Captured')}
               </span>
             </div>

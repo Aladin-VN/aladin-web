@@ -14,7 +14,7 @@ export function DealStatusBadge({ status, locale = 'vi' }: DealStatusBadgeProps)
   switch (status) {
     case 'ACTIVE':
       return (
-        <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 text-xs gap-1 border-0 animate-pulse">
+        <Badge className="bg-yellow-50 text-red-700 hover:bg-yellow-50 text-xs gap-1 border-0 animate-pulse">
           <CheckCircle className="h-3 w-3" />
           {t('Active', 'Hoạt động')}
         </Badge>

@@ -10,7 +10,7 @@ const STATUS_COLORS: Record<string, string> = {
   PENDING: 'bg-yellow-100 text-yellow-700 hover:bg-yellow-100',
   PICKED_UP: 'bg-blue-100 text-blue-700 hover:bg-blue-100',
   IN_TRANSIT: 'bg-indigo-100 text-indigo-700 hover:bg-indigo-100',
-  DELIVERED: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100',
+  DELIVERED: 'bg-yellow-50 text-red-700 hover:bg-yellow-50',
   FAILED: 'bg-red-100 text-red-700 hover:bg-red-100',
 };
 

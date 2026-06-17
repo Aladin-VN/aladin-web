@@ -45,7 +45,7 @@ const ORDER_STATUS_COLORS: Record<string, string> = {
   PROCESSING: 'bg-indigo-400',
   PACKED: 'bg-purple-400',
   OUT_FOR_DELIVERY: 'bg-cyan-400',
-  DELIVERED: 'bg-emerald-500',
+  DELIVERED: 'bg-red-500',
   CANCELLED: 'bg-red-400',
   REFUNDED: 'bg-gray-400',
 };
@@ -63,7 +63,7 @@ const ORDER_STATUS_LABELS: Record<string, { vi: string; en: string }> = {
 
 const PAYMENT_COLORS: Record<string, string> = {
   CREDIT: 'bg-amber-500',
-  DIGITAL: 'bg-emerald-500',
+  DIGITAL: 'bg-red-500',
   COD: 'bg-purple-500',
 };
 

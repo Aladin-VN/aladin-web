@@ -241,7 +241,7 @@ export function UserFormDialog({ open, onOpenChange, user, locale = 'vi', onSave
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             {t('Cancel', 'Huy')}
           </Button>
-          <Button onClick={handleSubmit} disabled={loading} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+          <Button onClick={handleSubmit} disabled={loading} className="bg-red-600 hover:bg-red-700 text-white">
             {loading && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
             {isCreate ? t('Create', 'Tao') : t('Save', 'Luu')}
           </Button>

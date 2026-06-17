@@ -24,7 +24,7 @@ export default function SupplyChainPage() {
       ),
       href: '/supply-chain/manufacturers',
       icon: Factory,
-      color: 'bg-emerald-100 text-emerald-600',
+      color: 'bg-yellow-50 text-red-600',
       count: t('View details', 'Xem chi tiet'),
     },
     {
@@ -64,14 +64,14 @@ export default function SupplyChainPage() {
           <Separator />
 
           {/* Info Banner */}
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 dark:border-emerald-900 dark:bg-emerald-950/20 p-4">
+          <div className="rounded-lg border border-yellow-100 bg-yellow-50/50 dark:border-red-900 dark:bg-emerald-950/20 p-4">
             <div className="flex items-start gap-3">
-              <Link2 className="h-5 w-5 text-emerald-600 mt-0.5 shrink-0" />
+              <Link2 className="h-5 w-5 text-red-600 mt-0.5 shrink-0" />
               <div>
-                <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
+                <p className="text-sm font-medium text-red-800 dark:text-yellow-400">
                   {t('Supply Chain Management', 'Quan ly chuoi cung ung')}
                 </p>
-                <p className="text-xs text-emerald-700/80 dark:text-emerald-400/80 mt-1">
+                <p className="text-xs text-red-700/80 dark:text-yellow-500/80 mt-1">
                   {t(
                     'Track manufacturers, distributors, and product sourcing. Manage commission rates and delivery logistics.',
                     'Theo doi nha san xuat, nha phan phoi va nguon cung cap san pham. Quan ly hoa hong va van chuyen.'
@@ -101,7 +101,7 @@ export default function SupplyChainPage() {
                         <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                           {section.description}
                         </p>
-                        <Button variant="ghost" size="sm" className="mt-3 h-8 text-xs text-emerald-600 hover:text-emerald-700 p-0">
+                        <Button variant="ghost" size="sm" className="mt-3 h-8 text-xs text-red-600 hover:text-red-700 p-0">
                           {section.count}
                           <ArrowRight className="h-3.5 w-3.5 ml-1" />
                         </Button>

@@ -31,9 +31,9 @@ const REPAYMENT_METHODS = [
     viDesc: 'Ghi nhận thanh toán tiền mặt',
     enDesc: 'Record cash payment',
     icon: Banknote,
-    color: 'text-emerald-600',
-    bg: 'bg-emerald-50',
-    border: 'border-emerald-200',
+    color: 'text-red-600',
+    bg: 'bg-yellow-50',
+    border: 'border-yellow-100',
   },
   {
     id: 'BANK_TRANSFER' as const,
@@ -152,8 +152,8 @@ export function RepaymentForm({ credit, onSuccess, onCancel }: RepaymentFormProp
       <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center">
         <div className="bg-background rounded-t-2xl sm:rounded-2xl w-full max-w-md p-6 animate-in slide-in-from-bottom duration-200">
           <div className="text-center">
-            <div className="h-16 w-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle2 className="h-8 w-8 text-emerald-600" />
+            <div className="h-16 w-16 bg-yellow-50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle2 className="h-8 w-8 text-red-600" />
             </div>
             <h3 className="text-lg font-bold text-foreground mb-1">
               {t('Thanh toán thành công!', 'Payment Successful!')}
@@ -173,7 +173,7 @@ export function RepaymentForm({ credit, onSuccess, onCancel }: RepaymentFormProp
                 {formatVND(resultBalance)}
               </div>
               {resultBalance === 0 && (
-                <div className="text-xs text-emerald-600 font-medium mt-1">
+                <div className="text-xs text-red-600 font-medium mt-1">
                   {t('Đã thanh toán đủ!', 'Fully Settled!')}
                 </div>
               )}
@@ -213,7 +213,7 @@ export function RepaymentForm({ credit, onSuccess, onCancel }: RepaymentFormProp
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">{t('Công nợ sau TT', 'Balance After')}</span>
-              <span className="font-semibold text-emerald-600">
+              <span className="font-semibold text-red-600">
                 {formatVND(credit.used - numericAmount)}
               </span>
             </div>
@@ -228,7 +228,7 @@ export function RepaymentForm({ credit, onSuccess, onCancel }: RepaymentFormProp
             </button>
             <button
               onClick={handleConfirm}
-              className="flex-1 bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white font-semibold py-2.5 rounded-xl transition-colors"
+              className="flex-1 bg-red-500 hover:bg-red-600 active:bg-red-700 text-white font-semibold py-2.5 rounded-xl transition-colors"
             >
               {t('Xác nhận', 'Confirm')}
             </button>
@@ -396,7 +396,7 @@ export function RepaymentForm({ credit, onSuccess, onCancel }: RepaymentFormProp
           <button
             onClick={handleSubmit}
             disabled={!canSubmit}
-            className="w-full bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 disabled:bg-muted disabled:text-muted-foreground text-white font-semibold py-3 rounded-xl transition-colors"
+            className="w-full bg-red-500 hover:bg-red-600 active:bg-red-700 disabled:bg-muted disabled:text-muted-foreground text-white font-semibold py-3 rounded-xl transition-colors"
           >
             {t(
               `Thanh toán ${numericAmount > 0 ? formatVND(numericAmount) : ''}`,

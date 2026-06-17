@@ -30,7 +30,7 @@ interface TransactionRowProps {
 
 const TX_TYPE_CONFIG: Record<TransactionType, { vi: string; en: string; icon: typeof ArrowDownLeft; color: string }> = {
   CREDIT_USED: { vi: 'Dùng tín dụng', en: 'Credit Used', icon: ArrowUpRight, color: 'text-red-500' },
-  REPAYMENT: { vi: 'Thanh toán', en: 'Repayment', icon: ArrowDownLeft, color: 'text-emerald-500' },
+  REPAYMENT: { vi: 'Thanh toán', en: 'Repayment', icon: ArrowDownLeft, color: 'text-red-500' },
   ORDER_PAYMENT: { vi: 'Thanh toán đơn', en: 'Order Payment', icon: CreditCard, color: 'text-blue-500' },
   REFUND: { vi: 'Hoàn trả', en: 'Refund', icon: RefreshCcw, color: 'text-amber-500' },
   CREDIT_LIMIT_INCREASE: { vi: 'Tăng hạn mức', en: 'Limit Increase', icon: TrendingUp, color: 'text-violet-500' },
@@ -90,7 +90,7 @@ export function TransactionRow({
   const Icon = config.icon;
 
   const isPositive = amount > 0; // positive = credit used (debit), negative = repayment/refund
-  const amountColor = isPositive ? 'text-red-500' : 'text-emerald-500';
+  const amountColor = isPositive ? 'text-red-500' : 'text-red-500';
   const amountPrefix = isPositive ? '-' : '+';
 
   // Payment method label

@@ -140,7 +140,7 @@ function StockBadge({ quantity }: { quantity: number }) {
     );
   }
   return (
-    <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 text-[11px] font-medium px-2 py-0.5">
+    <Badge variant="secondary" className="bg-yellow-50 text-red-700 hover:bg-yellow-50 text-[11px] font-medium px-2 py-0.5">
       {quantity}
     </Badge>
   );
@@ -171,7 +171,7 @@ function StatCardMini({
     <Card className={
       variant === 'danger' ? 'border-red-200 bg-red-50/50 dark:border-red-900 dark:bg-red-950/30' :
       variant === 'warning' ? 'border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/30' :
-      variant === 'success' ? 'border-emerald-200 bg-emerald-50/50 dark:border-emerald-900 dark:bg-emerald-950/30' :
+      variant === 'success' ? 'border-yellow-100 bg-yellow-50/50 dark:border-red-900 dark:bg-emerald-950/30' :
       ''
     }>
       <CardContent className="p-4">
@@ -183,7 +183,7 @@ function StatCardMini({
           <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${
             variant === 'danger' ? 'bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-400' :
             variant === 'warning' ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400' :
-            variant === 'success' ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-400' :
+            variant === 'success' ? 'bg-yellow-50 text-red-600 dark:bg-red-900/50 dark:text-yellow-500' :
             'bg-muted text-muted-foreground'
           }`}>
             {icon}
@@ -451,7 +451,7 @@ export default function ProductsPage() {
               <Button
                 size="sm"
                 onClick={handleCreate}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="bg-red-600 hover:bg-red-700 text-white"
               >
                 <Plus className="h-4 w-4 mr-1" />
                 {t('Add Product', 'Thêm SP')}
@@ -606,7 +606,7 @@ export default function ProductsPage() {
                   </p>
                   {!debouncedSearch && categoryFilter === 'all' && statusFilter === 'all' && (
                     <Button
-                      className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white"
+                      className="mt-4 bg-red-600 hover:bg-red-700 text-white"
                       onClick={handleCreate}
                     >
                       <Plus className="h-4 w-4 mr-2" />
@@ -689,7 +689,7 @@ export default function ProductsPage() {
                           {/* Group Buy Price */}
                           <TableCell className="text-right hidden sm:table-cell">
                             {product.groupBuyPrice ? (
-                              <span className="text-sm text-emerald-600 font-medium">
+                              <span className="text-sm text-red-600 font-medium">
                                 {formatVND(product.groupBuyPrice)}
                               </span>
                             ) : (
@@ -720,7 +720,7 @@ export default function ProductsPage() {
                               checked={product.isActive}
                               onCheckedChange={() => handleToggleActive(product)}
                               disabled={togglingId === product.id}
-                              className="data-[state=checked]:bg-emerald-600"
+                              className="data-[state=checked]:bg-red-600"
                             />
                           </TableCell>
 
@@ -774,7 +774,7 @@ export default function ProductsPage() {
                             key={p}
                             variant={p === page ? 'default' : 'outline'}
                             size="icon"
-                            className={`h-8 w-8 text-xs ${p === page ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''}`}
+                            className={`h-8 w-8 text-xs ${p === page ? 'bg-red-600 hover:bg-red-700 text-white' : ''}`}
                             onClick={() => setPage(p)}
                           >
                             {p}

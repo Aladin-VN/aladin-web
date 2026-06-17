@@ -151,12 +151,12 @@ export default function DataStoragePage() {
 
       <main className="px-4 pb-4 pt-3 space-y-4">
         {/* Installation status */}
-        <Card className={isInstalled ? 'border-emerald-200 dark:border-emerald-800' : ''}>
+        <Card className={isInstalled ? 'border-yellow-100 dark:border-red-800' : ''}>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${
                 isInstalled
-                  ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950/30'
+                  ? 'bg-yellow-50 text-red-600 dark:bg-emerald-950/30'
                   : 'bg-muted text-muted-foreground'
               }`}>
                 <Download className="h-5 w-5" />
@@ -174,7 +174,7 @@ export default function DataStoragePage() {
                 </p>
               </div>
               {isInstalled && (
-                <Shield className="h-4 w-4 text-emerald-500" />
+                <Shield className="h-4 w-4 text-red-500" />
               )}
             </div>
           </CardContent>

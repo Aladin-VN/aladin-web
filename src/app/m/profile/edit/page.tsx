@@ -178,7 +178,7 @@ export default function ProfileEditPage() {
 
         {/* Success message */}
         {success && (
-          <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 text-sm">
+          <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-yellow-50 dark:bg-emerald-950/30 text-red-600 text-sm">
             <Check className="h-4 w-4 shrink-0" />
             {t('Cập nhật thành công!', 'Profile updated!')}
           </div>

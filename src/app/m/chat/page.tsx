@@ -126,8 +126,8 @@ export default function MobileChatPage() {
         showBack
         showNotifications={false}
         rightAction={
-          <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
-            <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+          <div className="flex items-center gap-1.5 text-xs text-red-600 dark:text-yellow-500">
+            <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
             {t('Trực tuyến', 'Online')}
           </div>
         }

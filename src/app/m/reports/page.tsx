@@ -41,7 +41,7 @@ const REPORT_CARDS = [
     titleEn: 'Overview',
     descVi: 'KPI nền tảng tổng hợp',
     descEn: 'Platform KPI dashboard',
-    color: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400',
+    color: 'bg-yellow-50 text-red-600 dark:bg-red-900/30 dark:text-yellow-500',
   },
   {
     href: '/m/reports/revenue',

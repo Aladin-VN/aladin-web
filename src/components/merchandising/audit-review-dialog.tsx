@@ -129,7 +129,7 @@ export function AuditReviewDialog({ open, onOpenChange, audit, locale = 'vi', on
               {t('Reject', 'Tu choi')}
             </Button>
             <Button
-              className="h-9 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="h-9 text-xs bg-red-600 hover:bg-red-700 text-white"
               onClick={() => handleReview('APPROVED')}
               disabled={submitting}
             >

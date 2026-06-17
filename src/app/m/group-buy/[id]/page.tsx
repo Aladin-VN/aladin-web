@@ -70,7 +70,7 @@ interface DealDetail {
 function DealStatusBadge({ status, locale }: { status: string; locale: string }) {
   const t = (vi: string, en: string) => locale === 'vi' ? vi : en;
   const config: Record<string, { icon: typeof CheckCircle; cls: string; label: string }> = {
-    ACTIVE: { icon: CheckCircle, cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400', label: t('Hoạt động', 'Active') },
+    ACTIVE: { icon: CheckCircle, cls: 'bg-yellow-50 text-red-700 dark:bg-red-900/30 dark:text-yellow-500', label: t('Hoạt động', 'Active') },
     COMPLETED: { icon: CheckCircle, cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400', label: t('Hoàn thành', 'Completed') },
     EXPIRED: { icon: AlertTriangle, cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400', label: t('Hết hạn', 'Expired') },
     CANCELLED: { icon: XCircle, cls: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400', label: t('Đã hủy', 'Cancelled') },
@@ -116,7 +116,7 @@ export default function MobileGroupBuyDetailPage() {
   }, [dealId, t]);
 
   const progressColor = deal?.progressPercent && deal.progressPercent >= 100
-    ? 'bg-emerald-500'
+    ? 'bg-red-500'
     : deal?.progressPercent && deal.progressPercent >= 50
       ? 'bg-blue-500'
       : 'bg-amber-500';
@@ -180,7 +180,7 @@ export default function MobileGroupBuyDetailPage() {
         {/* Pricing card */}
         <div className="rounded-xl border p-4 space-y-3">
           <div className="flex items-end gap-3">
-            <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+            <span className="text-2xl font-bold text-red-600 dark:text-yellow-500">
               {deal.discountPriceFormatted}
             </span>
             <span className="text-sm text-muted-foreground line-through pb-0.5">
@@ -261,7 +261,7 @@ export default function MobileGroupBuyDetailPage() {
               onClick={() => setActiveTab(tab)}
               className={`flex-1 py-2 rounded-lg text-xs font-medium transition-colors ${
                 activeTab === tab
-                  ? 'bg-emerald-600 text-white shadow-sm'
+                  ? 'bg-red-600 text-white shadow-sm'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
@@ -283,8 +283,8 @@ export default function MobileGroupBuyDetailPage() {
             ) : (
               deal.participants.map((p) => (
                 <div key={p.id} className="flex items-center gap-3 p-3 rounded-xl border">
-                  <div className="h-9 w-9 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center shrink-0">
-                    <Store className="h-4 w-4 text-emerald-600" />
+                  <div className="h-9 w-9 rounded-lg bg-yellow-50 dark:bg-red-900/20 flex items-center justify-center shrink-0">
+                    <Store className="h-4 w-4 text-red-600" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{p.shop.name}</p>
@@ -326,7 +326,7 @@ export default function MobileGroupBuyDetailPage() {
                     <div className="text-right shrink-0">
                       <p className="text-sm font-semibold">{new Intl.NumberFormat('vi-VN').format(order.totalAmount)} ₫</p>
                       <span className={`text-[10px] font-medium ${
-                        order.status === 'DELIVERED' ? 'text-emerald-600' : 'text-muted-foreground'
+                        order.status === 'DELIVERED' ? 'text-red-600' : 'text-muted-foreground'
                       }`}>{order.status}</span>
                     </div>
                   </div>
@@ -339,7 +339,7 @@ export default function MobileGroupBuyDetailPage() {
         {activeTab === 'overview' && (
           <div className="rounded-xl border p-4">
             <p className="text-xs text-muted-foreground mb-2">{t('Tiềm năng tiết kiệm', 'Potential Savings')}</p>
-            <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
+            <p className="text-xl font-bold text-red-600 dark:text-yellow-500">
               {deal.totalPotentialSavingsFormatted}
             </p>
             <p className="text-[10px] text-muted-foreground mt-1">
@@ -354,7 +354,7 @@ export default function MobileGroupBuyDetailPage() {
         <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-lg border-t px-4 py-3 safe-area-bottom">
           <Link
             href={`/m/products?groupBuy=${deal.productId}`}
-            className="block w-full py-3 rounded-xl bg-emerald-600 text-white text-sm font-semibold text-center hover:bg-emerald-700 transition-colors"
+            className="block w-full py-3 rounded-xl bg-red-600 text-white text-sm font-semibold text-center hover:bg-red-700 transition-colors"
           >
             {t('Tham gia mua chung', 'Join Group Buy')}
           </Link>

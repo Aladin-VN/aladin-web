@@ -130,7 +130,7 @@ export function PromotionDetailDrawer({ open, onOpenChange, promotionId, locale 
                   key={tab}
                   variant={activeTab === tab ? 'default' : 'ghost'}
                   size="sm"
-                  className={`h-8 text-xs flex-1 ${activeTab === tab ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''}`}
+                  className={`h-8 text-xs flex-1 ${activeTab === tab ? 'bg-red-600 hover:bg-red-700 text-white' : ''}`}
                   onClick={() => setActiveTab(tab)}
                 >
                   {tab === 'overview' && <BarChart3 className="h-3.5 w-3.5 mr-1" />}
@@ -152,7 +152,7 @@ export function PromotionDetailDrawer({ open, onOpenChange, promotionId, locale 
                   <div className="rounded-lg border p-3">
                     <p className="text-[10px] text-muted-foreground font-medium">{t('Manufacturer', 'Nha san xuat')}</p>
                     <div className="flex items-center gap-1.5 mt-1.5">
-                      <Factory className="h-3.5 w-3.5 text-emerald-600" />
+                      <Factory className="h-3.5 w-3.5 text-red-600" />
                       <p className="text-sm font-medium truncate">{detail.manufacturer.name}</p>
                     </div>
                     <p className="text-[10px] text-muted-foreground mt-0.5">
@@ -171,7 +171,7 @@ export function PromotionDetailDrawer({ open, onOpenChange, promotionId, locale 
                       <div className="mt-1.5">
                         <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                           <div
-                            className={`h-full rounded-full ${detail.budgetPercent > 80 ? 'bg-red-500' : 'bg-emerald-500'}`}
+                            className={`h-full rounded-full ${detail.budgetPercent > 80 ? 'bg-red-500' : 'bg-red-500'}`}
                             style={{ width: `${Math.min(100, detail.budgetPercent)}%` }}
                           />
                         </div>
@@ -242,8 +242,8 @@ export function PromotionDetailDrawer({ open, onOpenChange, promotionId, locale 
                 ) : (
                   detail.orderItems.map((oi) => (
                     <div key={oi.id} className="flex items-center gap-3 p-2 rounded-lg border hover:bg-muted/50">
-                      <div className="h-10 w-10 rounded-md bg-emerald-50 flex items-center justify-center shrink-0">
-                        <ShoppingCart className="h-4 w-4 text-emerald-600" />
+                      <div className="h-10 w-10 rounded-md bg-yellow-50 flex items-center justify-center shrink-0">
+                        <ShoppingCart className="h-4 w-4 text-red-600" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium">{oi.order.orderNumber}</p>

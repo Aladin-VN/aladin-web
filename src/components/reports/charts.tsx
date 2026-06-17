@@ -35,7 +35,7 @@ export function BarChart({
         <div className="flex items-end gap-1.5" style={{ height: `${height}px` }}>
           {data.map((d, i) => {
             const pct = max > 0 ? (d.value / max) * 100 : 0;
-            const color = d.color || (i === data.length - 1 ? 'bg-emerald-500' : 'bg-emerald-500/70');
+            const color = d.color || (i === data.length - 1 ? 'bg-red-500' : 'bg-red-500/70');
             return (
               <div key={i} className="flex-1 flex flex-col items-center gap-1 min-w-0">
                 {showValues && d.value > 0 && (
@@ -104,7 +104,7 @@ export function HBarChart({
         {items.map((d, i) => {
           const pct = max > 0 ? (d.value / max) * 100 : 0;
           const color = d.color || [
-            'bg-emerald-500', 'bg-blue-500', 'bg-purple-500', 'bg-amber-500',
+            'bg-red-500', 'bg-blue-500', 'bg-purple-500', 'bg-amber-500',
             'bg-pink-500', 'bg-cyan-500', 'bg-indigo-500', 'bg-orange-500',
             'bg-teal-500', 'bg-rose-500',
           ][i % 10];

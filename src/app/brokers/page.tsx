@@ -268,7 +268,7 @@ export default function BrokersPage() {
                 <RefreshCw className="h-4 w-4 mr-1" />
                 {t('Refresh', 'Làm mới')}
               </Button>
-              <Button size="sm" onClick={() => setCreateDialogOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              <Button size="sm" onClick={() => setCreateDialogOpen(true)} className="bg-red-600 hover:bg-red-700 text-white">
                 <Plus className="h-4 w-4 mr-1" />
                 {t('Add Broker', 'Thêm đại lý')}
               </Button>
@@ -286,7 +286,7 @@ export default function BrokersPage() {
                     <p className="text-xs text-muted-foreground font-medium">{t('Total Brokers', 'Tổng đại lý')}</p>
                     <p className="text-xl font-bold mt-1">{stats?.totalBrokers || 0}</p>
                     {stats?.newBrokersThisMonth ? (
-                      <p className="text-[10px] text-emerald-600">+{stats.newBrokersThisMonth} {t('this month', 'tháng này')}</p>
+                      <p className="text-[10px] text-red-600">+{stats.newBrokersThisMonth} {t('this month', 'tháng này')}</p>
                     ) : null}
                   </div>
                   <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center">
@@ -296,15 +296,15 @@ export default function BrokersPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-emerald-200 bg-emerald-50/50">
+            <Card className="border-yellow-100 bg-yellow-50/50">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs text-muted-foreground font-medium">{t('Active', 'Hoạt động')}</p>
                     <p className="text-xl font-bold mt-1">{stats?.activeBrokers || 0}</p>
                   </div>
-                  <div className="h-9 w-9 rounded-lg bg-emerald-100 flex items-center justify-center">
-                    <Users className="h-4 w-4 text-emerald-600" />
+                  <div className="h-9 w-9 rounded-lg bg-yellow-50 flex items-center justify-center">
+                    <Users className="h-4 w-4 text-red-600" />
                   </div>
                 </div>
               </CardContent>
@@ -331,18 +331,18 @@ export default function BrokersPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs text-muted-foreground font-medium">{t('Commission', 'Hoa hồng')}</p>
-                    <p className="text-lg font-bold mt-1 text-emerald-700">
+                    <p className="text-lg font-bold mt-1 text-red-700">
                       <SensitiveValue value={stats?.totalCommissionEarned || 0} maskType="amount" formatOptions={{ formatCurrency: true, compact: true }} />
                     </p>
                   </div>
-                  <div className="h-9 w-9 rounded-lg bg-emerald-100 flex items-center justify-center">
-                    <DollarSign className="h-4 w-4 text-emerald-600" />
+                  <div className="h-9 w-9 rounded-lg bg-yellow-50 flex items-center justify-center">
+                    <DollarSign className="h-4 w-4 text-red-600" />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className={stats?.territoryCoverage?.coveragePercent && stats.territoryCoverage.coveragePercent >= 80 ? 'border-emerald-200 bg-emerald-50/50' : stats?.territoryCoverage?.coveragePercent && stats.territoryCoverage.coveragePercent >= 50 ? 'border-amber-200 bg-amber-50/50' : 'border-red-200 bg-red-50/50'}>
+            <Card className={stats?.territoryCoverage?.coveragePercent && stats.territoryCoverage.coveragePercent >= 80 ? 'border-yellow-100 bg-yellow-50/50' : stats?.territoryCoverage?.coveragePercent && stats.territoryCoverage.coveragePercent >= 50 ? 'border-amber-200 bg-amber-50/50' : 'border-red-200 bg-red-50/50'}>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
@@ -402,7 +402,7 @@ export default function BrokersPage() {
                         </div>
                         <div className="flex justify-between text-[10px]">
                           <span className="text-muted-foreground">{t('Commission', 'Hoa hồng')}</span>
-                          <span className="font-medium text-emerald-600">{p.commissionEarnedFormatted}</span>
+                          <span className="font-medium text-red-600">{p.commissionEarnedFormatted}</span>
                         </div>
                         <div className="flex justify-between text-[10px]">
                           <span className="text-muted-foreground">{t('Shops', 'Cửa hàng')}</span>
@@ -487,7 +487,7 @@ export default function BrokersPage() {
                       : t('Add your first broker to get started.', 'Thêm đại lý đầu tiên để bắt đầu.')}
                   </p>
                   {!hasActiveFilters && (
-                    <Button className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => setCreateDialogOpen(true)}>
+                    <Button className="mt-4 bg-red-600 hover:bg-red-700 text-white" onClick={() => setCreateDialogOpen(true)}>
                       <Plus className="h-4 w-4 mr-2" />{t('Add First Broker', 'Thêm đại lý đầu tiên')}
                     </Button>
                   )}
@@ -545,7 +545,7 @@ export default function BrokersPage() {
                             </span>
                           </TableCell>
                           <TableCell className="hidden lg:table-cell">
-                            <span className="text-xs font-medium text-emerald-600">
+                            <span className="text-xs font-medium text-red-600">
                               <SensitiveValue value={b.totalCommissionEarned} maskType="amount" formatOptions={{ formatCurrency: true, compact: true }} />
                             </span>
                           </TableCell>
@@ -574,7 +574,7 @@ export default function BrokersPage() {
                           <ChevronLeft className="h-4 w-4" />
                         </Button>
                         {getPageNumbers().map(p => (
-                          <Button key={p} variant={p === page ? 'default' : 'outline'} size="icon" className={`h-8 w-8 text-xs ${p === page ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''}`} onClick={() => setPage(p)}>
+                          <Button key={p} variant={p === page ? 'default' : 'outline'} size="icon" className={`h-8 w-8 text-xs ${p === page ? 'bg-red-600 hover:bg-red-700 text-white' : ''}`} onClick={() => setPage(p)}>
                             {p}
                           </Button>
                         ))}

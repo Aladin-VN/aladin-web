@@ -187,11 +187,11 @@ export function ProductDetailSheet({
           </div>
 
           {product.groupBuyPrice && product.groupBuyPrice < product.basePrice && (
-            <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg p-3 mb-3">
-              <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+            <div className="bg-yellow-50 dark:bg-emerald-950/30 border border-yellow-100 dark:border-red-800 rounded-lg p-3 mb-3">
+              <span className="text-xs font-medium text-red-700 dark:text-yellow-500">
                 {t('Giá mua chung', 'Group Buy Price')}
               </span>
-              <span className="text-base font-bold text-emerald-700 dark:text-emerald-400 ml-2">
+              <span className="text-base font-bold text-red-700 dark:text-yellow-500 ml-2">
                 {formatVND(product.groupBuyPrice)}
               </span>
             </div>

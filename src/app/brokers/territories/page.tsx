@@ -120,7 +120,7 @@ export default function BrokerTerritoriesPage() {
 
           {/* Coverage Summary */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <Card className={summary?.coveragePercent && summary.coveragePercent >= 80 ? 'border-emerald-200 bg-emerald-50/50' : summary?.coveragePercent && summary.coveragePercent >= 50 ? 'border-amber-200 bg-amber-50/50' : 'border-red-200 bg-red-50/50'}>
+            <Card className={summary?.coveragePercent && summary.coveragePercent >= 80 ? 'border-yellow-100 bg-yellow-50/50' : summary?.coveragePercent && summary.coveragePercent >= 50 ? 'border-amber-200 bg-amber-50/50' : 'border-red-200 bg-red-50/50'}>
               <CardContent className="p-4">
                 <p className="text-xs text-muted-foreground font-medium">{t('Ward Coverage', 'Phủ sóng Phường')}</p>
                 <p className="text-2xl font-bold mt-1">{summary?.coveragePercent || 0}%</p>
@@ -159,7 +159,7 @@ export default function BrokerTerritoriesPage() {
                 </div>
                 <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
                   <div
-                    className={`h-full rounded-full transition-all ${summary.coveragePercent >= 80 ? 'bg-emerald-500' : summary.coveragePercent >= 50 ? 'bg-amber-500' : 'bg-red-500'}`}
+                    className={`h-full rounded-full transition-all ${summary.coveragePercent >= 80 ? 'bg-red-500' : summary.coveragePercent >= 50 ? 'bg-amber-500' : 'bg-red-500'}`}
                     style={{ width: `${Math.max(2, summary.coveragePercent)}%` }}
                   />
                 </div>
@@ -199,24 +199,24 @@ export default function BrokerTerritoriesPage() {
               {covered.length > 0 && (
                 <div>
                   <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                    <CheckCircle2 className="h-4 w-4 text-red-600" />
                     {t('Covered Wards', 'Phường Đã phủ')} ({covered.length})
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {covered.map(ward => (
-                      <Card key={ward.wardId} className="border-emerald-200">
+                      <Card key={ward.wardId} className="border-yellow-100">
                         <CardContent className="p-4 space-y-3">
                           <div className="flex items-start justify-between">
                             <div className="flex items-center gap-2">
-                              <div className="h-8 w-8 rounded-lg bg-emerald-100 flex items-center justify-center">
-                                <MapPin className="h-4 w-4 text-emerald-600" />
+                              <div className="h-8 w-8 rounded-lg bg-yellow-50 flex items-center justify-center">
+                                <MapPin className="h-4 w-4 text-red-600" />
                               </div>
                               <div>
                                 <p className="text-sm font-medium">{ward.wardName}</p>
                                 <p className="text-[10px] text-muted-foreground">{ward.district}</p>
                               </div>
                             </div>
-                            <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 text-[10px]">
+                            <Badge variant="secondary" className="bg-yellow-50 text-red-700 text-[10px]">
                               {ward.brokerCount} {t('broker(s)', 'đại lý')}
                             </Badge>
                           </div>

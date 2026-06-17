@@ -138,10 +138,10 @@ export default function BrokerCommissionsPage() {
 
           {/* Summary Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <Card className="border-emerald-200 bg-emerald-50/50">
+            <Card className="border-yellow-100 bg-yellow-50/50">
               <CardContent className="p-4">
                 <p className="text-xs text-muted-foreground font-medium">{t('Total Commission', 'Tổng hoa hồng')}</p>
-                <p className="text-xl font-bold mt-1 text-emerald-700">
+                <p className="text-xl font-bold mt-1 text-red-700">
                   <SensitiveValue value={Number(summary?.totalUnpaidCommission) || 0} maskType="amount" formatOptions={{ formatCurrency: true, compact: true }} />
                 </p>
               </CardContent>
@@ -276,7 +276,7 @@ export default function BrokerCommissionsPage() {
                             </span>
                           </TableCell>
                           <TableCell>
-                            <span className="text-xs font-semibold text-emerald-600">
+                            <span className="text-xs font-semibold text-red-600">
                               <SensitiveValue value={b.totalCommissionEarned} maskType="amount" formatOptions={{ formatCurrency: true }} />
                             </span>
                           </TableCell>
@@ -300,7 +300,7 @@ export default function BrokerCommissionsPage() {
                           <ChevronLeft className="h-4 w-4" />
                         </Button>
                         {getPageNumbers().map(p => (
-                          <Button key={p} variant={p === page ? 'default' : 'outline'} size="icon" className={`h-8 w-8 text-xs ${p === page ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''}`} onClick={() => setPage(p)}>{p}</Button>
+                          <Button key={p} variant={p === page ? 'default' : 'outline'} size="icon" className={`h-8 w-8 text-xs ${p === page ? 'bg-red-600 hover:bg-red-700 text-white' : ''}`} onClick={() => setPage(p)}>{p}</Button>
                         ))}
                         <Button variant="outline" size="icon" className="h-8 w-8" disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>
                           <ChevronRight className="h-4 w-4" />

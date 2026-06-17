@@ -80,7 +80,7 @@ const TYPE_COLORS: Record<string, { bg: string; icon: React.ReactNode }> = {
   order: { bg: 'bg-blue-100 text-blue-600 dark:bg-blue-900/40', icon: <ShoppingBag className="h-4 w-4" /> },
   shipment: { bg: 'bg-cyan-100 text-cyan-600 dark:bg-cyan-900/40', icon: <Truck className="h-4 w-4" /> },
   credit: { bg: 'bg-amber-100 text-amber-600 dark:bg-amber-900/40', icon: <CreditCard className="h-4 w-4" /> },
-  promotion: { bg: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40', icon: <Tag className="h-4 w-4" /> },
+  promotion: { bg: 'bg-yellow-50 text-red-600 dark:bg-red-900/40', icon: <Tag className="h-4 w-4" /> },
   system: { bg: 'bg-gray-100 text-gray-600 dark:bg-gray-800', icon: <Settings className="h-4 w-4" /> },
 };
 

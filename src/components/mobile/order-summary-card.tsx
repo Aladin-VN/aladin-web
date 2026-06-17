@@ -78,10 +78,10 @@ export function OrderSummaryCard({
       {/* Discount (DIGITAL payment) */}
       {discount > 0 && (
         <div className="flex justify-between text-sm">
-          <span className="text-emerald-600">
+          <span className="text-red-600">
             {t('Giảm giá thanh toán số (2%)', 'Digital payment discount (2%)')}
           </span>
-          <span className="font-medium text-emerald-600">-{formatVND(discount)}</span>
+          <span className="font-medium text-red-600">-{formatVND(discount)}</span>
         </div>
       )}
 

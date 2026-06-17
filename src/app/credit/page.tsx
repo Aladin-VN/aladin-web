@@ -247,7 +247,7 @@ export default function CreditPage() {
   const getUtilizationColor = (percent: number) => {
     if (percent >= 80) return '[&>div]:bg-red-500';
     if (percent >= 50) return '[&>div]:bg-amber-500';
-    return '[&>div]:bg-emerald-500';
+    return '[&>div]:bg-red-500';
   };
 
   const getDaysColor = (days: number | null, status: string) => {
@@ -256,7 +256,7 @@ export default function CreditPage() {
     if (days === null) return 'text-muted-foreground';
     if (days <= 0) return 'text-red-600 font-bold';
     if (days <= 3) return 'text-amber-600 font-medium';
-    return 'text-emerald-600';
+    return 'text-red-600';
   };
 
   const formatLastActivity = (dateStr: string | null) => {
@@ -320,7 +320,7 @@ export default function CreditPage() {
           ) : summary ? (
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               {/* Total Credit Exposure */}
-              <Card className="border-emerald-200 bg-emerald-50/50 dark:border-emerald-900 dark:bg-emerald-950/30">
+              <Card className="border-yellow-100 bg-yellow-50/50 dark:border-red-900 dark:bg-emerald-950/30">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
@@ -337,7 +337,7 @@ export default function CreditPage() {
                         </p>
                       )}
                     </div>
-                    <div className="h-9 w-9 rounded-lg bg-emerald-100 text-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-400 flex items-center justify-center">
+                    <div className="h-9 w-9 rounded-lg bg-yellow-50 text-red-600 dark:bg-red-900/50 dark:text-yellow-500 flex items-center justify-center">
                       <CreditCard className="h-4 w-4" />
                     </div>
                   </div>
@@ -357,7 +357,7 @@ export default function CreditPage() {
                         {t(`of ${summary.creditLines.total} shops`, `/ ${summary.creditLines.total} cua hang`)}
                       </p>
                     </div>
-                    <div className="h-9 w-9 rounded-lg bg-emerald-100 text-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-400 flex items-center justify-center">
+                    <div className="h-9 w-9 rounded-lg bg-yellow-50 text-red-600 dark:bg-red-900/50 dark:text-yellow-500 flex items-center justify-center">
                       <ShieldCheck className="h-4 w-4" />
                     </div>
                   </div>
@@ -399,7 +399,7 @@ export default function CreditPage() {
                         {t('Collection Rate', 'Ty thu')}
                       </p>
                       <p className={`text-xl font-bold mt-1 ${
-                        summary.collection.collectionRate >= 80 ? 'text-emerald-600' :
+                        summary.collection.collectionRate >= 80 ? 'text-red-600' :
                         summary.collection.collectionRate >= 50 ? 'text-amber-600' :
                         'text-red-600'
                       }`}>
@@ -414,7 +414,7 @@ export default function CreditPage() {
                     </div>
                     <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${
                       summary.collection.collectionRate >= 80
-                        ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-400'
+                        ? 'bg-yellow-50 text-red-600 dark:bg-red-900/50 dark:text-yellow-500'
                         : 'bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400'
                     }`}>
                       <Percent className="h-4 w-4" />
@@ -430,7 +430,7 @@ export default function CreditPage() {
             <CardHeader className="pb-3">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <CardTitle className="text-sm flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                  <ShieldCheck className="h-4 w-4 text-red-600" />
                   {t('Automation Rules', 'Quy tac Tu dong hoa')}
                 </CardTitle>
                 <Button
@@ -459,7 +459,7 @@ export default function CreditPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium">{t('Credit Auto-Lock (Day 7)', 'Tu khoa Cong no (Ngay 7)')}</p>
-                      <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 text-[10px] px-1.5 py-0">
+                      <Badge variant="secondary" className="bg-yellow-50 text-red-700 hover:bg-yellow-50 text-[10px] px-1.5 py-0">
                         {t('Active', 'Hoat dong')}
                       </Badge>
                     </div>
@@ -480,7 +480,7 @@ export default function CreditPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium">{t('Day 5 Reminder', 'Nhac nho Ngay 5')}</p>
-                      <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 text-[10px] px-1.5 py-0">
+                      <Badge variant="secondary" className="bg-yellow-50 text-red-700 hover:bg-yellow-50 text-[10px] px-1.5 py-0">
                         {t('Active', 'Hoat dong')}
                       </Badge>
                     </div>
@@ -495,7 +495,7 @@ export default function CreditPage() {
 
                 {/* Rule 3: Pay Now Discount */}
                 <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                  <div className="h-8 w-8 rounded-lg bg-yellow-50 text-red-600 flex items-center justify-center shrink-0 mt-0.5">
                     <Zap className="h-4 w-4" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -560,7 +560,7 @@ export default function CreditPage() {
                     <TabsTrigger value="active">
                       {t('Active', 'Hoat dong')}
                       {summary && (
-                        <Badge variant="outline" className="ml-1.5 text-[10px] px-1.5 py-0 text-emerald-600">{summary.creditLines.active}</Badge>
+                        <Badge variant="outline" className="ml-1.5 text-[10px] px-1.5 py-0 text-red-600">{summary.creditLines.active}</Badge>
                       )}
                     </TabsTrigger>
                     <TabsTrigger value="overdue">
@@ -752,7 +752,7 @@ export default function CreditPage() {
                             key={p}
                             variant={p === page ? 'default' : 'outline'}
                             size="icon"
-                            className={`h-8 w-8 text-xs ${p === page ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''}`}
+                            className={`h-8 w-8 text-xs ${p === page ? 'bg-red-600 hover:bg-red-700 text-white' : ''}`}
                             onClick={() => setPage(p)}
                           >
                             {p}

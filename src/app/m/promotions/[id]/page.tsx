@@ -76,7 +76,7 @@ function PromoTypeLabel({ promo, locale }: { promo: PromoDetail; locale: string 
   switch (promoType) {
     case 'BUY_X_GET_Y':
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 text-xs font-semibold">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-yellow-50 dark:bg-red-900/20 text-red-700 text-xs font-semibold">
           <Gift className="h-4 w-4" />
           {buyQty && getQty
             ? (locale === 'vi' ? `Mua ${buyQty} Tặng ${getQty}` : `Buy ${buyQty} Get ${getQty}`)
@@ -106,7 +106,7 @@ function PromoTypeLabel({ promo, locale }: { promo: PromoDetail; locale: string 
 function PromoStatusBadge({ status, locale }: { status: string; locale: string }) {
   const t = (vi: string, en: string) => locale === 'vi' ? vi : en;
   const config: Record<string, { icon: typeof CheckCircle; cls: string; label: string }> = {
-    active: { icon: CheckCircle, cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400', label: t('Hoạt động', 'Active') },
+    active: { icon: CheckCircle, cls: 'bg-yellow-50 text-red-700 dark:bg-red-900/30 dark:text-yellow-500', label: t('Hoạt động', 'Active') },
     upcoming: { icon: Clock, cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400', label: t('Sắp diễn ra', 'Upcoming') },
     expired: { icon: AlertTriangle, cls: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400', label: t('Hết hạn', 'Expired') },
   };
@@ -199,8 +199,8 @@ export default function MobilePromotionDetailPage() {
         {/* Manufacturer */}
         <div className="rounded-xl border p-4">
           <div className="flex items-center gap-2">
-            <div className="h-10 w-10 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center shrink-0">
-              <Factory className="h-5 w-5 text-emerald-600" />
+            <div className="h-10 w-10 rounded-lg bg-yellow-50 dark:bg-red-900/20 flex items-center justify-center shrink-0">
+              <Factory className="h-5 w-5 text-red-600" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold truncate">{promo.manufacturer.name}</p>
@@ -224,7 +224,7 @@ export default function MobilePromotionDetailPage() {
               <div className="mt-1.5">
                 <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                   <div
-                    className={`h-full rounded-full ${promo.budgetPercent > 80 ? 'bg-red-500' : 'bg-emerald-500'}`}
+                    className={`h-full rounded-full ${promo.budgetPercent > 80 ? 'bg-red-500' : 'bg-red-500'}`}
                     style={{ width: `${Math.min(100, promo.budgetPercent)}%` }}
                   />
                 </div>
@@ -264,7 +264,7 @@ export default function MobilePromotionDetailPage() {
               onClick={() => setActiveTab(tab)}
               className={`flex-1 py-2 rounded-lg text-xs font-medium transition-colors ${
                 activeTab === tab
-                  ? 'bg-emerald-600 text-white shadow-sm'
+                  ? 'bg-red-600 text-white shadow-sm'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
@@ -310,8 +310,8 @@ export default function MobilePromotionDetailPage() {
             ) : (
               promo.orderItems.map((oi) => (
                 <div key={oi.id} className="flex items-center gap-3 p-3 rounded-xl border">
-                  <div className="h-10 w-10 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center shrink-0">
-                    <ShoppingCart className="h-4 w-4 text-emerald-600" />
+                  <div className="h-10 w-10 rounded-lg bg-yellow-50 dark:bg-red-900/20 flex items-center justify-center shrink-0">
+                    <ShoppingCart className="h-4 w-4 text-red-600" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{oi.order.orderNumber}</p>
@@ -335,7 +335,7 @@ export default function MobilePromotionDetailPage() {
         {activeTab === 'overview' && promo.totalBudgetFormatted && (
           <div className="rounded-xl border p-4">
             <p className="text-xs text-muted-foreground mb-1">{t('Ngân sách còn lại', 'Budget Remaining')}</p>
-            <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
+            <p className="text-xl font-bold text-red-600 dark:text-yellow-500">
               {promo.budgetRemainingFormatted}
             </p>
             <p className="text-[10px] text-muted-foreground mt-1">

@@ -51,7 +51,7 @@ const TIER_LABELS: Record<string, { vi: string; en: string }> = {
 
 const PAYMENT_COLORS: Record<string, string> = {
   CREDIT: 'bg-amber-500',
-  DIGITAL: 'bg-emerald-500',
+  DIGITAL: 'bg-red-500',
   COD: 'bg-purple-500',
 };
 
@@ -329,8 +329,8 @@ export default function MobileRevenueReportPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-card rounded-xl border border-border p-3">
                 <div className="flex items-center gap-2 mb-2">
-                  <div className="h-8 w-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                    <DollarSign className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  <div className="h-8 w-8 rounded-lg bg-yellow-50 dark:bg-red-900/30 flex items-center justify-center">
+                    <DollarSign className="h-4 w-4 text-red-600 dark:text-yellow-500" />
                   </div>
                   <p className="text-[11px] text-muted-foreground font-medium">{t('Tổng doanh thu', 'Total Revenue')}</p>
                 </div>
@@ -338,11 +338,11 @@ export default function MobileRevenueReportPage() {
                 {kpis.revenueGrowth !== null && (
                   <div className="flex items-center mt-1">
                     {kpis.revenueGrowth >= 0 ? (
-                      <TrendingUp className="h-3 w-3 text-emerald-600 mr-0.5" />
+                      <TrendingUp className="h-3 w-3 text-red-600 mr-0.5" />
                     ) : (
                       <TrendingDown className="h-3 w-3 text-red-600 mr-0.5" />
                     )}
-                    <span className={cn('text-[11px] font-medium', kpis.revenueGrowth >= 0 ? 'text-emerald-600' : 'text-red-600')}>
+                    <span className={cn('text-[11px] font-medium', kpis.revenueGrowth >= 0 ? 'text-red-600' : 'text-red-600')}>
                       {Math.abs(kpis.revenueGrowth)}%
                     </span>
                   </div>
@@ -402,11 +402,11 @@ export default function MobileRevenueReportPage() {
               {kpis.monthOverMonth !== null && (
                 <div className="flex items-center justify-center mt-3 pt-3 border-t border-border/50">
                   {kpis.monthOverMonth >= 0 ? (
-                    <TrendingUp className="h-4 w-4 text-emerald-600 mr-1" />
+                    <TrendingUp className="h-4 w-4 text-red-600 mr-1" />
                   ) : (
                     <TrendingDown className="h-4 w-4 text-red-600 mr-1" />
                   )}
-                  <span className={cn('text-sm font-semibold', kpis.monthOverMonth >= 0 ? 'text-emerald-600' : 'text-red-600')}>
+                  <span className={cn('text-sm font-semibold', kpis.monthOverMonth >= 0 ? 'text-red-600' : 'text-red-600')}>
                     {Math.abs(kpis.monthOverMonth)}%
                   </span>
                   <span className="text-xs text-muted-foreground ml-1">
@@ -523,7 +523,7 @@ export default function MobileRevenueReportPage() {
                       <p className="text-xs font-semibold truncate">{shop.name}</p>
                       <p className="text-[10px] text-muted-foreground">{shop.orders} {t('đơn hàng', 'orders')}</p>
                     </div>
-                    <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
+                    <span className="text-xs font-bold text-red-600 dark:text-yellow-500 shrink-0">
                       {shop.revenueFormatted}
                     </span>
                   </div>

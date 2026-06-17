@@ -205,7 +205,7 @@ function compactVND(value: number): string {
 const ORDER_STATUS_COLORS: Record<string, string> = {
   PENDING: 'bg-yellow-500', CONFIRMED: 'bg-blue-500', PROCESSING: 'bg-indigo-500',
   PACKED: 'bg-purple-500', OUT_FOR_DELIVERY: 'bg-cyan-500',
-  DELIVERED: 'bg-emerald-500', CANCELLED: 'bg-red-500', REFUNDED: 'bg-orange-500',
+  DELIVERED: 'bg-red-500', CANCELLED: 'bg-red-500', REFUNDED: 'bg-orange-500',
 };
 
 const ORDER_STATUS_LABELS: Record<string, { en: string; vi: string }> = {
@@ -389,7 +389,7 @@ export default function ReportsPage() {
               data={overview.dailyRevenue.map(d => ({
                 label: d.date.slice(5),
                 value: d.revenue,
-                color: d.date === overview.dailyRevenue[overview.dailyRevenue.length - 1]?.date ? 'bg-emerald-500' : 'bg-emerald-500/60',
+                color: d.date === overview.dailyRevenue[overview.dailyRevenue.length - 1]?.date ? 'bg-red-500' : 'bg-red-500/60',
               }))}
               formatValue={compactVND}
               locale={locale}
@@ -434,7 +434,7 @@ export default function ReportsPage() {
                 label: PAYMENT_METHOD_LABELS[method]?.en || method,
                 labelVi: PAYMENT_METHOD_LABELS[method]?.vi || method,
                 value,
-                color: method === 'CREDIT' ? 'bg-amber-500' : method === 'DIGITAL' ? 'bg-blue-500' : 'bg-emerald-500',
+                color: method === 'CREDIT' ? 'bg-amber-500' : method === 'DIGITAL' ? 'bg-blue-500' : 'bg-red-500',
               }))}
             locale={locale}
           />
@@ -479,7 +479,7 @@ export default function ReportsPage() {
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
                 <p className="text-xs text-muted-foreground">{t('This Month', 'Thang nay')}</p>
-                <p className="text-lg font-bold text-emerald-700">{k.thisMonthRevenueFormatted}</p>
+                <p className="text-lg font-bold text-red-700">{k.thisMonthRevenueFormatted}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">{t('Last Month', 'Thang truoc')}</p>
@@ -487,7 +487,7 @@ export default function ReportsPage() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">{t('MoM Growth', 'Tang/thang')}</p>
-                <p className={`text-lg font-bold ${k.monthOverMonth && k.monthOverMonth >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                <p className={`text-lg font-bold ${k.monthOverMonth && k.monthOverMonth >= 0 ? 'text-red-600' : 'text-red-600'}`}>
                   {k.monthOverMonth !== null ? `${k.monthOverMonth >= 0 ? '+' : ''}${k.monthOverMonth.toFixed(1)}%` : '-'}
                 </p>
               </div>
@@ -501,7 +501,7 @@ export default function ReportsPage() {
               title="Daily Revenue" titleVi="Doanh thu hang ngay"
               data={revenue.trends.daily.map(d => ({
                 label: d.date.slice(5), value: d.revenue,
-                color: d.date === revenue.trends.daily[revenue.trends.daily.length - 1]?.date ? 'bg-emerald-500' : 'bg-emerald-500/50',
+                color: d.date === revenue.trends.daily[revenue.trends.daily.length - 1]?.date ? 'bg-red-500' : 'bg-red-500/50',
               }))}
               formatValue={compactVND} locale={locale} height={200}
             />
@@ -514,7 +514,7 @@ export default function ReportsPage() {
                 label: PAYMENT_METHOD_LABELS[method]?.en || method,
                 labelVi: PAYMENT_METHOD_LABELS[method]?.vi || method,
                 value: d.revenue,
-                color: method === 'CREDIT' ? 'bg-amber-500' : method === 'DIGITAL' ? 'bg-blue-500' : 'bg-emerald-500',
+                color: method === 'CREDIT' ? 'bg-amber-500' : method === 'DIGITAL' ? 'bg-blue-500' : 'bg-red-500',
               }))}
             locale={locale}
           />
@@ -608,7 +608,7 @@ export default function ReportsPage() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">{t('COD', 'Thu tien')}</p>
-                <p className="text-base font-bold text-emerald-700">{k.codRevenueFormatted}</p>
+                <p className="text-base font-bold text-red-700">{k.codRevenueFormatted}</p>
               </div>
             </div>
           </CardContent>
@@ -707,7 +707,7 @@ export default function ReportsPage() {
                       </TableCell>
                       <TableCell>
                         <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                          o.status === 'DELIVERED' ? 'bg-emerald-100 text-emerald-700' :
+                          o.status === 'DELIVERED' ? 'bg-yellow-50 text-red-700' :
                           o.status === 'CANCELLED' ? 'bg-red-100 text-red-700' :
                           'bg-gray-100 text-gray-700'
                         }`}>
@@ -868,7 +868,7 @@ export default function ReportsPage() {
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
               <div className="text-center">
                 <p className="text-xs text-muted-foreground">{t('Active', 'HD')}</p>
-                <p className="text-lg font-bold text-emerald-600">{ch.active}</p>
+                <p className="text-lg font-bold text-red-600">{ch.active}</p>
               </div>
               <div className="text-center">
                 <p className="text-xs text-muted-foreground">{t('Overdue', 'Qua han')}</p>
@@ -880,11 +880,11 @@ export default function ReportsPage() {
               </div>
               <div className="text-center">
                 <p className="text-xs text-muted-foreground">{t('Utilization', 'Su dung')}</p>
-                <p className={`text-lg font-bold ${ch.utilizationPercent > 80 ? 'text-red-600' : ch.utilizationPercent > 50 ? 'text-amber-600' : 'text-emerald-600'}`}>{ch.utilizationPercent}%</p>
+                <p className={`text-lg font-bold ${ch.utilizationPercent > 80 ? 'text-red-600' : ch.utilizationPercent > 50 ? 'text-amber-600' : 'text-red-600'}`}>{ch.utilizationPercent}%</p>
               </div>
               <div className="text-center">
                 <p className="text-xs text-muted-foreground">{t('Available', 'Con lai')}</p>
-                <p className="text-base font-bold text-emerald-700">{ch.availableFormatted}</p>
+                <p className="text-base font-bold text-red-700">{ch.availableFormatted}</p>
               </div>
             </div>
           </CardContent>
@@ -989,7 +989,7 @@ export default function ReportsPage() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">{t('Fastest', 'Nhanh nhat')}</p>
-                <p className="text-xl font-bold text-emerald-600">{k.minDeliveryHours}h</p>
+                <p className="text-xl font-bold text-red-600">{k.minDeliveryHours}h</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">{t('Slowest', 'Cham nhat')}</p>
@@ -1006,7 +1006,7 @@ export default function ReportsPage() {
               <div>
                 <p className="text-xs text-muted-foreground">{t('Internal Fleet', 'Noi bo')}</p>
                 <p className="text-lg font-bold">{k.internal}</p>
-                <p className="text-[10px] text-emerald-600">{k.internalSuccessRate}% {t('success', 'thanh cong')}</p>
+                <p className="text-[10px] text-red-600">{k.internalSuccessRate}% {t('success', 'thanh cong')}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">{t('3rd Party', "Bên thu 3")}</p>
@@ -1044,7 +1044,7 @@ export default function ReportsPage() {
                 label: bucket === 'under2h' ? '< 2h' : bucket === 'over24h' ? '> 24h' : bucket,
                 labelVi: bucket === 'under2h' ? '< 2 gio' : bucket === 'over24h' ? '> 24 gio' : bucket,
                 value: count,
-                color: bucket === 'under2h' ? 'bg-emerald-500' : bucket === '2-4h' ? 'bg-blue-500' : bucket === '4-8h' ? 'bg-cyan-500' : bucket === '8-24h' ? 'bg-amber-500' : 'bg-red-500',
+                color: bucket === 'under2h' ? 'bg-red-500' : bucket === '2-4h' ? 'bg-blue-500' : bucket === '4-8h' ? 'bg-cyan-500' : bucket === '8-24h' ? 'bg-amber-500' : 'bg-red-500',
               }))}
             totalLabel="Total" totalLabelVi="Tong"
             locale={locale}
@@ -1077,10 +1077,10 @@ export default function ReportsPage() {
                       <TableCell className="text-xs text-muted-foreground">{i + 1}</TableCell>
                       <TableCell className="text-xs font-medium">{d.name}</TableCell>
                       <TableCell className="text-right text-xs">{d.totalShipments}</TableCell>
-                      <TableCell className="text-right text-xs font-medium text-emerald-600">{d.delivered}</TableCell>
+                      <TableCell className="text-right text-xs font-medium text-red-600">{d.delivered}</TableCell>
                       <TableCell className="text-right text-xs">{d.failed > 0 ? <span className="text-red-600">{d.failed}</span> : '-'}</TableCell>
                       <TableCell className="text-right">
-                        <span className={`text-xs font-semibold ${d.successRate >= 90 ? 'text-emerald-600' : d.successRate >= 70 ? 'text-amber-600' : 'text-red-600'}`}>
+                        <span className={`text-xs font-semibold ${d.successRate >= 90 ? 'text-red-600' : d.successRate >= 70 ? 'text-amber-600' : 'text-red-600'}`}>
                           {d.successRate}%
                         </span>
                       </TableCell>
@@ -1121,7 +1121,7 @@ export default function ReportsPage() {
                       <TableCell className="text-right text-xs font-medium">{d.delivered}</TableCell>
                       <TableCell className="text-right text-xs">{d.failed}</TableCell>
                       <TableCell className="text-right">
-                        <span className={`text-xs font-semibold ${d.successRate >= 90 ? 'text-emerald-600' : d.successRate >= 70 ? 'text-amber-600' : 'text-red-600'}`}>
+                        <span className={`text-xs font-semibold ${d.successRate >= 90 ? 'text-red-600' : d.successRate >= 70 ? 'text-amber-600' : 'text-red-600'}`}>
                           {d.successRate}%
                         </span>
                       </TableCell>

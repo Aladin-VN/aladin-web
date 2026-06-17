@@ -373,7 +373,7 @@ export function PromotionFormDialog({
             <Button
               onClick={handleSubmit}
               disabled={saving}
-              className="h-9 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="h-9 text-xs bg-red-600 hover:bg-red-700 text-white"
             >
               {saving && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />}
               {isEditing

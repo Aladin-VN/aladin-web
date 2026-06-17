@@ -97,7 +97,7 @@ export function AdminHeader() {
                 {t('Group Buy deal target reached', 'Deal mua chung dat muc tieu')}
               </span>
               <span className="text-xs text-muted-foreground">1 {t('hour ago', 'gio truoc')}</span>
-              <Badge className="text-[10px] bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+              <Badge className="text-[10px] bg-yellow-50 text-red-700 hover:bg-yellow-50">
                 {t('Success', 'Thanh cong')}
               </Badge>
             </DropdownMenuItem>
@@ -115,7 +115,7 @@ export function AdminHeader() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="h-9 gap-2 px-2">
               <Avatar className="h-7 w-7">
-                <AvatarFallback className="bg-emerald-100 text-emerald-700 text-xs font-bold">
+                <AvatarFallback className="bg-yellow-50 text-red-700 text-xs font-bold">
                   {initials}
                 </AvatarFallback>
               </Avatar>

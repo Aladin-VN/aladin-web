@@ -148,7 +148,7 @@ const TX_TYPE_LABELS_EN: Record<string, string> = {
 
 const TX_TYPE_COLORS: Record<string, string> = {
   CREDIT_USED: 'text-red-600',
-  REPAYMENT: 'text-emerald-600',
+  REPAYMENT: 'text-red-600',
   CREDIT_LIMIT_INCREASE: 'text-blue-600',
   CREDIT_LIMIT_DECREASE: 'text-orange-600',
   ORDER_PAYMENT: 'text-purple-600',
@@ -218,7 +218,7 @@ export function ShopDetailDrawer({
               <Skeleton className="h-5 w-48" />
             ) : shop ? (
               <>
-                <Store className="h-4 w-4 text-emerald-600" />
+                <Store className="h-4 w-4 text-red-600" />
                 <span>{shop.name}</span>
                 <LoyaltyTierBadge tier={shop.loyaltyTier} locale={locale} size="md" />
               </>
@@ -277,12 +277,12 @@ export function ShopDetailDrawer({
 
                   <div className="rounded-lg border p-3 space-y-1">
                     <div className="flex items-center gap-1.5">
-                      <TrendingUp className="h-3.5 w-3.5 text-emerald-600" />
+                      <TrendingUp className="h-3.5 w-3.5 text-red-600" />
                       <span className="text-[10px] text-muted-foreground uppercase font-medium">
                         {t('Total GMV', 'Tong GMV')}
                       </span>
                     </div>
-                    <p className="text-lg font-bold text-emerald-700">
+                    <p className="text-lg font-bold text-red-700">
                       <SensitiveValue value={shop.stats.totalGmv} maskType="amount" formatOptions={{ formatCurrency: true }} />
                     </p>
                     <p className="text-[10px] text-muted-foreground">
@@ -315,7 +315,7 @@ export function ShopDetailDrawer({
                     </div>
                     <p className="text-[10px]">
                       <span className="text-muted-foreground">{t('Available', 'Con lai')}: </span>
-                      <span className={`font-semibold ${shop.creditAvailable === 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                      <span className={`font-semibold ${shop.creditAvailable === 0 ? 'text-red-600' : 'text-red-600'}`}>
                         <SensitiveValue value={shop.creditAvailable} maskType="amount" formatOptions={{ formatCurrency: true }} />
                       </span>
                     </p>
@@ -479,9 +479,9 @@ export function ShopDetailDrawer({
                         <SensitiveValue value={shop.creditBalance} maskType="amount" formatOptions={{ formatCurrency: true }} />
                       </p>
                     </div>
-                    <div className="text-center p-2 rounded-md bg-emerald-50 dark:bg-emerald-950/20">
-                      <p className="text-[10px] text-emerald-600 uppercase">{t('Available', 'Con lai')}</p>
-                      <p className="text-sm font-bold mt-1 text-emerald-600">
+                    <div className="text-center p-2 rounded-md bg-yellow-50 dark:bg-emerald-950/20">
+                      <p className="text-[10px] text-red-600 uppercase">{t('Available', 'Con lai')}</p>
+                      <p className="text-sm font-bold mt-1 text-red-600">
                         <SensitiveValue value={shop.creditAvailable} maskType="amount" formatOptions={{ formatCurrency: true }} />
                       </p>
                     </div>
@@ -556,7 +556,7 @@ export function ShopDetailDrawer({
                                   )}
                                 </TableCell>
                                 <TableCell className="text-right">
-                                  <span className={`text-xs font-semibold ${isCredit ? 'text-emerald-600' : 'text-red-600'}`}>
+                                  <span className={`text-xs font-semibold ${isCredit ? 'text-red-600' : 'text-red-600'}`}>
                                     {isCredit ? '+' : '-'}
                                     <SensitiveValue value={tx.amount} maskType="amount" formatOptions={{ formatCurrency: true }} />
                                   </span>

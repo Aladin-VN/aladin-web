@@ -270,7 +270,7 @@ export default function SettingsPage() {
                     <Button
                       onClick={handleSaveSettings}
                       disabled={savingSettings || !hasChanges}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                      className="bg-red-600 hover:bg-red-700 text-white"
                     >
                       {savingSettings ? (
                         <Loader2 className="h-4 w-4 mr-1 animate-spin" />
@@ -298,8 +298,8 @@ export default function SettingsPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center gap-4">
-                    <div className="h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center">
-                      <span className="text-xl font-bold text-emerald-700">
+                    <div className="h-16 w-16 rounded-full bg-yellow-50 flex items-center justify-center">
+                      <span className="text-xl font-bold text-red-700">
                         {profile.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
                       </span>
                     </div>
@@ -347,7 +347,7 @@ export default function SettingsPage() {
                       <Key className="h-4 w-4 mr-1" />
                       {t('Change Password', 'Doi mat khau')}
                     </Button>
-                    <Button onClick={handleSaveProfile} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                    <Button onClick={handleSaveProfile} className="bg-red-600 hover:bg-red-700 text-white">
                       <Save className="h-4 w-4 mr-1" />
                       {t('Save Profile', 'Luu ho so')}
                     </Button>

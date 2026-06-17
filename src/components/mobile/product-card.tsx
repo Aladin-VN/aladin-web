@@ -48,7 +48,7 @@ function formatVND(amount: number): string {
 function getStockStatus(stock: number, locale: string) {
   if (stock === 0) return { label: locale === 'vi' ? 'Hết hàng' : 'Out of stock', color: 'text-destructive' };
   if (stock <= 10) return { label: locale === 'vi' ? `Còn ${stock}` : `${stock} left`, color: 'text-amber-600' };
-  return { label: locale === 'vi' ? 'Còn hàng' : 'In stock', color: 'text-emerald-600' };
+  return { label: locale === 'vi' ? 'Còn hàng' : 'In stock', color: 'text-red-600' };
 }
 
 // ============================================
@@ -105,7 +105,7 @@ export function ProductCard({ product, onAddToCart, onTap }: ProductCardProps) {
         )}
         {/* Group buy badge */}
         {product.groupBuyPrice && product.groupBuyPrice < product.basePrice && (
-          <Badge className="absolute top-2 left-2 bg-emerald-500 text-white text-[10px] px-1.5 py-0">
+          <Badge className="absolute top-2 left-2 bg-red-500 text-white text-[10px] px-1.5 py-0">
             {t('Mua chung', 'Group Buy')}
           </Badge>
         )}
@@ -140,7 +140,7 @@ export function ProductCard({ product, onAddToCart, onTap }: ProductCardProps) {
               {formatVND(product.basePrice)}
             </span>
             {product.groupBuyPrice && (
-              <span className="text-[10px] text-emerald-600">
+              <span className="text-[10px] text-red-600">
                 {formatVND(product.groupBuyPrice)} {t('(mua chung)', '(group buy)')}
               </span>
             )}

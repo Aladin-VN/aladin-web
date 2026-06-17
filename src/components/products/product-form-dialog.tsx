@@ -367,7 +367,7 @@ export function ProductFormDialog({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5 text-emerald-600" />
+            <Package className="h-5 w-5 text-red-600" />
             {isEdit
               ? t('Edit Product', 'Chỉnh sửa sản phẩm')
               : t('Create New Product', 'Tạo sản phẩm mới')}
@@ -814,7 +814,7 @@ export function ProductFormDialog({
             type="button"
             onClick={handleSubmit}
             disabled={submitting}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            className="bg-red-600 hover:bg-red-700 text-white"
           >
             {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             {submitting

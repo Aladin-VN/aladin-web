@@ -15,7 +15,7 @@ interface CreditBalanceCardProps {
 }
 
 const STATUS_CONFIG: Record<CreditStatus, { vi: string; en: string; color: string; bg: string }> = {
-  ACTIVE: { vi: 'Hoạt động', en: 'Active', color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200' },
+  ACTIVE: { vi: 'Hoạt động', en: 'Active', color: 'text-red-600', bg: 'bg-yellow-50 border-yellow-100' },
   LOCKED: { vi: 'Đã khóa', en: 'Locked', color: 'text-amber-600', bg: 'bg-amber-50 border-amber-200' },
   OVERDUE: { vi: 'Quá hạn', en: 'Overdue', color: 'text-red-600', bg: 'bg-red-50 border-red-200' },
 };
@@ -35,7 +35,7 @@ export function CreditBalanceCard({ credit, monthly, onRepay }: CreditBalanceCar
   const progressColor =
     credit.utilizationPercent >= 90 ? 'bg-red-500' :
     credit.utilizationPercent >= 70 ? 'bg-amber-500' :
-    'bg-emerald-500';
+    'bg-red-500';
 
   return (
     <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-4 text-white shadow-lg">
@@ -45,7 +45,7 @@ export function CreditBalanceCard({ credit, monthly, onRepay }: CreditBalanceCar
           {t('Hạn mức tín dụng', 'Credit Limit')}
         </span>
         <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold border ${
-          credit.status === 'ACTIVE' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' :
+          credit.status === 'ACTIVE' ? 'bg-red-500/20 text-yellow-400 border-red-500/30' :
           credit.status === 'LOCKED' ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' :
           'bg-red-500/20 text-red-300 border-red-500/30'
         }`}>
@@ -135,7 +135,7 @@ export function CreditBalanceCard({ credit, monthly, onRepay }: CreditBalanceCar
         </div>
         <div className="bg-slate-700/50 rounded-lg p-2.5">
           <div className="flex items-center gap-1.5 mb-1">
-            <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />
+            <TrendingUp className="h-3.5 w-3.5 text-yellow-500" />
             <span className="text-[10px] text-slate-400 uppercase tracking-wider">
               {t('Đã trả TL', 'Repaid/Mo')}
             </span>
@@ -150,7 +150,7 @@ export function CreditBalanceCard({ credit, monthly, onRepay }: CreditBalanceCar
       {isNegativeBalance && (
         <button
           onClick={onRepay}
-          className="w-full bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white font-semibold py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2"
+          className="w-full bg-red-500 hover:bg-red-600 active:bg-red-700 text-white font-semibold py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2"
         >
           <CheckCircle className="h-4 w-4" />
           {t('Thanh toán ngay', 'Repay Now')}
@@ -160,7 +160,7 @@ export function CreditBalanceCard({ credit, monthly, onRepay }: CreditBalanceCar
       {/* Zero balance state */}
       {!isNegativeBalance && (
         <div className="text-center py-1.5">
-          <span className="text-xs text-emerald-400">
+          <span className="text-xs text-yellow-500">
             {t('Công nợ đã thanh toán đủ', 'Credit fully settled')}
           </span>
         </div>

@@ -79,7 +79,7 @@ export function MobileShell() {
 
       {/* Update available banner */}
       {updateAvailable && (
-        <div className="fixed top-0 left-0 right-0 z-[100] bg-emerald-600 text-white text-center py-2 px-4 text-xs font-medium flex items-center justify-center gap-2">
+        <div className="fixed top-0 left-0 right-0 z-[100] bg-red-600 text-white text-center py-2 px-4 text-xs font-medium flex items-center justify-center gap-2">
           <RefreshCw className="h-3.5 w-3.5" />
           {locale === 'vi' ? 'Cập nhật mới sẵn sàng' : 'Update available'}
           <button

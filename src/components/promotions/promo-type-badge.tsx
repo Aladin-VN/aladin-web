@@ -18,7 +18,7 @@ export function PromoTypeBadge({ type, buyQty, getQty, discountPercent, discount
   switch (type) {
     case 'BUY_X_GET_Y':
       return (
-        <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 hover:bg-emerald-50 text-xs gap-1">
+        <Badge variant="secondary" className="bg-yellow-50 text-red-700 hover:bg-yellow-50 text-xs gap-1">
           <Gift className="h-3 w-3" />
           {buyQty && getQty
             ? (locale === 'vi' ? `Mua ${buyQty} Tang ${getQty}` : `Buy ${buyQty} Get ${getQty}`)

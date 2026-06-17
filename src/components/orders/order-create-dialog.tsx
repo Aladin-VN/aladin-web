@@ -283,7 +283,7 @@ export function OrderCreateDialog({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <ShoppingCart className="h-5 w-5 text-emerald-600" />
+            <ShoppingCart className="h-5 w-5 text-red-600" />
             {t('Create Order', 'Tạo đơn hàng')}
           </DialogTitle>
           <DialogDescription>
@@ -397,7 +397,7 @@ export function OrderCreateDialog({
                                 {product.sku} · {t('Stock', 'Tồn')}: {product.stockQuantity}
                               </p>
                             </div>
-                            <span className="text-xs font-semibold text-emerald-600 whitespace-nowrap ml-2">
+                            <span className="text-xs font-semibold text-red-600 whitespace-nowrap ml-2">
                               {formatVND(product.basePrice)}
                             </span>
                           </div>
@@ -504,7 +504,7 @@ export function OrderCreateDialog({
                   <span>{formatVND(subtotal)}</span>
                 </div>
                 {discountAmount > 0 && (
-                  <div className="flex justify-between text-emerald-600">
+                  <div className="flex justify-between text-red-600">
                     <span>{t('Discount (2%)', 'Giảm giá (2%)')}</span>
                     <span>-{formatVND(discountAmount)}</span>
                   </div>
@@ -517,7 +517,7 @@ export function OrderCreateDialog({
                 )}
                 <div className="flex justify-between text-base font-bold pt-1 border-t">
                   <span>{t('Total', 'Tổng thanh tiền')}</span>
-                  <span className="text-emerald-700">{formatVND(totalAmount)}</span>
+                  <span className="text-red-700">{formatVND(totalAmount)}</span>
                 </div>
               </div>
             </div>
@@ -531,7 +531,7 @@ export function OrderCreateDialog({
           <Button
             onClick={handleSubmit}
             disabled={submitting || cart.length === 0 || !selectedShop || !paymentMethod}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            className="bg-red-600 hover:bg-red-700 text-white"
           >
             {submitting && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
             {submitting

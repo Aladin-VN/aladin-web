@@ -39,7 +39,7 @@ export default function MobileOfflinePage() {
       <div className="flex items-center gap-2 mb-8">
         <div
           className={`h-2.5 w-2.5 rounded-full ${
-            isOnline ? 'bg-emerald-500' : 'bg-red-500'
+            isOnline ? 'bg-red-500' : 'bg-red-500'
           }`}
         />
         <span className="text-xs text-muted-foreground">

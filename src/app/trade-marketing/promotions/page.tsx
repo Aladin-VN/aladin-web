@@ -299,7 +299,7 @@ export default function PromotionsPage() {
                 <RefreshCw className="h-4 w-4 mr-1" />
                 {t('Refresh', 'Lam moi')}
               </Button>
-              <Button size="sm" onClick={handleCreate} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              <Button size="sm" onClick={handleCreate} className="bg-red-600 hover:bg-red-700 text-white">
                 <Plus className="h-4 w-4 mr-1" />
                 {t('Create Promotion', 'Tao khuyen mai')}
               </Button>
@@ -317,7 +317,7 @@ export default function PromotionsPage() {
                     <p className="text-xs text-muted-foreground font-medium">{t('Active', 'Hoat dong')}</p>
                     <p className="text-xl font-bold mt-1">{stats?.activePromotions || 0}</p>
                   </div>
-                  <div className="h-9 w-9 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                  <div className="h-9 w-9 rounded-lg bg-yellow-50 text-red-600 flex items-center justify-center">
                     <TrendingUp className="h-4 w-4" />
                   </div>
                 </div>
@@ -462,7 +462,7 @@ export default function PromotionsPage() {
                   <p className="text-sm text-muted-foreground mt-1">
                     {t('Create your first manufacturer-funded promotion', 'Tao chuong trinh khuyen mai dau tien')}
                   </p>
-                  <Button className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleCreate}>
+                  <Button className="mt-4 bg-red-600 hover:bg-red-700 text-white" onClick={handleCreate}>
                     <Plus className="h-4 w-4 mr-2" />
                     {t('Create First Promotion', 'Tao khuyen mai dau tien')}
                   </Button>
@@ -528,7 +528,7 @@ export default function PromotionsPage() {
                                 <p className="text-xs">{promo.usedBudgetFormatted}</p>
                                 <div className="h-1 bg-muted rounded-full w-16 mx-auto mt-1 overflow-hidden">
                                   <div
-                                    className={`h-full rounded-full ${promo.budgetPercent > 80 ? 'bg-red-500' : 'bg-emerald-500'}`}
+                                    className={`h-full rounded-full ${promo.budgetPercent > 80 ? 'bg-red-500' : 'bg-red-500'}`}
                                     style={{ width: `${Math.min(100, promo.budgetPercent)}%` }}
                                   />
                                 </div>
@@ -581,7 +581,7 @@ export default function PromotionsPage() {
                         </Button>
                         {getPageNumbers().map((p) => (
                           <Button key={p} variant={p === page ? 'default' : 'outline'} size="icon"
-                            className={`h-8 w-8 text-xs ${p === page ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''}`}
+                            className={`h-8 w-8 text-xs ${p === page ? 'bg-red-600 hover:bg-red-700 text-white' : ''}`}
                             onClick={() => setPage(p)}>{p}</Button>
                         ))}
                         <Button variant="outline" size="icon" className="h-8 w-8" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
@@ -596,10 +596,10 @@ export default function PromotionsPage() {
           </Card>
 
           {/* Scheme Engine Info */}
-          <Card className="border-emerald-200 bg-emerald-50/50 dark:bg-emerald-950/20">
+          <Card className="border-yellow-100 bg-yellow-50/50 dark:bg-emerald-950/20">
             <CardContent className="p-4">
               <div className="flex items-start gap-3">
-                <div className="h-8 w-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                <div className="h-8 w-8 rounded-lg bg-yellow-50 text-red-600 flex items-center justify-center shrink-0 mt-0.5">
                   <BarChart3 className="h-4 w-4" />
                 </div>
                 <div>

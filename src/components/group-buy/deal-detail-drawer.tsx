@@ -159,7 +159,7 @@ export function DealDetailDrawer({ open, onOpenChange, dealId, locale = 'vi' }: 
                   key={tab}
                   className={`h-8 text-xs flex-1 rounded-md flex items-center justify-center gap-1 transition-colors ${
                     activeTab === tab
-                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                      ? 'bg-red-600 hover:bg-red-700 text-white'
                       : 'hover:bg-muted-foreground/10'
                   }`}
                   onClick={() => setActiveTab(tab)}
@@ -188,7 +188,7 @@ export function DealDetailDrawer({ open, onOpenChange, dealId, locale = 'vi' }: 
                     <div
                       className={`h-full rounded-full transition-all ${
                         detail.progressPercent >= 100
-                          ? 'bg-emerald-500'
+                          ? 'bg-red-500'
                           : detail.progressPercent >= 50
                             ? 'bg-blue-500'
                             : 'bg-amber-500'
@@ -206,7 +206,7 @@ export function DealDetailDrawer({ open, onOpenChange, dealId, locale = 'vi' }: 
                   <div className="rounded-lg border p-3">
                     <p className="text-[10px] text-muted-foreground font-medium">{t('Product', 'Sản phẩm')}</p>
                     <div className="flex items-center gap-1.5 mt-1.5">
-                      <Package className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                      <Package className="h-3.5 w-3.5 text-red-600 shrink-0" />
                       <p className="text-xs font-medium truncate">{detail.product.name}</p>
                     </div>
                     <p className="text-[10px] text-muted-foreground mt-0.5">{detail.product.sku}</p>
@@ -217,14 +217,14 @@ export function DealDetailDrawer({ open, onOpenChange, dealId, locale = 'vi' }: 
                       <p className="text-xs">
                         <span className="text-muted-foreground line-through">{detail.originalPriceFormatted}</span>
                       </p>
-                      <p className="text-sm font-bold text-emerald-600">{detail.discountPriceFormatted}</p>
+                      <p className="text-sm font-bold text-red-600">{detail.discountPriceFormatted}</p>
                     </div>
                     <p className="text-[10px] text-muted-foreground mt-0.5">-{detail.savingsPercent}%</p>
                   </div>
                   <div className="rounded-lg border p-3">
                     <p className="text-[10px] text-muted-foreground font-medium">{t('Savings / Unit', 'Tiết kiệm / SP')}</p>
                     <div className="flex items-center gap-1.5 mt-1.5">
-                      <PiggyBank className="h-3.5 w-3.5 text-emerald-600" />
+                      <PiggyBank className="h-3.5 w-3.5 text-red-600" />
                       <p className="text-sm font-bold">{detail.savingsPerUnitFormatted}</p>
                     </div>
                     <p className="text-[10px] text-muted-foreground">
@@ -286,8 +286,8 @@ export function DealDetailDrawer({ open, onOpenChange, dealId, locale = 'vi' }: 
                 ) : (
                   detail.participants.map((p) => (
                     <div key={p.id} className="flex items-center gap-3 p-2 rounded-lg border hover:bg-muted/50">
-                      <div className="h-10 w-10 rounded-md bg-emerald-50 flex items-center justify-center shrink-0">
-                        <Store className="h-4 w-4 text-emerald-600" />
+                      <div className="h-10 w-10 rounded-md bg-yellow-50 flex items-center justify-center shrink-0">
+                        <Store className="h-4 w-4 text-red-600" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{p.shop.name}</p>

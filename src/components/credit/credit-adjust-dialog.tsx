@@ -196,7 +196,7 @@ export function CreditAdjustDialog({
               className="font-mono"
             />
             {isIncrease && (
-              <p className="text-xs text-emerald-600">
+              <p className="text-xs text-red-600">
                 +{formatVND(limitNum - shop.creditLimit)} {t('increase', 'tang')}
               </p>
             )}
@@ -263,10 +263,10 @@ export function CreditAdjustDialog({
             disabled={loading || !newLimit || !reason.trim()}
             className={
               isIncrease
-                ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                ? 'bg-red-600 hover:bg-red-700 text-white'
                 : isDecrease
                 ? 'bg-red-600 hover:bg-red-700 text-white'
-                : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                : 'bg-red-600 hover:bg-red-700 text-white'
             }
           >
             {loading ? (

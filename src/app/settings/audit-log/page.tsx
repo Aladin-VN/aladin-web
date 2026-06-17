@@ -84,7 +84,7 @@ function getActionColor(action: string): string {
     return 'text-purple-600 dark:text-purple-400';
   }
   if (action.includes('ORDER') || action.includes('SHIPMENT')) {
-    return 'text-emerald-600 dark:text-emerald-400';
+    return 'text-red-600 dark:text-yellow-500';
   }
   if (action.includes('CREDIT') || action.includes('REPAYMENT')) {
     return 'text-amber-600 dark:text-amber-400';
@@ -103,7 +103,7 @@ function getActionBadgeColor(action: string): string {
     return 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-950 dark:text-purple-400';
   }
   if (action.includes('ORDER') || action.includes('SHIPMENT')) {
-    return 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-400';
+    return 'bg-yellow-50 text-red-700 border-yellow-100 dark:bg-emerald-950 dark:text-yellow-500';
   }
   if (action.includes('CREDIT') || action.includes('REPAYMENT')) {
     return 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-400';
@@ -297,15 +297,15 @@ export default function AuditLogPage() {
                 </div>
               </CardContent>
             </Card>
-            <Card className="border-emerald-200 bg-emerald-50/50 dark:border-emerald-900 dark:bg-emerald-950/30">
+            <Card className="border-yellow-100 bg-yellow-50/50 dark:border-red-900 dark:bg-emerald-950/30">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs text-muted-foreground font-medium">{t('User Actions', 'Thao tac ND')}</p>
                     <p className="text-xl font-bold mt-1">{stats.userActions}</p>
                   </div>
-                  <div className="h-9 w-9 rounded-lg bg-emerald-100 flex items-center justify-center">
-                    <Users className="h-4 w-4 text-emerald-600" />
+                  <div className="h-9 w-9 rounded-lg bg-yellow-50 flex items-center justify-center">
+                    <Users className="h-4 w-4 text-red-600" />
                   </div>
                 </div>
               </CardContent>
@@ -581,7 +581,7 @@ export default function AuditLogPage() {
                             key={p}
                             variant={p === page ? 'default' : 'outline'}
                             size="icon"
-                            className={`h-8 w-8 text-xs ${p === page ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''}`}
+                            className={`h-8 w-8 text-xs ${p === page ? 'bg-red-600 hover:bg-red-700 text-white' : ''}`}
                             onClick={() => setPage(p)}
                           >
                             {p}

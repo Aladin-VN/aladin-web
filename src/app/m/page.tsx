@@ -85,7 +85,7 @@ const STATUS_COLORS: Record<string, string> = {
   PROCESSING: 'bg-indigo-100 text-indigo-700',
   PACKED: 'bg-purple-100 text-purple-700',
   OUT_FOR_DELIVERY: 'bg-cyan-100 text-cyan-700',
-  DELIVERED: 'bg-emerald-100 text-emerald-700',
+  DELIVERED: 'bg-yellow-50 text-red-700',
   CANCELLED: 'bg-red-100 text-red-700',
 };
 
@@ -360,7 +360,7 @@ export default function MobileDashboardPage() {
               </CardTitle>
               <div className="flex gap-3">
                 <div className="flex items-center gap-1">
-                  <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                  <div className="h-2 w-2 rounded-full bg-red-500" />
                   <span className="text-[10px] text-muted-foreground">{t('Doanh thu', 'Revenue')}</span>
                 </div>
                 <div className="flex items-center gap-1">

@@ -208,7 +208,7 @@ export default function MobileShipmentDetailPage() {
                           </p>
                         )}
                         {isDelivered && step.status === 'DELIVERED' && shipment.deliveredAt && (
-                          <p className="text-[10px] text-emerald-600 mt-0.5">
+                          <p className="text-[10px] text-red-600 mt-0.5">
                             {formatDate(shipment.deliveredAt, locale)}
                           </p>
                         )}
@@ -267,8 +267,8 @@ export default function MobileShipmentDetailPage() {
             </div>
             <div className="ml-2.5 border-l-2 border-dashed border-muted-foreground/30 h-4" />
             <div className="flex items-start gap-2">
-              <div className="h-5 w-5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0 mt-0.5">
-                <MapPin className="h-3 w-3 text-emerald-600" />
+              <div className="h-5 w-5 rounded-full bg-yellow-50 dark:bg-red-900/30 flex items-center justify-center shrink-0 mt-0.5">
+                <MapPin className="h-3 w-3 text-red-600" />
               </div>
               <div>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{t('Điểm giao', 'Dropoff')}</p>

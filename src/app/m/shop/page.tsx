@@ -94,7 +94,7 @@ const TIER_CONFIG: Record<string, { color: string; bg: string; label: string; la
 };
 
 const CREDIT_STATUS_CONFIG: Record<string, { color: string; label: string; labelVi: string }> = {
-  ACTIVE: { color: 'bg-emerald-100 text-emerald-700', label: 'Active', labelVi: 'Hoạt động' },
+  ACTIVE: { color: 'bg-yellow-50 text-red-700', label: 'Active', labelVi: 'Hoạt động' },
   LOCKED: { color: 'bg-red-100 text-red-700', label: 'Locked', labelVi: 'Đã khóa' },
   OVERDUE: { color: 'bg-amber-100 text-amber-700', label: 'Overdue', labelVi: 'Quá hạn' },
 };
@@ -268,7 +268,7 @@ export default function MobileShopProfilePage() {
             {/* Available credit - hero number */}
             <div className="text-center py-2">
               <p className="text-[11px] text-muted-foreground">{t('Available Credit', 'Hạn mức còn lại')}</p>
-              <p className="text-2xl font-bold text-emerald-600">{shop.creditAvailableFormatted}</p>
+              <p className="text-2xl font-bold text-red-600">{shop.creditAvailableFormatted}</p>
             </div>
 
             {/* Usage bar */}
@@ -355,7 +355,7 @@ export default function MobileShopProfilePage() {
               </div>
               <div className="text-right space-y-1">
                 <div className="flex items-center gap-1 text-xs">
-                  <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                  <div className="h-2 w-2 rounded-full bg-red-500" />
                   <span className="text-muted-foreground">{t('Delivered', 'Đã giao')}: {shop.stats.deliveredOrders}</span>
                 </div>
                 <div className="flex items-center gap-1 text-xs">

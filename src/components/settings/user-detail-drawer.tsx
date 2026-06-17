@@ -308,7 +308,7 @@ export function UserDetailDrawer({
                 className={`w-full justify-start ${
                   user.status === 'ACTIVE'
                     ? 'text-red-600 hover:text-red-700 hover:bg-red-50'
-                    : 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50'
+                    : 'text-red-600 hover:text-red-700 hover:bg-yellow-50'
                 }`}
                 onClick={handleToggleStatus}
                 disabled={togglingStatus}

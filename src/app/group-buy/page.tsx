@@ -306,7 +306,7 @@ export default function GroupBuyPage() {
                 <RefreshCw className="h-4 w-4 mr-1" />
                 {t('Refresh', 'Làm mới')}
               </Button>
-              <Button size="sm" onClick={handleCreate} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              <Button size="sm" onClick={handleCreate} className="bg-red-600 hover:bg-red-700 text-white">
                 <Plus className="h-4 w-4 mr-1" />
                 {t('Create Deal', 'Tạo Deal')}
               </Button>
@@ -324,7 +324,7 @@ export default function GroupBuyPage() {
                     <p className="text-xs text-muted-foreground font-medium">{t('Active Deals', 'Deal hoạt động')}</p>
                     <p className="text-xl font-bold mt-1">{stats?.activeDeals || 0}</p>
                   </div>
-                  <div className="h-9 w-9 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                  <div className="h-9 w-9 rounded-lg bg-yellow-50 text-red-600 flex items-center justify-center">
                     <TrendingUp className="h-4 w-4" />
                   </div>
                 </div>
@@ -459,7 +459,7 @@ export default function GroupBuyPage() {
                       'Tạo deal mua chung đầu tiên để mở khóa chiết khấu số lượng'
                     )}
                   </p>
-                  <Button className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleCreate}>
+                  <Button className="mt-4 bg-red-600 hover:bg-red-700 text-white" onClick={handleCreate}>
                     <Plus className="h-4 w-4 mr-2" />
                     {t('Create First Deal', 'Tạo Deal đầu tiên')}
                   </Button>
@@ -507,7 +507,7 @@ export default function GroupBuyPage() {
                                 <div
                                   className={`h-full rounded-full transition-all ${
                                     deal.progressPercent >= 100
-                                      ? 'bg-emerald-500'
+                                      ? 'bg-red-500'
                                       : deal.progressPercent >= 50
                                         ? 'bg-blue-500'
                                         : 'bg-amber-500'
@@ -521,8 +521,8 @@ export default function GroupBuyPage() {
                           {/* Savings */}
                           <TableCell className="hidden lg:table-cell">
                             <div className="flex items-center gap-1">
-                              <Percent className="h-3 w-3 text-emerald-600" />
-                              <span className="text-sm font-medium text-emerald-600">-{deal.savingsPercent}%</span>
+                              <Percent className="h-3 w-3 text-red-600" />
+                              <span className="text-sm font-medium text-red-600">-{deal.savingsPercent}%</span>
                               <span className="text-[10px] text-muted-foreground">
                                 ({deal.savingsPerUnitFormatted}/{t('unit', 'sp')})
                               </span>
@@ -622,7 +622,7 @@ export default function GroupBuyPage() {
                         </Button>
                         {getPageNumbers().map((p) => (
                           <Button key={p} variant={p === page ? 'default' : 'outline'} size="icon"
-                            className={`h-8 w-8 text-xs ${p === page ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''}`}
+                            className={`h-8 w-8 text-xs ${p === page ? 'bg-red-600 hover:bg-red-700 text-white' : ''}`}
                             onClick={() => setPage(p)}>{p}</Button>
                         ))}
                         <Button variant="outline" size="icon" className="h-8 w-8" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
@@ -637,10 +637,10 @@ export default function GroupBuyPage() {
           </Card>
 
           {/* Info Banner */}
-          <Card className="border-emerald-200 bg-emerald-50/50 dark:bg-emerald-950/20">
+          <Card className="border-yellow-100 bg-yellow-50/50 dark:bg-emerald-950/20">
             <CardContent className="p-4">
               <div className="flex items-start gap-3">
-                <div className="h-8 w-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                <div className="h-8 w-8 rounded-lg bg-yellow-50 text-red-600 flex items-center justify-center shrink-0 mt-0.5">
                   <BarChart3 className="h-4 w-4" />
                 </div>
                 <div>

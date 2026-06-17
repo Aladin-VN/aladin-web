@@ -31,7 +31,7 @@ function getPasswordStrength(pwd: string): { score: number; label: string; color
 
   if (score <= 2) return { score, label: 'Weak', viLabel: 'Yeu', color: 'bg-red-500' };
   if (score <= 4) return { score, label: 'Medium', viLabel: 'Trung binh', color: 'bg-amber-500' };
-  return { score, label: 'Strong', viLabel: 'Manh', color: 'bg-emerald-500' };
+  return { score, label: 'Strong', viLabel: 'Manh', color: 'bg-red-500' };
 }
 
 export function ChangePasswordDialog({ open, onOpenChange, locale = 'vi' }: ChangePasswordDialogProps) {
@@ -202,7 +202,7 @@ export function ChangePasswordDialog({ open, onOpenChange, locale = 'vi' }: Chan
           <Button variant="outline" onClick={() => handleClose(false)}>
             {t('Cancel', 'Huy')}
           </Button>
-          <Button onClick={handleSubmit} disabled={loading} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+          <Button onClick={handleSubmit} disabled={loading} className="bg-red-600 hover:bg-red-700 text-white">
             {loading && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
             {t('Change Password', 'Doi mat khau')}
           </Button>

@@ -162,8 +162,8 @@ export function AuditSubmitForm({ onSubmitted, onCancel }: AuditSubmitFormProps)
   if (step === 'success') {
     return (
       <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
-        <div className="h-16 w-16 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mb-4">
-          <CheckCircle className="h-8 w-8 text-emerald-600" />
+        <div className="h-16 w-16 rounded-full bg-yellow-50 dark:bg-red-900/30 flex items-center justify-center mb-4">
+          <CheckCircle className="h-8 w-8 text-red-600" />
         </div>
         <h3 className="text-base font-semibold mb-1">{t('Gửi thành công!', 'Submitted!')}</h3>
         <p className="text-sm text-muted-foreground mb-6">
@@ -179,7 +179,7 @@ export function AuditSubmitForm({ onSubmitted, onCancel }: AuditSubmitFormProps)
             setSelectedProduct(null);
             setSelectedPromotion(null);
           }}
-          className="px-6 py-2.5 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 transition-colors"
+          className="px-6 py-2.5 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors"
         >
           {t('Gửi ảnh khác', 'Submit Another')}
         </button>
@@ -225,8 +225,8 @@ export function AuditSubmitForm({ onSubmitted, onCancel }: AuditSubmitFormProps)
 
         {selectedProduct ? (
           <div className="flex items-center gap-2 p-2.5 rounded-lg border bg-muted/30">
-            <div className="h-8 w-8 rounded bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
-              <Package className="h-4 w-4 text-emerald-600" />
+            <div className="h-8 w-8 rounded bg-yellow-50 dark:bg-red-900/30 flex items-center justify-center shrink-0">
+              <Package className="h-4 w-4 text-red-600" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium truncate">{selectedProduct.name}</p>
@@ -371,7 +371,7 @@ export function AuditSubmitForm({ onSubmitted, onCancel }: AuditSubmitFormProps)
         className={cn(
           'w-full py-3 rounded-xl text-sm font-semibold transition-colors',
           canSubmit
-            ? 'bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-800'
+            ? 'bg-red-600 text-white hover:bg-red-700 active:bg-red-800'
             : 'bg-muted text-muted-foreground cursor-not-allowed'
         )}
       >

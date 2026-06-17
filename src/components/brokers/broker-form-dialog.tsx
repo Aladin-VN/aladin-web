@@ -206,7 +206,7 @@ export function BrokerFormDialog({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <UserCircle className="h-4 w-4 text-emerald-600" />
+            <UserCircle className="h-4 w-4 text-red-600" />
             {isEdit
               ? t('Edit Broker', 'Sua dai ly')
               : t('Add Broker', 'Them dai ly')}
@@ -325,7 +325,7 @@ export function BrokerFormDialog({
           <Button
             onClick={handleSave}
             disabled={saving || (!isEdit && !form.userId.trim())}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            className="bg-red-600 hover:bg-red-700 text-white"
           >
             {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
             <Save className="h-4 w-4 mr-1" />

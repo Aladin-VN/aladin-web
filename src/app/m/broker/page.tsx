@@ -139,11 +139,11 @@ interface TerritorySummary {
 const TIER_LABELS: Record<string, { vi: string; en: string; color: string }> = {
   WARD_LEVEL: { vi: 'Cấp phường', en: 'Ward Level', color: 'bg-blue-100 text-blue-700' },
   CATEGORY_SPECIALIST: { vi: 'Chuyên ngành', en: 'Category Specialist', color: 'bg-purple-100 text-purple-700' },
-  FACTORY_GATE: { vi: 'Cổng nhà máy', en: 'Factory Gate', color: 'bg-emerald-100 text-emerald-700' },
+  FACTORY_GATE: { vi: 'Cổng nhà máy', en: 'Factory Gate', color: 'bg-yellow-50 text-red-700' },
 };
 
 const STATUS_LABELS: Record<string, { vi: string; en: string; color: string }> = {
-  ACTIVE: { vi: 'Hoạt động', en: 'Active', color: 'bg-emerald-100 text-emerald-700' },
+  ACTIVE: { vi: 'Hoạt động', en: 'Active', color: 'bg-yellow-50 text-red-700' },
   INACTIVE: { vi: 'Ngưng', en: 'Inactive', color: 'bg-gray-100 text-gray-600' },
   LOCKED: { vi: 'Bị khóa', en: 'Locked', color: 'bg-red-100 text-red-700' },
   SUSPENDED: { vi: 'Tạm đình chỉ', en: 'Suspended', color: 'bg-amber-100 text-amber-700' },
@@ -243,7 +243,7 @@ function OverviewTab({
       {/* Hero KPI Grid 2x2 */}
       <div className="grid grid-cols-2 gap-3">
         {/* Total Commission */}
-        <div className="bg-emerald-50/50 border border-emerald-200 dark:border-emerald-900 dark:bg-emerald-950/30 rounded-xl p-3">
+        <div className="bg-yellow-50/50 border border-yellow-100 dark:border-red-900 dark:bg-emerald-950/30 rounded-xl p-3">
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-[11px] text-muted-foreground font-medium">
@@ -253,14 +253,14 @@ function OverviewTab({
                 {stats.totalCommissionEarnedFormatted}
               </p>
             </div>
-            <div className="h-8 w-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 ml-2">
+            <div className="h-8 w-8 rounded-lg bg-yellow-50 text-red-600 flex items-center justify-center shrink-0 ml-2">
               <DollarSign className="h-4 w-4" />
             </div>
           </div>
           {stats.newBrokersThisMonth > 0 && (
             <div className="flex items-center mt-1.5">
-              <TrendingUp className="h-3 w-3 text-emerald-600 mr-0.5" />
-              <span className="text-[11px] text-emerald-600 font-medium">
+              <TrendingUp className="h-3 w-3 text-red-600 mr-0.5" />
+              <span className="text-[11px] text-red-600 font-medium">
                 +{stats.newBrokersThisMonth} {t('đại lý mới', 'new')}
               </span>
             </div>
@@ -370,7 +370,7 @@ function OverviewTab({
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] text-muted-foreground">{t('Hoa hồng', 'Commission')}</span>
-                      <span className="text-xs font-semibold text-emerald-600">{broker.commissionEarnedFormatted}</span>
+                      <span className="text-xs font-semibold text-red-600">{broker.commissionEarnedFormatted}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] text-muted-foreground">{t('Cửa hàng', 'Shops')}</span>
@@ -512,7 +512,7 @@ function CommissionCard({
       <div className="bg-muted/30 rounded-lg p-2.5 mb-2">
         <div className="flex items-center justify-between">
           <span className="text-[11px] text-muted-foreground">{t('Hoa hồng đã kiếm', 'Commission Earned')}</span>
-          <span className="text-sm font-bold text-emerald-600">{item.totalCommissionEarnedFormatted}</span>
+          <span className="text-sm font-bold text-red-600">{item.totalCommissionEarnedFormatted}</span>
         </div>
       </div>
 
@@ -895,8 +895,8 @@ export default function BrokerDashboardPage() {
                 <div className="space-y-4">
                   {/* Summary Banner */}
                   {commissionSummary && (
-                    <div className="bg-emerald-50/50 border border-emerald-200 dark:border-emerald-900 dark:bg-emerald-950/30 rounded-xl p-4">
-                      <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200 mb-3">
+                    <div className="bg-yellow-50/50 border border-yellow-100 dark:border-red-900 dark:bg-emerald-950/30 rounded-xl p-4">
+                      <p className="text-sm font-semibold text-red-800 dark:text-yellow-100 mb-3">
                         {t('Tổng quan hoa hồng', 'Commission Summary')}
                       </p>
                       <div className="grid grid-cols-2 gap-3">
@@ -904,7 +904,7 @@ export default function BrokerDashboardPage() {
                           <p className="text-[11px] text-muted-foreground">
                             {t('Chưa thanh toán', 'Unpaid')}
                           </p>
-                          <p className="text-sm font-bold text-emerald-600">
+                          <p className="text-sm font-bold text-red-600">
                             {commissionSummary.totalUnpaidCommissionFormatted}
                           </p>
                         </div>
@@ -1008,7 +1008,7 @@ export default function BrokerDashboardPage() {
                             className={cn(
                               'h-full rounded-full transition-all duration-500',
                               territorySummary.coveragePercent >= 70
-                                ? 'bg-emerald-500'
+                                ? 'bg-red-500'
                                 : territorySummary.coveragePercent >= 40
                                   ? 'bg-amber-500'
                                   : 'bg-red-500'
@@ -1037,7 +1037,7 @@ export default function BrokerDashboardPage() {
                       {/* Stats row */}
                       <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border/50">
                         <div className="flex items-center gap-1.5">
-                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                          <CheckCircle2 className="h-3.5 w-3.5 text-red-500" />
                           <span className="text-[11px] text-muted-foreground">
                             {territorySummary.coveredWards} {t('đã phủ', 'covered')}
                           </span>
@@ -1099,7 +1099,7 @@ export default function BrokerDashboardPage() {
                                   {locale === 'vi' ? ward.wardName : ward.wardNameEn}
                                 </p>
                                 {ward.isCovered ? (
-                                  <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                                  <CheckCircle2 className="h-4 w-4 text-red-500 shrink-0" />
                                 ) : (
                                   <AlertCircle className="h-4 w-4 text-amber-500 shrink-0" />
                                 )}

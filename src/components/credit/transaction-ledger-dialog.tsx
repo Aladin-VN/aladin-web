@@ -72,7 +72,7 @@ interface TransactionLedgerDialogProps {
 
 const TX_TYPE_CONFIG: Record<string, { bg: string; label: { en: string; vi: string } }> = {
   CREDIT_USED: { bg: 'bg-red-100 text-red-700', label: { en: 'Credit Used', vi: 'Da su dung' } },
-  REPAYMENT: { bg: 'bg-emerald-100 text-emerald-700', label: { en: 'Repayment', vi: 'Tra no' } },
+  REPAYMENT: { bg: 'bg-yellow-50 text-red-700', label: { en: 'Repayment', vi: 'Tra no' } },
   CREDIT_LIMIT_INCREASE: { bg: 'bg-blue-100 text-blue-700', label: { en: 'Limit ↑', vi: 'Tang han muc' } },
   CREDIT_LIMIT_DECREASE: { bg: 'bg-amber-100 text-amber-700', label: { en: 'Limit ↓', vi: 'Giam han muc' } },
   ORDER_PAYMENT: { bg: 'bg-purple-100 text-purple-700', label: { en: 'Payment', vi: 'Thanh toan' } },
@@ -186,7 +186,7 @@ export function TransactionLedgerDialog({
             <div className="flex items-center justify-between">
               <div>
                 <DialogTitle className="flex items-center gap-2">
-                  <ScrollText className="h-5 w-5 text-emerald-600" />
+                  <ScrollText className="h-5 w-5 text-red-600" />
                   {t('Transaction Ledger', 'So cai no')}
                 </DialogTitle>
                 <p className="text-sm text-muted-foreground mt-1">{shop.shopName}</p>
@@ -263,7 +263,7 @@ export function TransactionLedgerDialog({
 
             <Button
               size="sm"
-              className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white ml-auto"
+              className="h-8 text-xs bg-red-600 hover:bg-red-700 text-white ml-auto"
               onClick={() => setRepaymentOpen(true)}
             >
               <Plus className="h-3 w-3 mr-1" />
@@ -324,7 +324,7 @@ export function TransactionLedgerDialog({
                                 <SensitiveValue value={String(tx.amount)} maskType="amount" formatOptions={{ formatCurrency: true }} />
                               </span>
                             ) : (
-                              <span className="text-emerald-600 font-medium">
+                              <span className="text-red-600 font-medium">
                                 <ArrowDownRight className="h-3 w-3 inline mr-0.5" />
                                 <SensitiveValue value={String(Math.abs(tx.amount))} maskType="amount" formatOptions={{ formatCurrency: true }} />
                               </span>

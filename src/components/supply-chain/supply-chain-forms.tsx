@@ -145,7 +145,7 @@ export function ManufacturerFormDialog({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Factory className="h-4 w-4 text-emerald-600" />
+            <Factory className="h-4 w-4 text-red-600" />
             {isEdit
               ? t('Edit Manufacturer', 'Sua nha san xuat')
               : t('Add Manufacturer', 'Them nha san xuat')}
@@ -228,7 +228,7 @@ export function ManufacturerFormDialog({
             {t('Cancel', 'Huy')}
           </Button>
           <Button onClick={handleSave} disabled={saving || !form.name.trim()}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white">
+            className="bg-red-600 hover:bg-red-700 text-white">
             {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
             <Save className="h-4 w-4 mr-1" />
             {t('Save', 'Luu')}
@@ -363,7 +363,7 @@ export function DistributorFormDialog({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Warehouse className="h-4 w-4 text-emerald-600" />
+            <Warehouse className="h-4 w-4 text-red-600" />
             {isEdit
               ? t('Edit Distributor', 'Sua nha phan phoi')
               : t('Add Distributor', 'Them nha phan phoi')}
@@ -443,7 +443,7 @@ export function DistributorFormDialog({
             {t('Cancel', 'Huy')}
           </Button>
           <Button onClick={handleSave} disabled={saving || !form.name.trim()}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white">
+            className="bg-red-600 hover:bg-red-700 text-white">
             {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
             <Save className="h-4 w-4 mr-1" />
             {t('Save', 'Luu')}

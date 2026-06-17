@@ -171,7 +171,7 @@ export function RepaymentDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Banknote className="h-5 w-5 text-emerald-600" />
+            <Banknote className="h-5 w-5 text-red-600" />
             {t('Record Repayment', 'Ghi nhan tra no')}
           </DialogTitle>
           <DialogDescription>
@@ -289,7 +289,7 @@ export function RepaymentDialog({
           <Button
             onClick={handleSubmit}
             disabled={loading || !selectedOrderId || !amount || !paymentMethod}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            className="bg-red-600 hover:bg-red-700 text-white"
           >
             {loading ? (
               <Loader2 className="h-4 w-4 mr-1 animate-spin" />

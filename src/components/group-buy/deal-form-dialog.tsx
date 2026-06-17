@@ -298,7 +298,7 @@ export function DealFormDialog({
               </>
             ) : (
               <div className="flex items-center gap-2 p-2 rounded-md border bg-muted/50">
-                <Package className="h-4 w-4 text-emerald-600 shrink-0" />
+                <Package className="h-4 w-4 text-red-600 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium truncate">{selectedProduct.name}</p>
                   <p className="text-[10px] text-muted-foreground">
@@ -365,20 +365,20 @@ export function DealFormDialog({
 
           {/* Savings indicator */}
           {form.originalPrice > 0 && form.discountPrice > 0 && (
-            <div className="rounded-md bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 p-2.5">
+            <div className="rounded-md bg-yellow-50 dark:bg-emerald-950/20 border border-yellow-100 p-2.5">
               <div className="flex items-center gap-2 text-xs">
-                <Percent className="h-4 w-4 text-emerald-600" />
-                <span className="font-medium text-emerald-700">
+                <Percent className="h-4 w-4 text-red-600" />
+                <span className="font-medium text-red-700">
                   {t('Savings', 'Tiết kiệm')}: {savingsPercent}%
                 </span>
                 <span className="text-muted-foreground">·</span>
-                <span className="font-medium text-emerald-700">
+                <span className="font-medium text-red-700">
                   {formatVND(savingsPerUnit)}/{t('unit', 'sp')}
                 </span>
                 {form.targetQty > 0 && (
                   <>
                     <span className="text-muted-foreground">·</span>
-                    <span className="font-medium text-emerald-700">
+                    <span className="font-medium text-red-700">
                       {t('Total potential', 'Tổng tiềm năng')}: {formatVND(savingsPerUnit * form.targetQty)}
                     </span>
                   </>
@@ -448,7 +448,7 @@ export function DealFormDialog({
             <Button
               onClick={handleSubmit}
               disabled={saving || !form.productId || form.discountPrice >= form.originalPrice}
-              className="h-9 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="h-9 text-xs bg-red-600 hover:bg-red-700 text-white"
             >
               {saving && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />}
               {isEditing

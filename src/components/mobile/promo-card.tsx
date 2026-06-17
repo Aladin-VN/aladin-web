@@ -37,7 +37,7 @@ function PromoTypeLabel({ type, promo, locale }: { type: string; promo: PromoCar
   switch (type) {
     case 'BUY_X_GET_Y':
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-[10px] font-medium">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-50 dark:bg-red-900/20 text-red-700 dark:text-yellow-500 text-[10px] font-medium">
           <Tag className="h-2.5 w-2.5" />
           {promo.buyQty && promo.getQty
             ? (locale === 'vi' ? `Mua ${promo.buyQty} Tặng ${promo.getQty}` : `Buy ${promo.buyQty} Get ${promo.getQty}`)
@@ -68,7 +68,7 @@ function PromoTypeLabel({ type, promo, locale }: { type: string; promo: PromoCar
 function PromoStatusBadge({ status, isActive, locale }: { status: string; isActive: boolean; locale: string }) {
   const t = (vi: string, en: string) => locale === 'vi' ? vi : en;
   const config: Record<string, { label: string; cls: string }> = {
-    active: { label: t('Hoạt động', 'Active'), cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' },
+    active: { label: t('Hoạt động', 'Active'), cls: 'bg-yellow-50 text-red-700 dark:bg-red-900/30 dark:text-yellow-500' },
     upcoming: { label: t('Sắp diễn ra', 'Upcoming'), cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
     expired: { label: isActive ? t('Tạm dừng', 'Paused') : t('Hết hạn', 'Expired'), cls: isActive ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400' },
   };
@@ -138,7 +138,7 @@ export function PromoCard({ promo, onClick }: PromoCardProps) {
           </div>
           <div className="h-1.5 bg-muted rounded-full overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all ${promo.budgetPercent > 80 ? 'bg-red-500' : 'bg-emerald-500'}`}
+              className={`h-full rounded-full transition-all ${promo.budgetPercent > 80 ? 'bg-red-500' : 'bg-red-500'}`}
               style={{ width: `${Math.min(100, promo.budgetPercent)}%` }}
             />
           </div>

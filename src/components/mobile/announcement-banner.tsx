@@ -36,7 +36,7 @@ interface AnnouncementBannerProps {
 
 const TYPE_STYLES: Record<string, { bg: string; border: string; icon: string }> = {
   info: { bg: 'bg-blue-50 dark:bg-blue-950/30', border: 'border-blue-200 dark:border-blue-900', icon: 'info' },
-  promotion: { bg: 'bg-emerald-50 dark:bg-emerald-950/30', border: 'border-emerald-200 dark:border-emerald-900', icon: 'promo' },
+  promotion: { bg: 'bg-yellow-50 dark:bg-emerald-950/30', border: 'border-yellow-100 dark:border-red-900', icon: 'promo' },
   warning: { bg: 'bg-amber-50 dark:bg-amber-950/30', border: 'border-amber-200 dark:border-amber-900', icon: 'warn' },
   urgent: { bg: 'bg-red-50 dark:bg-red-950/30', border: 'border-red-200 dark:border-red-900', icon: 'urgent' },
 };

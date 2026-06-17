@@ -13,7 +13,7 @@ const SHIPMENT_STATUS_CONFIG: Record<ShipmentStatus, { vi: string; en: string; b
   PENDING:    { vi: 'Chờ lấy hàng',    en: 'Pending',    bg: 'bg-amber-100 dark:bg-amber-900/30',   text: 'text-amber-700 dark:text-amber-400',   dot: 'bg-amber-500' },
   PICKED_UP:  { vi: 'Đã lấy hàng',    en: 'Picked Up',  bg: 'bg-blue-100 dark:bg-blue-900/30',     text: 'text-blue-700 dark:text-blue-400',     dot: 'bg-blue-500' },
   IN_TRANSIT: { vi: 'Đang vận chuyển', en: 'In Transit', bg: 'bg-cyan-100 dark:bg-cyan-900/30',     text: 'text-cyan-700 dark:text-cyan-400',     dot: 'bg-cyan-500' },
-  DELIVERED:  { vi: 'Đã giao',        en: 'Delivered',  bg: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-700 dark:text-emerald-400', dot: 'bg-emerald-500' },
+  DELIVERED:  { vi: 'Đã giao',        en: 'Delivered',  bg: 'bg-yellow-50 dark:bg-red-900/30', text: 'text-red-700 dark:text-yellow-500', dot: 'bg-red-500' },
   FAILED:     { vi: 'Giao thất bại',   en: 'Failed',     bg: 'bg-red-100 dark:bg-red-900/30',       text: 'text-red-700 dark:text-red-400',       dot: 'bg-red-500' },
 };
 

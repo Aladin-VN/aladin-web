@@ -162,7 +162,7 @@ export function BrokerDetailDrawer({
               <Skeleton className="h-5 w-48" />
             ) : broker ? (
               <>
-                <UserCircle className="h-4 w-4 text-emerald-600" />
+                <UserCircle className="h-4 w-4 text-red-600" />
                 <span>{broker.user.name}</span>
                 <BrokerTierBadge tier={broker.tier} locale={locale} size="md" />
               </>
@@ -203,12 +203,12 @@ export function BrokerDetailDrawer({
 
               <div className="rounded-lg border p-3 text-center space-y-1">
                 <div className="flex items-center justify-center gap-1.5">
-                  <DollarSign className="h-3.5 w-3.5 text-emerald-600" />
+                  <DollarSign className="h-3.5 w-3.5 text-red-600" />
                 </div>
                 <p className="text-[10px] text-muted-foreground uppercase font-medium">
                   {t('Commission', 'Hoa hong')}
                 </p>
-                <p className="text-lg font-bold text-emerald-700">
+                <p className="text-lg font-bold text-red-700">
                   <SensitiveValue value={broker.totalCommissionEarned} maskType="amount" formatOptions={{ formatCurrency: true }} />
                 </p>
                 <p className="text-[10px] text-muted-foreground">{t('earned', 'da kiem')}</p>
