@@ -64,7 +64,7 @@ export async function POST(request: Request) {
 export async function GET() {
   try {
     const { db } = await import('@/lib/db');
-    const productCount = await db.product.count();
+    const productCount = await db.product.count().catch(() => 0);
 
     return NextResponse.json({
       seeded: productCount > 0,
@@ -76,7 +76,7 @@ export async function GET() {
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: message, seeded: false }, { status: 500 });
   }
 }
 
@@ -84,6 +84,8 @@ export async function GET() {
 // This is a fallback — Prisma normally handles schema via db push
 function getCreateTablesSql(): string[] {
   return [
+    // MUST be first: disable FK checks during bulk table creation
+    `PRAGMA foreign_keys=OFF`,
     `CREATE TABLE IF NOT EXISTS "Category" (
       "id" TEXT NOT NULL PRIMARY KEY, "name" TEXT NOT NULL, "nameEn" TEXT,
       "slug" TEXT NOT NULL, "icon" TEXT, "sortOrder" INTEGER NOT NULL DEFAULT 0,
@@ -161,8 +163,7 @@ function getCreateTablesSql(): string[] {
       "cancelledAt" DATETIME, "cancelReason" TEXT,
       "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" DATETIME NOT NULL,
       CONSTRAINT "Order_shopId_fkey" FOREIGN KEY ("shopId") REFERENCES "Shop"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
-      CONSTRAINT "Order_groupDealId_fkey" FOREIGN KEY ("groupDealId") REFERENCES "GroupDeal"("id") ON DELETE SET NULL ON UPDATE CASCADE,
-      CONSTRAINT "Order_shipmentId_fkey" FOREIGN KEY ("id") REFERENCES "Shipment"("orderId") ON DELETE SET NULL ON UPDATE CASCADE
+      CONSTRAINT "Order_groupDealId_fkey" FOREIGN KEY ("groupDealId") REFERENCES "GroupDeal"("id") ON DELETE SET NULL ON UPDATE CASCADE
     )`,
     `CREATE UNIQUE INDEX IF NOT EXISTS "Order_orderNumber_key" ON "Order"("orderNumber")`,
     `CREATE UNIQUE INDEX IF NOT EXISTS "Order_idempotencyKey_key" ON "Order"("idempotencyKey")`,
@@ -277,7 +278,7 @@ function getCreateTablesSql(): string[] {
       "imageUrl" TEXT, "metadata" TEXT, "isRead" BOOLEAN NOT NULL DEFAULT false,
       "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`,
-    // Disable foreign keys for seed (insert order matters)
-    `PRAGMA foreign_keys=OFF`,
+    // Re-enable foreign keys after table creation
+    `PRAGMA foreign_keys=ON`,
   ];
 }
