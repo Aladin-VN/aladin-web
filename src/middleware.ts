@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 
 // ============================================
 // ALADIN Middleware
-// - Admin auth guard: redirect to /auth/login
+// - Protects admin pages: redirect to /auth/login
+// - Allows public paths: login, setup, static assets
 // - Mobile auth: client-side hydrate() handles redirect
 // ============================================
 
@@ -32,16 +33,19 @@ export function middleware(request: NextRequest) {
 
   // ============================================
   // Admin routes (everything except /m/ and /api/)
-  // Redirect to /auth/login if no access token cookie
+  // If no access token cookie AND no Bearer token header, redirect to login
   // ============================================
   if (!pathname.startsWith('/m') && !pathname.startsWith('/api/')) {
     const token = request.cookies.get('aladin-access-token')?.value;
 
     // If there's a token cookie, allow through
-    // (Client-side AuthGuard does the real check with localStorage)
-    // If no cookie at all, redirect to login
-    // Note: We don't block here because tokens are in localStorage, not cookies
-    // The AuthGuard component on each page handles the actual protection
+    // (Client-side AuthGuard does the real JWT validation with localStorage)
+    if (!token) {
+      const loginUrl = new URL('/auth/login', request.url);
+      loginUrl.searchParams.set('redirect', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+
     return NextResponse.next();
   }
 

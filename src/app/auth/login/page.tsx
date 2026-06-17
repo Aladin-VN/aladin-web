@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Phone, Lock, Eye, EyeOff, Loader2, ShieldCheck, Store, Truck, Users, BarChart3, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -23,8 +23,10 @@ const DEMO_ACCOUNTS = [
   { phone: '0933333333', role: 'Broker', icon: BarChart3, color: 'text-amber-600 bg-amber-50 border-amber-200', description: 'See referred shops and commissions' },
 ];
 
-export default function AuthLoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectPath = searchParams.get('redirect') || '/';
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -80,13 +82,11 @@ export default function AuthLoginPage() {
           shop: user.shop || null,
         }));
 
-        // Redirect based on role
-        if (user.role === 'DRIVER') {
+        // Redirect based on role or to original path
+        if (user.role === 'DRIVER' && redirectPath === '/') {
           router.replace('/shipments');
-        } else if (user.role === 'SHOP_OWNER') {
-          router.replace('/');
         } else {
-          router.replace('/');
+          router.replace(redirectPath);
         }
       } else {
         const msg = json.error?.message || 'Login failed. Please check your credentials.';
@@ -284,5 +284,17 @@ export default function AuthLoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function AuthLoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }

@@ -3,11 +3,21 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { extractBearerToken, verifyAccessToken, hasRole } from '@/lib/auth';
 import { successResponse, errorResponse, formatVND, sanitizeInput } from '@/lib/security';
 
-// GET /api/group-deals — paginated group deal list with filters
+// GET /api/group-deals — paginated group deal list with filters (auth required)
 export async function GET(request: NextRequest) {
   try {
+    const token = extractBearerToken(request.headers.get('authorization'));
+    if (!token) {
+      return NextResponse.json(errorResponse('UNAUTHORIZED', 'Authentication required'), { status: 401 });
+    }
+    const payload = verifyAccessToken(token);
+    if (!payload) {
+      return NextResponse.json(errorResponse('INVALID_TOKEN', 'Token expired or invalid'), { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
     const limit = Math.min(50, Math.max(1, parseInt(searchParams.get('limit') || '20')));
@@ -140,9 +150,18 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/group-deals — Create new group deal
+// POST /api/group-deals — Create new group deal (admin only)
 export async function POST(request: NextRequest) {
   try {
+    const token = extractBearerToken(request.headers.get('authorization'));
+    if (!token) {
+      return NextResponse.json(errorResponse('UNAUTHORIZED', 'Authentication required'), { status: 401 });
+    }
+    const payload = verifyAccessToken(token);
+    if (!payload || !hasRole(payload.role, ['ADMIN'])) {
+      return NextResponse.json(errorResponse('FORBIDDEN', 'Admin access required'), { status: 403 });
+    }
+
     const body = await request.json();
     const {
       title, titleEn, description, productId, targetQty,
