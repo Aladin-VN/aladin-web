@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { extractBearerToken, verifyAccessToken } from '@/lib/auth';
 import { successResponse, errorResponse, formatVND } from '@/lib/security';
 
 // ============================================
@@ -54,6 +55,15 @@ function getDateRange(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    const token = extractBearerToken(request.headers.get('authorization'));
+    if (!token) {
+      return NextResponse.json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Authentication required.' } }, { status: 401 });
+    }
+    const payload = verifyAccessToken(token);
+    if (!payload) {
+      return NextResponse.json({ success: false, error: { code: 'INVALID_TOKEN', message: 'Token expired or invalid.' } }, { status: 401 });
+    }
+
     const { start, end, prevStart, prevEnd } = getDateRange(request);
     const { searchParams } = new URL(request.url);
     const period = searchParams.get('period') || '30d';

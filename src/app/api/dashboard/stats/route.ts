@@ -61,6 +61,7 @@ export async function GET(request: NextRequest) {
       totalTransactions,
       pendingShipments,
       activeGroupDeals,
+      totalProducts,
     ] = await Promise.all([
       // Total shops
       db.shop.count({ where: shopWhere }),
@@ -101,6 +102,8 @@ export async function GET(request: NextRequest) {
       db.groupDeal.count({
         where: { status: 'ACTIVE' },
       }),
+      // Total active products
+      db.product.count({ where: { deletedAt: null, isActive: true } }),
     ]);
 
     const monthlyGmv = monthlyOrders.reduce((sum, o) => sum + o.totalAmount, 0);
@@ -201,6 +204,7 @@ export async function GET(request: NextRequest) {
         overdueAccounts,
         pendingShipments,
         activeGroupDeals,
+        totalProducts,
         pipeline,
         recentOrders: recentOrders.map((o) => ({
           id: o.id,

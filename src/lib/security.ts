@@ -24,7 +24,8 @@ export function maskName(name: string): string {
 
 /** Mask monetary amount: 2500000 → 2.500.000 ₫ (formatted) */
 export function formatVND(amount: number): string {
-  return new Intl.NumberFormat('vi-VN').format(amount) + ' ₫';
+  const num = Number(amount) || 0;
+  return new Intl.NumberFormat('vi-VN').format(num) + ' ₫';
 }
 
 /** Mask monetary amount partially: 2.***.000 ₫ */
@@ -58,7 +59,7 @@ export function generateIdempotencyKey(userId: string, timestamp?: number): stri
 /** Validate Vietnamese phone number (09xx, 03xx, 07xx, 08xx, 05xx) */
 export function isValidVNPhone(phone: string): boolean {
   const clean = phone.replace(/\D/g, '');
-  return /^(0[3|5|7|8|9])[0-9]{8}$/.test(clean);
+  return /^(0[35789])[0-9]{8}$/.test(clean);
 }
 
 /** Sanitize string input (prevent XSS) */

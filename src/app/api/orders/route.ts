@@ -62,10 +62,20 @@ export async function GET(request: NextRequest) {
     const where: Record<string, unknown> = { ...roleFilter };
 
     if (search) {
-      where.OR = [
+      const searchConditions = [
         { orderNumber: { contains: search } },
         { shop: { name: { contains: search } } },
       ];
+      // Use AND to preserve role filter's OR conditions
+      if (roleFilter.OR) {
+        where.AND = [
+          roleFilter,
+          { OR: searchConditions },
+        ];
+        delete where.OR; // Remove the role filter OR from top level since it's now in AND
+      } else {
+        where.OR = searchConditions;
+      }
     }
 
     if (status && Object.values(ORDER_STATUS).includes(status as typeof ORDER_STATUS[keyof typeof ORDER_STATUS])) {

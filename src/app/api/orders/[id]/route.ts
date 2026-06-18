@@ -4,7 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { extractBearerToken, verifyAccessToken } from '@/lib/auth';
-import { successResponse, errorResponse, formatVND } from '@/lib/security';
+import { successResponse, errorResponse, formatVND, ROLES } from '@/lib/security';
 
 // ============================================
 // GET /api/orders/[id] — Order Detail
@@ -66,6 +66,29 @@ export async function GET(
 
     if (!order) {
       return NextResponse.json(errorResponse('NOT_FOUND', 'Order not found'), { status: 404 });
+    }
+
+    // RBAC: Shop owner can only see their own orders
+    if (payload.role === 'SHOP_OWNER') {
+      const userShop = await db.shop.findFirst({ where: { userId: payload.userId }, select: { id: true } });
+      if (!userShop || userShop.id !== order.shopId) {
+        return NextResponse.json({ success: false, error: { code: 'FORBIDDEN', message: 'You can only view your own orders.' } }, { status: 403 });
+      }
+    }
+    // RBAC: Driver can only see orders assigned to them
+    if (payload.role === 'DRIVER') {
+      const isAssigned = order.assignedDriverId === payload.userId || 
+        (order.shipment && order.shipment.assignedDriverId === payload.userId);
+      if (!isAssigned) {
+        return NextResponse.json({ success: false, error: { code: 'FORBIDDEN', message: 'You can only view orders assigned to you.' } }, { status: 403 });
+      }
+    }
+    // RBAC: Broker can only see orders from their referred shops
+    if (payload.role === 'BROKER') {
+      const shop = await db.shop.findFirst({ where: { id: order.shopId, broker: { userId: payload.userId } }, select: { id: true } });
+      if (!shop) {
+        return NextResponse.json({ success: false, error: { code: 'FORBIDDEN', message: 'You can only view orders from your referred shops.' } }, { status: 403 });
+      }
     }
 
     // Parse shop snapshot for historical record

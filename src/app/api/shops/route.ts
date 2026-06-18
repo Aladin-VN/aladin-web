@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
     const where: Record<string, unknown> = { deletedAt: null, ...roleFilter };
 
     if (search) {
-      where.OR = [
+      const searchConditions = [
         { name: { contains: search } },
         { nameEn: { contains: search } },
         { address: { contains: search } },
@@ -52,6 +52,15 @@ export async function GET(request: NextRequest) {
         { user: { phone: { contains: search } } },
         { user: { name: { contains: search } } },
       ];
+      // Use AND to preserve role filter's conditions
+      if (Object.keys(roleFilter).length > 0) {
+        where.AND = [
+          roleFilter,
+          { OR: searchConditions },
+        ];
+      } else {
+        where.OR = searchConditions;
+      }
     }
 
     if (creditStatus) {

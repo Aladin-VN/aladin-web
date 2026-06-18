@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { extractBearerToken, verifyAccessToken } from '@/lib/auth';
+import { getOrderFilter, type AuthUser } from '@/lib/get-auth-user';
 import { successResponse, errorResponse, formatVND, ORDER_STATUS, PAYMENT_METHOD } from '@/lib/security';
 
 // ============================================
@@ -21,12 +22,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(errorResponse('INVALID_TOKEN', 'Token expired or invalid'), { status: 401 });
     }
 
+    // Build auth user for role filtering
+    const authUser: AuthUser = {
+      userId: payload.userId,
+      phone: payload.phone,
+      name: '',
+      role: payload.role,
+      shopId: payload.shopId,
+    };
+    const roleFilter = getOrderFilter(authUser);
+
     // Parse optional shop filter
     const { searchParams } = new URL(request.url);
     const shopId = searchParams.get('shopId') || '';
 
-    // Base where clause
-    const where: Record<string, unknown> = {};
+    // Base where clause — merge role filter
+    const where: Record<string, unknown> = { ...roleFilter };
     if (shopId) {
       where.shopId = shopId;
     }

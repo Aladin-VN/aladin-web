@@ -94,6 +94,7 @@ const navItems: NavItem[] = [
     titleVi: 'Mua chung',
     href: '/group-buy',
     icon: <Tag className="h-4 w-4" />,
+    roles: [ROLES.ADMIN, ROLES.SHOP_OWNER],
   },
   {
     title: 'Credit & Finance',
@@ -107,6 +108,7 @@ const navItems: NavItem[] = [
     titleVi: 'Van chuyen',
     href: '/shipments',
     icon: <Truck className="h-4 w-4" />,
+    roles: [ROLES.ADMIN, ROLES.DRIVER, ROLES.SHOP_OWNER],
   },
   {
     title: 'Supply Chain',
