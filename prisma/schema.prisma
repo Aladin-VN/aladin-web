@@ -3,9 +3,9 @@
 // B2B AI-Powered Commerce Platform for Vietnam
 // ============================================================
 // Architecture: Modular Monolith (Next.js App Router)
-// Database: SQLite (local) / Turso libSQL (Vercel)
-// Local dev:  DATABASE_URL=file:./db/custom.db
-// Vercel:      DATABASE_URL=libsql://... + TURSO_AUTH_TOKEN=...
+// Database: Neon PostgreSQL (serverless)
+// Local dev:  DATABASE_URL=postgresql://... (Neon)
+// Vercel:      DATABASE_URL=postgresql://... (Neon, same)
 // Conventions: UTC timestamps, append-only ledger, soft deletes
 // ============================================================
 
@@ -14,12 +14,13 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 // ============================================================
-// ENUMS (SQLite: use String type with validation in app layer)
+// ENUMS (PostgreSQL: defined as String with app-layer validation
+// for flexibility — can migrate to native enums later)
 // ============================================================
 
 // User Roles

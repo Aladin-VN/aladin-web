@@ -1,5 +1,5 @@
 // ALADIN Database Seed Script — CLI entry point
-// Run: DATABASE_URL=file:./db/custom.db npx tsx prisma/seed.ts
+// Run: DATABASE_URL=postgresql://... npx tsx prisma/seed.ts
 
 import { seedDatabase } from '../src/lib/seed';
 

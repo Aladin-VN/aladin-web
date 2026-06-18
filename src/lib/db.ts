@@ -1,38 +1,21 @@
 import { PrismaClient } from '@prisma/client'
-import { PrismaLibSQL } from '@prisma/adapter-libsql'
-import { createClient, type Client } from '@libsql/client'
+import { neon } from '@neondatabase/serverless'
+import { PrismaNeon } from '@prisma/adapter-neon'
 
 function createPrismaClient() {
-  let url = process.env.DATABASE_URL || 'file:./db/custom.db'
+  const connectionString = process.env.DATABASE_URL
 
-  // On Vercel (production), SQLite file paths must use /tmp (only writable dir)
-  // Auto-redirect file: URLs to /tmp/ on Vercel
-  const isVercel = !!process.env.VERCEL
-  if (isVercel && url.startsWith('file:')) {
-    url = 'file:/tmp/aladin.db'
+  if (!connectionString) {
+    throw new Error('DATABASE_URL environment variable is not set')
   }
 
-  // If URL starts with libsql://, use the Turso adapter
-  if (url.startsWith('libsql://')) {
-    const libsql: Client = createClient({
-      url,
-      authToken: process.env.TURSO_AUTH_TOKEN,
-    })
-    const adapter = new PrismaLibSQL(libsql)
-    return new PrismaClient({
-      adapter,
-      log: ['error'],
-    })
-  }
+  // Neon serverless driver for Vercel edge/serverless
+  const sql = neon(connectionString)
+  const adapter = new PrismaNeon(sql)
 
-  // SQLite file (local dev or Vercel /tmp)
   return new PrismaClient({
-    datasources: {
-      db: {
-        url,
-      },
-    },
-    log: process.env.NODE_ENV === 'development' ? ['query'] : ['error'],
+    adapter,
+    log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
   })
 }
 
