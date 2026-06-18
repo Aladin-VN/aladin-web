@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "This is the **Orders page** of the ALADIN B2B Commerce platform (URL: `aladin-web.vercel.app/orders`).  \n\nIt is **showing data** (specifically, order metrics) but the main order list is **empty** (no orders found). The page displays:  \n- Order status metrics (Total Orders, Pending, Processing, Delivered Today) all showing `0`.  \n- A “No orders found” message (with a shopping cart icon) in the main content area, indicating no orders exist to display.  \n- Filters/search options for managing orders (e.g., search by order number, status, date).",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1781798474,
+  "id": "202606190001084c5d42070b094657",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "202606190001084c5d42070b094657",
+  "usage": {
+    "completion_tokens": 135,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 5433,
+    "prompt_tokens_details": {
+      "cached_tokens": 4
+    },
+    "total_tokens": 5568
+  }
+}

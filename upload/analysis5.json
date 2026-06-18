@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "This is the **Categories page** of the ALADIN AI B2B Commerce platform (URL: `aladin-web.vercel.app/products/categories`).  \n\nIt is **empty** (no categories exist yet). The page displays a message “No categories yet” with a prompt to “Create your first category to organize products in the catalog,” along with a “Create First Category” button. The sidebar confirms the “Products > Categories” navigation, and the main area shows a placeholder (folder icon) indicating no data is currently present.",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1781798442,
+  "id": "202606190000335bcc112c02e94866",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "202606190000335bcc112c02e94866",
+  "usage": {
+    "completion_tokens": 109,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 5537,
+    "prompt_tokens_details": {
+      "cached_tokens": 4
+    },
+    "total_tokens": 5646
+  }
+}

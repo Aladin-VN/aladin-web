@@ -1,0 +1,717 @@
+     1→'use client';
+     2→import { useLocale } from '@/providers/app-provider';
+     3→
+     4→import { useState, useEffect, useCallback } from 'react';
+     5→import {
+     6→  FolderOpen,
+     7→  Plus,
+     8→  Pencil,
+     9→  Trash2,
+    10→  ChevronUp,
+    11→  ChevronDown,
+    12→  RefreshCw,
+    13→  Package,
+    14→  AlertCircle,
+    15→  Check,
+    16→  X,
+    17→  Loader2,
+    18→  GripVertical,
+    19→} from 'lucide-react';
+    20→import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+    21→import { Badge } from '@/components/ui/badge';
+    22→import { Button } from '@/components/ui/button';
+    23→import { Skeleton } from '@/components/ui/skeleton';
+    24→import { Input } from '@/components/ui/input';
+    25→import { Switch } from '@/components/ui/switch';
+    26→import {
+    27→  Dialog,
+    28→  DialogContent,
+    29→  DialogDescription,
+    30→  DialogFooter,
+    31→  DialogHeader,
+    32→  DialogTitle,
+    33→} from '@/components/ui/dialog';
+    34→import {
+    35→  AlertDialog,
+    36→  AlertDialogAction,
+    37→  AlertDialogCancel,
+    38→  AlertDialogContent,
+    39→  AlertDialogDescription,
+    40→  AlertDialogFooter,
+    41→  AlertDialogHeader,
+    42→  AlertDialogTitle,
+    43→} from '@/components/ui/alert-dialog';
+    44→import { AdminSidebar } from '@/components/layout/admin-sidebar';
+    45→import { AdminHeader } from '@/components/layout/admin-header';
+    46→import { SidebarInset } from '@/components/ui/sidebar';
+    47→import { Separator } from '@/components/ui/separator';
+    48→
+    49→// ============================================
+    50→// Types
+    51→// ============================================
+    52→
+    53→interface CategoryItem {
+    54→  id: string;
+    55→  name: string;
+    56→  nameEn: string | null;
+    57→  slug: string;
+    58→  icon: string | null;
+    59→  sortOrder: number;
+    60→  isActive: boolean;
+    61→  productCount: number;
+    62→  createdAt: string;
+    63→  updatedAt: string;
+    64→}
+    65→
+    66→interface CategoryFormData {
+    67→  name: string;
+    68→  nameEn: string;
+    69→  slug: string;
+    70→  icon: string;
+    71→}
+    72→
+    73→// ============================================
+    74→// Main Categories Page
+    75→// ============================================
+    76→
+    77→export default function CategoriesPage() {
+    78→  const { locale } = useLocale();
+    79→  const t = (en: string, vi: string) => locale === 'vi' ? vi : en;
+    80→
+    81→  // Data
+    82→  const [categories, setCategories] = useState<CategoryItem[]>([]);
+    83→  const [loading, setLoading] = useState(true);
+    84→
+    85→  // Dialogs
+    86→  const [formDialogOpen, setFormDialogOpen] = useState(false);
+    87→  const [editingCategory, setEditingCategory] = useState<CategoryItem | null>(null);
+    88→  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    89→  const [deletingCategory, setDeletingCategory] = useState<CategoryItem | null>(null);
+    90→
+    91→  // Form state
+    92→  const [formData, setFormData] = useState<CategoryFormData>({
+    93→    name: '',
+    94→    nameEn: '',
+    95→    slug: '',
+    96→    icon: '',
+    97→  });
+    98→  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+    99→  const [submitting, setSubmitting] = useState(false);
+   100→
+   101→  // Action states
+   102→  const [togglingId, setTogglingId] = useState<string | null>(null);
+   103→  const [reorderingId, setReorderingId] = useState<string | null>(null);
+   104→
+   105→  // Fetch categories
+   106→  const fetchCategories = useCallback(async () => {
+   107→    try {
+   108→      setLoading(true);
+   109→      const res = await fetch('/api/categories');
+   110→      const json = await res.json();
+   111→      if (json.success) {
+   112→        setCategories(json.data.items || []);
+   113→      }
+   114→    } catch (err) {
+   115→      console.error('Failed to fetch categories:', err);
+   116→    } finally {
+   117→      setLoading(false);
+   118→    }
+   119→  }, []);
+   120→
+   121→  useEffect(() => {
+   122→    fetchCategories();
+   123→  }, [fetchCategories]);
+   124→
+   125→  // Auto-generate slug from Vietnamese name
+   126→  const generateSlug = (name: string): string => {
+   127→    return name
+   128→      .toLowerCase()
+   129→      .normalize('NFD')
+   130→      .replace(/[\u0300-\u036f]/g, '')
+   131→      .replace(/đ/g, 'd')
+   132→      .replace(/[^a-z0-9\s-]/g, '')
+   133→      .trim()
+   134→      .replace(/\s+/g, '-')
+   135→      .replace(/-+/g, '-');
+   136→  };
+   137→
+   138→  // Open create dialog
+   139→  const handleCreate = () => {
+   140→    setEditingCategory(null);
+   141→    setFormData({ name: '', nameEn: '', slug: '', icon: '' });
+   142→    setFormErrors({});
+   143→    setFormDialogOpen(true);
+   144→  };
+   145→
+   146→  // Open edit dialog
+   147→  const handleEdit = (cat: CategoryItem) => {
+   148→    setEditingCategory(cat);
+   149→    setFormData({
+   150→      name: cat.name,
+   151→      nameEn: cat.nameEn || '',
+   152→      slug: cat.slug,
+   153→      icon: cat.icon || '',
+   154→    });
+   155→    setFormErrors({});
+   156→    setFormDialogOpen(true);
+   157→  };
+   158→
+   159→  // Validate form
+   160→  const validateForm = (): boolean => {
+   161→    const errors: Record<string, string> = {};
+   162→    if (!formData.name.trim() || formData.name.trim().length < 2) {
+   163→      errors.name = t('Name required (min 2 chars)', 'Tên bắt buộc (tối thiểu 2 ký tự)');
+   164→    }
+   165→    if (!formData.slug.trim() || formData.slug.trim().length < 2) {
+   166→      errors.slug = t('Slug required (min 2 chars)', 'Slug bắt buộc (tối thiểu 2 ký tự)');
+   167→    } else if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(formData.slug.trim())) {
+   168→      errors.slug = t(
+   169→        'Slug must be lowercase with hyphens (e.g., "gao", "dau-an")',
+   170→        'Slug phải viết thường, dùng gạch ngang (VD: "gao", "dau-an")'
+   171→      );
+   172→    }
+   173→    setFormErrors(errors);
+   174→    return Object.keys(errors).length === 0;
+   175→  };
+   176→
+   177→  // Submit form
+   178→  const handleSubmit = async () => {
+   179→    if (!validateForm()) return;
+   180→
+   181→    setSubmitting(true);
+   182→    try {
+   183→      const isEdit = !!editingCategory;
+   184→      const url = isEdit ? `/api/categories/${editingCategory.id}` : '/api/categories';
+   185→      const method = isEdit ? 'PUT' : 'POST';
+   186→
+   187→      const res = await fetch(url, {
+   188→        method,
+   189→        headers: { 'Content-Type': 'application/json' },
+   190→        body: JSON.stringify({
+   191→          name: formData.name.trim(),
+   192→          nameEn: formData.nameEn.trim() || null,
+   193→          slug: formData.slug.trim(),
+   194→          icon: formData.icon.trim() || null,
+   195→        }),
+   196→      });
+   197→
+   198→      const json = await res.json();
+   199→
+   200→      if (json.success) {
+   201→        setFormDialogOpen(false);
+   202→        fetchCategories();
+   203→      } else {
+   204→        if (json.error?.details?.errors) {
+   205→          const serverErrors: Record<string, string> = {};
+   206→          (json.error.details.errors as string[]).forEach((err: string) => {
+   207→            if (err.toLowerCase().includes('slug')) serverErrors.slug = err;
+   208→            else if (err.toLowerCase().includes('name')) serverErrors.name = err;
+   209→            else serverErrors._general = err;
+   210→          });
+   211→          setFormErrors(serverErrors);
+   212→        } else {
+   213→          setFormErrors({ _general: json.error?.message || t('Failed to save category', 'Không thể lưu danh mục') });
+   214→        }
+   215→      }
+   216→    } catch (err) {
+   217→      console.error('Submit error:', err);
+   218→      setFormErrors({ _general: t('Network error', 'Lỗi mạng') });
+   219→    } finally {
+   220→      setSubmitting(false);
+   221→    }
+   222→  };
+   223→
+   224→  // Delete category
+   225→  const handleDelete = (cat: CategoryItem) => {
+   226→    setDeletingCategory(cat);
+   227→    setDeleteDialogOpen(true);
+   228→  };
+   229→
+   230→  const confirmDelete = async () => {
+   231→    if (!deletingCategory) return;
+   232→    try {
+   233→      const res = await fetch(`/api/categories/${deletingCategory.id}`, { method: 'DELETE' });
+   234→      const json = await res.json();
+   235→      if (json.success) {
+   236→        setDeleteDialogOpen(false);
+   237→        setDeletingCategory(null);
+   238→        fetchCategories();
+   239→      }
+   240→    } catch (err) {
+   241→      console.error('Delete error:', err);
+   242→    }
+   243→  };
+   244→
+   245→  // Toggle active
+   246→  const handleToggleActive = async (cat: CategoryItem) => {
+   247→    try {
+   248→      setTogglingId(cat.id);
+   249→      const res = await fetch(`/api/categories/${cat.id}`, {
+   250→        method: 'PATCH',
+   251→        headers: { 'Content-Type': 'application/json' },
+   252→        body: JSON.stringify({ action: 'toggle_active' }),
+   253→      });
+   254→      const json = await res.json();
+   255→      if (json.success) {
+   256→        setCategories((prev) =>
+   257→          prev.map((c) => (c.id === cat.id ? { ...c, isActive: !c.isActive } : c))
+   258→        );
+   259→      }
+   260→    } catch (err) {
+   261→      console.error('Toggle error:', err);
+   262→    } finally {
+   263→      setTogglingId(null);
+   264→    }
+   265→  };
+   266→
+   267→  // Reorder: move up/down
+   268→  const handleReorder = async (cat: CategoryItem, direction: 'up' | 'down') => {
+   269→    const sortedCats = [...categories].sort((a, b) => a.sortOrder - b.sortOrder);
+   270→    const idx = sortedCats.findIndex((c) => c.id === cat.id);
+   271→    if (
+   272→      (direction === 'up' && idx <= 0) ||
+   273→      (direction === 'down' && idx >= sortedCats.length - 1)
+   274→    ) {
+   275→      return;
+   276→    }
+   277→
+   278→    const swapWith = sortedCats[direction === 'up' ? idx - 1 : idx + 1];
+   279→    const order: { id: string; sortOrder: number }[] = sortedCats.map((c, i) => ({
+   280→      id: c.id,
+   281→      sortOrder: i,
+   282→    }));
+   283→
+   284→    // Swap sort orders
+   285→    const tempOrder = order[idx].sortOrder;
+   286→    order[idx].sortOrder = order[idx + (direction === 'up' ? -1 : 1)].sortOrder;
+   287→    order[idx + (direction === 'up' ? -1 : 1)].sortOrder = tempOrder;
+   288→
+   289→    try {
+   290→      setReorderingId(cat.id);
+   291→      const res = await fetch(`/api/categories/${cat.id}`, {
+   292→        method: 'PATCH',
+   293→        headers: { 'Content-Type': 'application/json' },
+   294→        body: JSON.stringify({ action: 'reorder', order }),
+   295→      });
+   296→      const json = await res.json();
+   297→      if (json.success) {
+   298→        fetchCategories();
+   299→      }
+   300→    } catch (err) {
+   301→      console.error('Reorder error:', err);
+   302→    } finally {
+   303→      setReorderingId(null);
+   304→    }
+   305→  };
+   306→
+   307→  return (
+   308→    <div className="flex min-h-screen">
+   309→      <AdminSidebar />
+   310→      <SidebarInset>
+   311→        <AdminHeader />
+   312→
+   313→        <main className="flex-1 p-4 md:p-6 lg:p-8 space-y-6">
+   314→          {/* Page Header */}
+   315→          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+   316→            <div>
+   317→              <h1 className="text-2xl font-bold tracking-tight">
+   318→                {t('Categories', 'Danh mục')}
+   319→              </h1>
+   320→              <p className="text-sm text-muted-foreground mt-1">
+   321→                {t('Organize products into categories for better browsing', 'Sắp xếp sản phẩm vào danh mục để dễ duyệt')}
+   322→              </p>
+   323→            </div>
+   324→            <div className="flex items-center gap-2">
+   325→              <Button variant="outline" size="sm" onClick={fetchCategories}>
+   326→                <RefreshCw className="h-4 w-4 mr-1" />
+   327→                {t('Refresh', 'Làm mới')}
+   328→              </Button>
+   329→              <Button
+   330→                size="sm"
+   331→                onClick={handleCreate}
+   332→                className="bg-red-600 hover:bg-red-700 text-white"
+   333→              >
+   334→                <Plus className="h-4 w-4 mr-1" />
+   335→                {t('Add Category', 'Thêm danh mục')}
+   336→              </Button>
+   337→            </div>
+   338→          </div>
+   339→
+   340→          <Separator />
+   341→
+   342→          {/* Categories List */}
+   343→          <Card>
+   344→            <CardHeader className="pb-3">
+   345→              <div className="flex items-center justify-between">
+   346→                <CardTitle className="text-base flex items-center gap-2">
+   347→                  <FolderOpen className="h-4 w-4 text-red-600" />
+   348→                  {t('All Categories', 'Tất cả danh mục')}
+   349→                </CardTitle>
+   350→                <Badge variant="outline" className="font-mono">
+   351→                  {categories.length}
+   352→                </Badge>
+   353→              </div>
+   354→            </CardHeader>
+   355→            <CardContent>
+   356→              {loading ? (
+   357→                <div className="space-y-3">
+   358→                  {Array.from({ length: 5 }).map((_, i) => (
+   359→                    <Skeleton key={i} className="h-16 w-full rounded-lg" />
+   360→                  ))}
+   361→                </div>
+   362→              ) : categories.length === 0 ? (
+   363→                /* Empty State */
+   364→                <div className="text-center py-16 px-4">
+   365→                  <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+   366→                    <FolderOpen className="h-8 w-8 text-muted-foreground" />
+   367→                  </div>
+   368→                  <h3 className="text-lg font-semibold">
+   369→                    {t('No categories yet', 'Chưa có danh mục')}
+   370→                  </h3>
+   371→                  <p className="text-sm text-muted-foreground mt-1 max-w-md mx-auto">
+   372→                    {t(
+   373→                      'Create your first category to organize products in the catalog.',
+   374→                      'Tạo danh mục đầu tiên để sắp xếp sản phẩm trong danh mục.'
+   375→                    )}
+   376→                  </p>
+   377→                  <Button
+   378→                    className="mt-4 bg-red-600 hover:bg-red-700 text-white"
+   379→                    onClick={handleCreate}
+   380→                  >
+   381→                    <Plus className="h-4 w-4 mr-2" />
+   382→                    {t('Create First Category', 'Tạo danh mục đầu tiên')}
+   383→                  </Button>
+   384→                </div>
+   385→              ) : (
+   386→                /* Categories List */
+   387→                <div className="space-y-2">
+   388→                  {categories.map((cat) => (
+   389→                    <div
+   390→                      key={cat.id}
+   391→                      className={`flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors ${
+   392→                        !cat.isActive ? 'opacity-60' : ''
+   393→                      }`}
+   394→                    >
+   395→                      {/* Icon */}
+   396→                      <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
+   397→                        {cat.icon ? (
+   398→                          <span className="text-xl">{cat.icon}</span>
+   399→                        ) : (
+   400→                          <FolderOpen className="h-5 w-5 text-muted-foreground" />
+   401→                        )}
+   402→                      </div>
+   403→
+   404→                      {/* Info */}
+   405→                      <div className="flex-1 min-w-0">
+   406→                        <div className="flex items-center gap-2">
+   407→                          <h3 className="text-sm font-semibold truncate">
+   408→                            {locale === 'vi' ? cat.name : (cat.nameEn || cat.name)}
+   409→                          </h3>
+   410→                          {cat.nameEn && locale === 'vi' && (
+   411→                            <span className="text-xs text-muted-foreground hidden sm:inline">
+   412→                              ({cat.nameEn})
+   413→                            </span>
+   414→                          )}
+   415→                        </div>
+   416→                        <div className="flex items-center gap-2 mt-0.5">
+   417→                          <code className="text-[11px] font-mono text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+   418→                            {cat.slug}
+   419→                          </code>
+   420→                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-medium">
+   421→                            <Package className="h-2.5 w-2.5 mr-1" />
+   422→                            {cat.productCount} {t('products', 'SP')}
+   423→                          </Badge>
+   424→                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono">
+   425→                            #{cat.sortOrder}
+   426→                          </Badge>
+   427→                        </div>
+   428→                      </div>
+   429→
+   430→                      {/* Actions */}
+   431→                      <div className="flex items-center gap-1 shrink-0">
+   432→                        {/* Reorder Up */}
+   433→                        <Button
+   434→                          variant="ghost"
+   435→                          size="icon"
+   436→                          className="h-8 w-8"
+   437→                          disabled={reorderingId === cat.id}
+   438→                          onClick={() => handleReorder(cat, 'up')}
+   439→                          title={t('Move up', 'Di chuyển lên')}
+   440→                        >
+   441→                          {reorderingId === cat.id ? (
+   442→                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+   443→                          ) : (
+   444→                            <ChevronUp className="h-3.5 w-3.5" />
+   445→                          )}
+   446→                        </Button>
+   447→
+   448→                        {/* Reorder Down */}
+   449→                        <Button
+   450→                          variant="ghost"
+   451→                          size="icon"
+   452→                          className="h-8 w-8"
+   453→                          disabled={reorderingId === cat.id}
+   454→                          onClick={() => handleReorder(cat, 'down')}
+   455→                          title={t('Move down', 'Di chuyển xuống')}
+   456→                        >
+   457→                          {reorderingId === cat.id ? (
+   458→                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+   459→                          ) : (
+   460→                            <ChevronDown className="h-3.5 w-3.5" />
+   461→                          )}
+   462→                        </Button>
+   463→
+   464→                        {/* Active Toggle */}
+   465→                        <div className="flex items-center px-1">
+   466→                          <Switch
+   467→                            checked={cat.isActive}
+   468→                            onCheckedChange={() => handleToggleActive(cat)}
+   469→                            disabled={togglingId === cat.id}
+   470→                            className="data-[state=checked]:bg-red-600"
+   471→                          />
+   472→                        </div>
+   473→
+   474→                        {/* Edit */}
+   475→                        <Button
+   476→                          variant="ghost"
+   477→                          size="icon"
+   478→                          className="h-8 w-8 hover:bg-muted"
+   479→                          onClick={() => handleEdit(cat)}
+   480→                          title={t('Edit', 'Sửa')}
+   481→                        >
+   482→                          <Pencil className="h-3.5 w-3.5" />
+   483→                        </Button>
+   484→
+   485→                        {/* Delete */}
+   486→                        <Button
+   487→                          variant="ghost"
+   488→                          size="icon"
+   489→                          className="h-8 w-8 hover:bg-red-50 hover:text-red-600"
+   490→                          onClick={() => handleDelete(cat)}
+   491→                          title={t('Delete', 'Xóa')}
+   492→                        >
+   493→                          <Trash2 className="h-3.5 w-3.5" />
+   494→                        </Button>
+   495→                      </div>
+   496→                    </div>
+   497→                  ))}
+   498→                </div>
+   499→              )}
+   500→            </CardContent>
+   501→          </Card>
+   502→
+   503→          {/* Info Card */}
+   504→          <Card className="border-dashed">
+   505→            <CardContent className="p-4">
+   506→              <div className="flex items-start gap-3">
+   507→                <div className="h-8 w-8 rounded-lg bg-yellow-50 text-red-600 flex items-center justify-center shrink-0 mt-0.5">
+   508→                  <FolderOpen className="h-4 w-4" />
+   509→                </div>
+   510→                <div>
+   511→                  <p className="text-sm font-medium">
+   512→                    {t('Category Management Tips', 'Mẹo quản lý danh mục')}
+   513→                  </p>
+   514→                  <ul className="text-xs text-muted-foreground mt-1 space-y-0.5 list-disc list-inside">
+   515→                    <li>
+   516→                      {t(
+   517→                        'Use the up/down arrows to change display order in the product catalog.',
+   518→                        'Dùng mũi tên lên/xuống để thay đổi thứ tự hiển thị trong danh mục SP.'
+   519→                      )}
+   520→                    </li>
+   521→                    <li>
+   522→                      {t(
+   523→                        'Deactivate a category to hide it from the catalog without deleting.',
+   524→                        'Vô hiệu hóa danh mục để ẩn khỏi danh mục mà không cần xóa.'
+   525→                      )}
+   526→                    </li>
+   527→                    <li>
+   528→                      {t(
+   529→                        'Categories with products cannot be deleted. Reassign products first.',
+   530→                        'Danh mục có sản phẩm không thể bị xóa. Hãy chuyển sản phẩm sang danh mục khác trước.'
+   531→                      )}
+   532→                    </li>
+   533→                    <li>
+   534→                      {t(
+   535→                        'Slug is used in URLs. Keep it short and lowercase (e.g., "gao", "dau-an").',
+   536→                        'Slug dùng trong URL. Giữ ngắn và viết thường (VD: "gao", "dau-an").'
+   537→                      )}
+   538→                    </li>
+   539→                  </ul>
+   540→                </div>
+   541→              </div>
+   542→            </CardContent>
+   543→          </Card>
+   544→        </main>
+   545→
+   546→        {/* Create/Edit Dialog */}
+   547→        <Dialog open={formDialogOpen} onOpenChange={setFormDialogOpen}>
+   548→          <DialogContent className="max-w-md">
+   549→            <DialogHeader>
+   550→              <DialogTitle className="flex items-center gap-2">
+   551→                <FolderOpen className="h-5 w-5 text-red-600" />
+   552→                {editingCategory
+   553→                  ? t('Edit Category', 'Chỉnh sửa danh mục')
+   554→                  : t('Create Category', 'Tạo danh mục')}
+   555→              </DialogTitle>
+   556→              <DialogDescription>
+   557→                {editingCategory
+   558→                  ? t('Update category details', 'Cập nhật thông tin danh mục')
+   559→                  : t('Add a new product category', 'Thêm danh mục sản phẩm mới')}
+   560→              </DialogDescription>
+   561→            </DialogHeader>
+   562→
+   563→            {/* General Error */}
+   564→            {formErrors._general && (
+   565→              <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+   566→                <AlertCircle className="h-4 w-4 shrink-0" />
+   567→                {formErrors._general}
+   568→              </div>
+   569→            )}
+   570→
+   571→            <div className="grid gap-4 py-2">
+   572→              {/* Icon */}
+   573→              <div className="space-y-2">
+   574→                <label className="text-sm font-medium">
+   575→                  {t('Icon (Emoji)', 'Biểu tượng (Emoji)')}
+   576→                </label>
+   577→                <div className="flex gap-2 items-center">
+   578→                  <div className="h-10 w-10 rounded-lg border flex items-center justify-center text-xl bg-muted/50 shrink-0">
+   579→                    {formData.icon || '📦'}
+   580→                  </div>
+   581→                  <Input
+   582→                    placeholder={t('e.g., 🍚, 🥤, 🧴', 'VD: 🍚, 🥤, 🧴')}
+   583→                    value={formData.icon}
+   584→                    onChange={(e) => setFormData((prev) => ({ ...prev, icon: e.target.value }))}
+   585→                  />
+   586→                </div>
+   587→              </div>
+   588→
+   589→              {/* Name (VI) */}
+   590→              <div className="space-y-2">
+   591→                <label htmlFor="cat-name" className="text-sm font-medium">
+   592→                  {t('Name (Vietnamese)', 'Tên (Tiếng Việt)')} <span className="text-red-500">*</span>
+   593→                </label>
+   594→                <Input
+   595→                  id="cat-name"
+   596→                  placeholder={t('e.g., Gạo', 'VD: Gạo')}
+   597→                  value={formData.name}
+   598→                  onChange={(e) => {
+   599→                    const name = e.target.value;
+   600→                    setFormData((prev) => ({
+   601→                      ...prev,
+   602→                      name,
+   603→                      // Auto-generate slug if creating or slug hasn't been manually edited
+   604→                      slug: !editingCategory ? generateSlug(name) : prev.slug,
+   605→                    }));
+   606→                    if (formErrors.name) setFormErrors((prev) => { const n = { ...prev }; delete n.name; return n; });
+   607→                  }}
+   608→                  className={formErrors.name ? 'border-red-300' : ''}
+   609→                />
+   610→                {formErrors.name && <p className="text-xs text-red-500">{formErrors.name}</p>}
+   611→              </div>
+   612→
+   613→              {/* Name (EN) */}
+   614→              <div className="space-y-2">
+   615→                <label htmlFor="cat-name-en" className="text-sm font-medium">
+   616→                  {t('Name (English)', 'Tên (Tiếng Anh)')}
+   617→                </label>
+   618→                <Input
+   619→                  id="cat-name-en"
+   620→                  placeholder={t('e.g., Rice', 'VD: Rice')}
+   621→                  value={formData.nameEn}
+   622→                  onChange={(e) => setFormData((prev) => ({ ...prev, nameEn: e.target.value }))}
+   623→                />
+   624→              </div>
+   625→
+   626→              {/* Slug */}
+   627→              <div className="space-y-2">
+   628→                <label htmlFor="cat-slug" className="text-sm font-medium">
+   629→                  Slug <span className="text-red-500">*</span>
+   630→                </label>
+   631→                <Input
+   632→                  id="cat-slug"
+   633→                  placeholder={t('e.g., gao, dau-an', 'VD: gao, dau-an')}
+   634→                  value={formData.slug}
+   635→                  onChange={(e) => {
+   636→                    setFormData((prev) => ({ ...prev, slug: e.target.value }));
+   637→                    if (formErrors.slug) setFormErrors((prev) => { const n = { ...prev }; delete n.slug; return n; });
+   638→                  }}
+   639→                  className={`font-mono text-sm ${formErrors.slug ? 'border-red-300' : ''}`}
+   640→                />
+   641→                {formErrors.slug && <p className="text-xs text-red-500">{formErrors.slug}</p>}
+   642→                <p className="text-[11px] text-muted-foreground">
+   643→                  {t(
+   644→                    'Used in URLs. Lowercase, hyphens only. Auto-generated from Vietnamese name.',
+   645→                    'Dùng trong URL. Chữ thường, chỉ dùng gạch ngang. Tự động tạo từ tên tiếng Việt.'
+   646→                  )}
+   647→                </p>
+   648→              </div>
+   649→            </div>
+   650→
+   651→            <DialogFooter className="gap-2 sm:gap-0">
+   652→              <Button variant="outline" onClick={() => setFormDialogOpen(false)} disabled={submitting}>
+   653→                {t('Cancel', 'Hủy')}
+   654→              </Button>
+   655→              <Button
+   656→                onClick={handleSubmit}
+   657→                disabled={submitting}
+   658→                className="bg-red-600 hover:bg-red-700 text-white"
+   659→              >
+   660→                {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+   661→                {submitting
+   662→                  ? t('Saving...', 'Đang lưu...')
+   663→                  : editingCategory
+   664→                    ? t('Update', 'Cập nhật')
+   665→                    : t('Create', 'Tạo')}
+   666→              </Button>
+   667→            </DialogFooter>
+   668→          </DialogContent>
+   669→        </Dialog>
+   670→
+   671→        {/* Delete Confirmation */}
+   672→        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+   673→          <AlertDialogContent>
+   674→            <AlertDialogHeader>
+   675→              <AlertDialogTitle>
+   676→                {t('Delete Category', 'Xóa danh mục')}
+   677→              </AlertDialogTitle>
+   678→              <AlertDialogDescription>
+   679→                {deletingCategory && (
+   680→                  <>
+   681→                    {t(
+   682→                      `Are you sure you want to delete "${deletingCategory.name}"?`,
+   683→                      `Bạn có chắc muốn xóa "${deletingCategory.name}"?`
+   684→                    )}
+   685→                    {deletingCategory.productCount > 0 && (
+   686→                      <>
+   687→                        <br />
+   688→                        <br />
+   689→                        <span className="text-amber-600 font-medium flex items-center gap-1">
+   690→                          <AlertCircle className="h-4 w-4" />
+   691→                          {t(
+   692→                            `This category has ${deletingCategory.productCount} product(s). Deletion will be blocked. Reassign products first.`,
+   693→                            `Danh mục này có ${deletingCategory.productCount} sản phẩm. Việc xóa sẽ bị từ chối. Hãy chuyển sản phẩm sang danh mục khác trước.`
+   694→                          )}
+   695→                        </span>
+   696→                      </>
+   697→                    )}
+   698→                  </>
+   699→                )}
+   700→              </AlertDialogDescription>
+   701→            </AlertDialogHeader>
+   702→            <AlertDialogFooter>
+   703→              <AlertDialogCancel>{t('Cancel', 'Hủy')}</AlertDialogCancel>
+   704→              <AlertDialogAction
+   705→                onClick={confirmDelete}
+   706→                className="bg-red-600 hover:bg-red-700 text-white"
+   707→              >
+   708→                {t('Delete', 'Xóa')}
+   709→              </AlertDialogAction>
+   710→            </AlertDialogFooter>
+   711→          </AlertDialogContent>
+   712→        </AlertDialog>
+   713→      </SidebarInset>
+   714→    </div>
+   715→  );
+   716→}
+   717→

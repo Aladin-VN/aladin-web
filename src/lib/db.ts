@@ -1,52 +1,33 @@
 import { PrismaClient } from '@prisma/client'
+import { neon } from '@neondatabase/serverless'
+import { PrismaNeon } from '@prisma/adapter-neon'
 
 function createPrismaClient() {
-  let connectionString = process.env.DATABASE_URL
+  const connectionString = process.env.DATABASE_URL
 
+  // During build time on Vercel, DATABASE_URL may not be available
+  // Return a minimal client that won't actually be used at build time
   if (!connectionString) {
-    // During build time on Vercel, DATABASE_URL may not be available
-    // Return a dummy client that won't be used
-    if (process.env.NODE_ENV === 'production' && !connectionString) {
-      return new PrismaClient({
-        log: ['error'],
-        datasources: {
-          db: {
-            url: 'postgresql://dummy:dummy@localhost/dummy',
-          },
+    return new PrismaClient({
+      log: [],
+      datasources: {
+        db: {
+          url: 'postgresql://dummy:dummy@localhost/dummy',
         },
-      })
-    }
-    throw new Error('DATABASE_URL environment variable is not set')
+      },
+    })
   }
 
   // Strip channel_binding parameter — not supported by @neondatabase/serverless neon()
-  connectionString = connectionString.replace(/[&?]channel_binding=[^&]*/g, '')
+  const cleanUrl = connectionString.replace(/[&?]channel_binding=[^&]*/g, '')
 
-  // Use Neon serverless adapter for serverless/Vercel environments
-  // Dynamic import to avoid issues at build time
-  let client: PrismaClient
+  const sql = neon(cleanUrl)
+  const adapter = new PrismaNeon(sql)
 
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { neon } = require('@neondatabase/serverless')
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { PrismaNeon } = require('@prisma/adapter-neon')
-
-    const sql = neon(connectionString)
-    const adapter = new PrismaNeon(sql)
-
-    client = new PrismaClient({
-      adapter,
-      log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
-    })
-  } catch {
-    // Fallback: use standard Prisma Client (works for local dev with direct PG connection)
-    client = new PrismaClient({
-      log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
-    })
-  }
-
-  return client
+  return new PrismaClient({
+    adapter,
+    log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
+  })
 }
 
 const globalForPrisma = globalThis as unknown as {

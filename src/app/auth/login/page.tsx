@@ -11,7 +11,7 @@ import { Phone, Lock, Eye, EyeOff, Loader2, ShieldCheck, Store, Truck, Users, Ba
 // ============================================
 
 const DEMO_ACCOUNTS = [
-  { phone: '0901234567', role: 'Admin', icon: ShieldCheck, desc: 'Full platform access' },
+  { phone: '0900000001', role: 'Admin', icon: ShieldCheck, desc: 'Full platform access' },
   { phone: '0901234600', role: 'Shop Owner', icon: Store, desc: 'Own shop data only' },
   { phone: '0911111111', role: 'Sales Rep', icon: Users, desc: 'All shops & payments' },
   { phone: '0922222222', role: 'Driver', icon: Truck, desc: 'Assigned deliveries' },

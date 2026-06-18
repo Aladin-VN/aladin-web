@@ -1,12 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Neon serverless driver needs to be bundled by webpack (not external)
-  // @neondatabase/serverless works natively in Vercel serverless functions
   typescript: {
     ignoreBuildErrors: true,
   },
   reactStrictMode: false,
+  serverExternalPackages: ["@neondatabase/serverless", "@prisma/adapter-neon"],
 };
 
 export default nextConfig;

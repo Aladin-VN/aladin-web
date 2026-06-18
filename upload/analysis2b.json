@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "This is a dashboard page (likely an admin/management interface). It shows **data** (not empty):  \n\n- The “Recent Orders” section displays 4 delivered orders (with details like order IDs, amounts, dates, and “0 items” status).  \n- The “Top Products” section is empty (shows “No product data yet”).  \n- The “Active Automation Rules” section lists 3 rules (Credit Auto - Lock, Group Buy Threshold, Cash Reconciliation) with descriptions.",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1781798467,
+  "id": "20260619000100c707659e90f947e9",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "20260619000100c707659e90f947e9",
+  "usage": {
+    "completion_tokens": 102,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 4059,
+    "prompt_tokens_details": {
+      "cached_tokens": 5
+    },
+    "total_tokens": 4161
+  }
+}

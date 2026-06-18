@@ -1,0 +1,825 @@
+     1→     1→'use client';
+     2→     2→import { useLocale } from '@/providers/app-provider';
+     3→     3→
+     4→     4→import { useState, useEffect, useCallback, useRef } from 'react';
+     5→     5→import {
+     6→     6→  Store,
+     7→     7→  Search,
+     8→     8→  ChevronLeft,
+     9→     9→  ChevronRight,
+    10→    10→  RefreshCw,
+    11→    11→  Loader2,
+    12→    12→  Edit,
+    13→    13→  MapPin,
+    14→    14→  TrendingUp,
+    15→    15→  Users,
+    16→    16→  AlertTriangle,
+    17→    17→  Crown,
+    18→    18→  Plus,
+    19→    19→  RotateCcw,
+    20→    20→  ArrowUpDown,
+    21→    21→  Download,
+    22→    22→  CreditCard,
+    23→    23→} from 'lucide-react';
+    24→    24→import { Card, CardContent } from '@/components/ui/card';
+    25→    25→import { Button } from '@/components/ui/button';
+    26→    26→import { Skeleton } from '@/components/ui/skeleton';
+    27→    27→import { Input } from '@/components/ui/input';
+    28→    28→import {
+    29→    29→  Select,
+    30→    30→  SelectContent,
+    31→    31→  SelectItem,
+    32→    32→  SelectTrigger,
+    33→    33→  SelectValue,
+    34→    34→} from '@/components/ui/select';
+    35→    35→import {
+    36→    36→  Table,
+    37→    37→  TableBody,
+    38→    38→  TableCell,
+    39→    39→  TableHead,
+    40→    40→  TableHeader,
+    41→    41→  TableRow,
+    42→    42→} from '@/components/ui/table';
+    43→    43→import { AdminSidebar } from '@/components/layout/admin-sidebar';
+    44→    44→import { AdminHeader } from '@/components/layout/admin-header';
+    45→    45→import { SidebarInset } from '@/components/ui/sidebar';
+    46→    46→import { Separator } from '@/components/ui/separator';
+    47→    47→import { SensitiveValue } from '@/components/shared/sensitive-value';
+    48→    48→import {
+    49→    49→  LoyaltyTierBadge,
+    50→    50→  CreditStatusBadge,
+    51→    51→  ShopTypeBadge,
+    52→    52→} from '@/components/shops/shop-status-badge';
+    53→    53→import { ShopDetailDrawer } from '@/components/shops/shop-detail-drawer';
+    54→    54→import { ShopEditDialog } from '@/components/shops/shop-edit-dialog';
+    55→    55→
+    56→    56→// ============================================
+    57→    57→// Types
+    58→    58→// ============================================
+    59→    59→
+    60→    60→interface ShopListItem {
+    61→    61→  id: string;
+    62→    62→  name: string;
+    63→    63→  nameEn: string | null;
+    64→    64→  district: string | null;
+    65→    65→  province: string;
+    66→    66→  address: string | null;
+    67→    67→  shopType: string;
+    68→    68→  loyaltyTier: string;
+    69→    69→  creditStatus: string;
+    70→    70→  creditLimit: number;
+    71→    71→  creditLimitFormatted: string;
+    72→    72→  creditBalance: number;
+    73→    73→  creditBalanceFormatted: string;
+    74→    74→  creditAvailable: number;
+    75→    75→  creditAvailableFormatted: string;
+    76→    76→  totalOrders: number;
+    77→    77→  totalGmv: number;
+    78→    78→  totalGmvFormatted: string;
+    79→    79→  avgOrderValue: number;
+    80→    80→  avgOrderValueFormatted: string;
+    81→    81→  createdAt: string;
+    82→    82→  ward: { id: string; name: string } | null;
+    83→    83→  user: { id: string; phone: string; name: string; status: string; zaloId: string | null } | null;
+    84→    84→}
+    85→    85→
+    86→    86→interface ShopsResponse {
+    87→    87→  items: ShopListItem[];
+    88→    88→  pagination: {
+    89→    89→    page: number;
+    90→    90→    limit: number;
+    91→    91→    total: number;
+    92→    92→    totalPages: number;
+    93→    93→  };
+    94→    94→}
+    95→    95→
+    96→    96→interface ShopStats {
+    97→    97→  totalShops: number;
+    98→    98→  activeShops: number;
+    99→    99→  lockedShops: number;
+   100→   100→  overdueShops: number;
+   101→   101→  platinumShops: number;
+   102→   102→  newThisMonth: number;
+   103→   103→  totalGmv: number;
+   104→   104→  totalGmvFormatted: string;
+   105→   105→  totalCreditExposure: number;
+   106→   106→  totalCreditExposureFormatted: string;
+   107→   107→  tierDistribution: Record<string, number>;
+   108→   108→  creditDistribution: Record<string, number>;
+   109→   109→  topDistricts: { district: string; count: number }[];
+   110→   110→  shopTypeDistribution: Record<string, number>;
+   111→   111→}
+   112→   112→
+   113→   113→// ============================================
+   114→   114→// Stat Card Mini
+   115→   115→// ============================================
+   116→   116→
+   117→   117→function StatCardMini({
+   118→   118→  title,
+   119→   119→  titleVi,
+   120→   120→  value,
+   121→   121→  icon,
+   122→   122→  variant = 'default',
+   123→   123→  locale,
+   124→   124→  isSensitive = false,
+   125→   125→}: {
+   126→   126→  title: string;
+   127→   127→  titleVi: string;
+   128→   128→  value: string | number;
+   129→   129→  icon: React.ReactNode;
+   130→   130→  variant?: 'default' | 'warning' | 'danger' | 'success';
+   131→   131→  locale: string;
+   132→   132→  isSensitive?: boolean;
+   133→   133→}) {
+   134→   134→  const label = locale === 'vi' ? titleVi : title;
+   135→   135→
+   136→   136→  return (
+   137→   137→    <Card className={
+   138→   138→      variant === 'danger' ? 'border-red-200 bg-red-50/50 dark:border-red-900 dark:bg-red-950/30' :
+   139→   139→      variant === 'warning' ? 'border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/30' :
+   140→   140→      variant === 'success' ? 'border-yellow-100 bg-yellow-50/50 dark:border-red-900 dark:bg-emerald-950/30' :
+   141→   141→      ''
+   142→   142→    }>
+   143→   143→      <CardContent className="p-4">
+   144→   144→        <div className="flex items-center justify-between">
+   145→   145→          <div>
+   146→   146→            <p className="text-xs text-muted-foreground font-medium">{label}</p>
+   147→   147→            <p className="text-xl font-bold mt-1">
+   148→   148→              {isSensitive ? (
+   149→   149→                <SensitiveValue value={String(value)} maskType="amount" formatOptions={{ formatCurrency: true }} />
+   150→   150→              ) : (
+   151→   151→                typeof value === 'number' ? value.toLocaleString() : value
+   152→   152→              )}
+   153→   153→            </p>
+   154→   154→          </div>
+   155→   155→          <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${
+   156→   156→            variant === 'danger' ? 'bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-400' :
+   157→   157→            variant === 'warning' ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400' :
+   158→   158→            variant === 'success' ? 'bg-yellow-50 text-red-600 dark:bg-red-900/50 dark:text-yellow-500' :
+   159→   159→            'bg-muted text-muted-foreground'
+   160→   160→          }`}>
+   161→   161→            {icon}
+   162→   162→          </div>
+   163→   163→        </div>
+   164→   164→      </CardContent>
+   165→   165→    </Card>
+   166→   166→  );
+   167→   167→}
+   168→   168→
+   169→   169→// ============================================
+   170→   170→// Main Shops Page
+   171→   171→// ============================================
+   172→   172→
+   173→   173→export default function ShopsPage() {
+   174→   174→  const { locale } = useLocale();
+   175→   175→  const t = (en: string, vi: string) => locale === 'vi' ? vi : en;
+   176→   176→
+   177→   177→  // Data state
+   178→   178→  const [shops, setShops] = useState<ShopListItem[]>([]);
+   179→   179→  const [loading, setLoading] = useState(true);
+   180→   180→  const [stats, setStats] = useState<ShopStats | null>(null);
+   181→   181→
+   182→   182→  // Filter state
+   183→   183→  const [searchQuery, setSearchQuery] = useState('');
+   184→   184→  const [debouncedSearch, setDebouncedSearch] = useState('');
+   185→   185→  const [creditStatusFilter, setCreditStatusFilter] = useState('all');
+   186→   186→  const [loyaltyTierFilter, setLoyaltyTierFilter] = useState('all');
+   187→   187→  const [shopTypeFilter, setShopTypeFilter] = useState('all');
+   188→   188→  const [sortBy, setSortBy] = useState('createdAt');
+   189→   189→  const [sortOrder, setSortOrder] = useState('desc');
+   190→   190→  const [page, setPage] = useState(1);
+   191→   191→  const [totalPages, setTotalPages] = useState(1);
+   192→   192→  const [totalShopsCount, setTotalShopsCount] = useState(0);
+   193→   193→  const limit = 20;
+   194→   194→
+   195→   195→  // Dialog / Drawer state
+   196→   196→  const [selectedShopId, setSelectedShopId] = useState<string | null>(null);
+   197→   197→  const [drawerOpen, setDrawerOpen] = useState(false);
+   198→   198→  const [editDialogOpen, setEditDialogOpen] = useState(false);
+   199→   199→
+   200→   200→  // Refs
+   201→   201→  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+   202→   202→
+   203→   203→  // Debounced search
+   204→   204→  useEffect(() => {
+   205→   205→    if (searchTimeoutRef.current) {
+   206→   206→      clearTimeout(searchTimeoutRef.current);
+   207→   207→    }
+   208→   208→    searchTimeoutRef.current = setTimeout(() => {
+   209→   209→      setDebouncedSearch(searchQuery);
+   210→   210→      setPage(1);
+   211→   211→    }, 300);
+   212→   212→    return () => {
+   213→   213→      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+   214→   214→    };
+   215→   215→  }, [searchQuery]);
+   216→   216→
+   217→   217→  // Fetch shops
+   218→   218→  const fetchShops = useCallback(async () => {
+   219→   219→    try {
+   220→   220→      setLoading(true);
+   221→   221→      const params = new URLSearchParams({
+   222→   222→        page: String(page),
+   223→   223→        limit: String(limit),
+   224→   224→        search: debouncedSearch,
+   225→   225→        sortBy,
+   226→   226→        sortOrder,
+   227→   227→      });
+   228→   228→
+   229→   229→      if (creditStatusFilter !== 'all') params.set('creditStatus', creditStatusFilter);
+   230→   230→      if (loyaltyTierFilter !== 'all') params.set('loyaltyTier', loyaltyTierFilter);
+   231→   231→      if (shopTypeFilter !== 'all') params.set('shopType', shopTypeFilter);
+   232→   232→
+   233→   233→      const res = await fetch(`/api/shops?${params.toString()}`);
+   234→   234→      const json = await res.json();
+   235→   235→
+   236→   236→      if (json.success) {
+   237→   237→        const data: ShopsResponse = json.data;
+   238→   238→        setShops(data.items || []);
+   239→   239→        setTotalPages(data.pagination.totalPages);
+   240→   240→        setTotalShopsCount(data.pagination.total);
+   241→   241→      }
+   242→   242→    } catch (err) {
+   243→   243→      console.error('Failed to fetch shops:', err);
+   244→   244→    } finally {
+   245→   245→      setLoading(false);
+   246→   246→    }
+   247→   247→  }, [page, debouncedSearch, creditStatusFilter, loyaltyTierFilter, shopTypeFilter, sortBy, sortOrder, limit]);
+   248→   248→
+   249→   249→  // Fetch stats
+   250→   250→  const fetchStats = useCallback(async () => {
+   251→   251→    try {
+   252→   252→      const res = await fetch('/api/shops/stats');
+   253→   253→      const json = await res.json();
+   254→   254→      if (json.success) {
+   255→   255→        setStats(json.data);
+   256→   256→      }
+   257→   257→    } catch (err) {
+   258→   258→      console.error('Failed to fetch shop stats:', err);
+   259→   259→    }
+   260→   260→  }, []);
+   261→   261→
+   262→   262→  // Initial load
+   263→   263→  useEffect(() => {
+   264→   264→    fetchStats();
+   265→   265→  }, [fetchStats]);
+   266→   266→
+   267→   267→  // Re-fetch on filter/page change
+   268→   268→  useEffect(() => {
+   269→   269→    fetchShops();
+   270→   270→  }, [fetchShops]);
+   271→   271→
+   272→   272→  // Row click handler
+   273→   273→  const handleRowClick = (shopId: string) => {
+   274→   274→    setSelectedShopId(shopId);
+   275→   275→    setDrawerOpen(true);
+   276→   276→  };
+   277→   277→
+   278→   278→  // Edit handler
+   279→   279→  const handleEdit = (e: React.MouseEvent, shopId: string) => {
+   280→   280→    e.stopPropagation();
+   281→   281→    setSelectedShopId(shopId);
+   282→   282→    setEditDialogOpen(true);
+   283→   283→  };
+   284→   284→
+   285→   285→  // Reset filters
+   286→   286→  const handleResetFilters = () => {
+   287→   287→    setSearchQuery('');
+   288→   288→    setCreditStatusFilter('all');
+   289→   289→    setLoyaltyTierFilter('all');
+   290→   290→    setShopTypeFilter('all');
+   291→   291→    setSortBy('createdAt');
+   292→   292→    setSortOrder('desc');
+   293→   293→    setPage(1);
+   294→   294→  };
+   295→   295→
+   296→   296→  // Refresh
+   297→   297→  const handleRefresh = () => {
+   298→   298→    fetchShops();
+   299→   299→    fetchStats();
+   300→   300→  };
+   301→   301→
+   302→   302→  // After edit
+   303→   303→  const handleDataChanged = () => {
+   304→   304→    fetchShops();
+   305→   305→    fetchStats();
+   306→   306→  };
+   307→   307→
+   308→   308→  // Toggle sort direction
+   309→   309→  const handleSortToggle = () => {
+   310→   310→    setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'asc'));
+   311→   311→  };
+   312→   312→
+   313→   313→  // Page range for pagination
+   314→   314→  const getPageNumbers = () => {
+   315→   315→    const pages: number[] = [];
+   316→   316→    const maxVisible = 5;
+   317→   317→    let start = Math.max(1, page - Math.floor(maxVisible / 2));
+   318→   318→    const end = Math.min(totalPages, start + maxVisible - 1);
+   319→   319→    if (end - start + 1 < maxVisible) {
+   320→   320→      start = Math.max(1, end - maxVisible + 1);
+   321→   321→    }
+   322→   322→    for (let i = start; i <= end; i++) {
+   323→   323→      pages.push(i);
+   324→   324→    }
+   325→   325→    return pages;
+   326→   326→  };
+   327→   327→
+   328→   328→  const hasActiveFilters = debouncedSearch || creditStatusFilter !== 'all' || loyaltyTierFilter !== 'all' || shopTypeFilter !== 'all';
+   329→   329→
+   330→   330→  // Export CSV
+   331→   331→  const handleExportCSV = () => {
+   332→   332→    if (shops.length === 0) return;
+   333→   333→    const headers = locale === 'vi'
+   334→   334→      ? ['Ten', 'Chu', 'Dien thoai', 'Quan', 'Tinh', 'Loai', 'Cap TV', 'Trang thai no', 'Han muc', 'Da dung', 'Con lai', 'Tong DH', 'Tong GMV', 'Ngay tao']
+   335→   335→      : ['Name', 'Owner', 'Phone', 'District', 'Province', 'Type', 'Tier', 'Credit Status', 'Limit', 'Used', 'Available', 'Orders', 'GMV', 'Created'];
+   336→   336→
+   337→   337→    const rows = shops.map((s) => [
+   338→   338→      s.name,
+   339→   339→      s.user?.name || '',
+   340→   340→      s.user?.phone || '',
+   341→   341→      s.district || '',
+   342→   342→      s.province,
+   343→   343→      s.shopType,
+   344→   344→      s.loyaltyTier,
+   345→   345→      s.creditStatus,
+   346→   346→      s.creditLimit,
+   347→   347→      s.creditBalance,
+   348→   348→      s.creditAvailable,
+   349→   349→      s.totalOrders,
+   350→   350→      s.totalGmv,
+   351→   351→      s.createdAt,
+   352→   352→    ]);
+   353→   353→
+   354→   354→    const csv = [headers, ...rows].map((row) => row.map((cell) => `"${cell}"`).join(',')).join('\n');
+   355→   355→    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+   356→   356→    const url = URL.createObjectURL(blob);
+   357→   357→    const link = document.createElement('a');
+   358→   358→    link.href = url;
+   359→   359→    link.download = `aladin-shops-${new Date().toISOString().split('T')[0]}.csv`;
+   360→   360→    link.click();
+   361→   361→    URL.revokeObjectURL(url);
+   362→   362→  };
+   363→   363→
+   364→   364→  return (
+   365→   365→    <div className="flex min-h-screen">
+   366→   366→      <AdminSidebar />
+   367→   367→      <SidebarInset>
+   368→   368→        <AdminHeader />
+   369→   369→
+   370→   370→        <main className="flex-1 p-4 md:p-6 lg:p-8 space-y-6">
+   371→   371→          {/* Page Header */}
+   372→   372→          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+   373→   373→            <div>
+   374→   374→              <h1 className="text-2xl font-bold tracking-tight">
+   375→   375→                {t('Shops Management', 'Quan ly Cua hang')}
+   376→   376→              </h1>
+   377→   377→              <p className="text-sm text-muted-foreground mt-1">
+   378→   378→                {t('Manage mom-and-pop shops, track credit, and loyalty tiers', 'Quan ly cua hang tap hoa, theo doi cong no va cap thanh vien')}
+   379→   379→              </p>
+   380→   380→            </div>
+   381→   381→            <div className="flex items-center gap-2">
+   382→   382→              <Button variant="outline" size="sm" onClick={handleRefresh}>
+   383→   383→                <RefreshCw className="h-4 w-4 mr-1" />
+   384→   384→                {t('Refresh', 'Lam moi')}
+   385→   385→              </Button>
+   386→   386→              <Button
+   387→   387→                variant="outline"
+   388→   388→                size="sm"
+   389→   389→                onClick={handleExportCSV}
+   390→   390→                disabled={shops.length === 0}
+   391→   391→              >
+   392→   392→                <Download className="h-4 w-4 mr-1" />
+   393→   393→                {t('Export', 'Xuat')}
+   394→   394→              </Button>
+   395→   395→            </div>
+   396→   396→          </div>
+   397→   397→
+   398→   398→          <Separator />
+   399→   399→
+   400→   400→          {/* Stats Bar */}
+   401→   401→          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+   402→   402→            <StatCardMini
+   403→   403→              title="Total Shops"
+   404→   404→              titleVi="Tong cua hang"
+   405→   405→              value={stats?.totalShops || 0}
+   406→   406→              icon={<Store className="h-4 w-4" />}
+   407→   407→              variant="default"
+   408→   408→              locale={locale}
+   409→   409→            />
+   410→   410→            <StatCardMini
+   411→   411→              title="New This Month"
+   412→   412→              titleVi="Moi trong thang"
+   413→   413→              value={stats?.newThisMonth || 0}
+   414→   414→              icon={<Plus className="h-4 w-4" />}
+   415→   415→              variant="success"
+   416→   416→              locale={locale}
+   417→   417→            />
+   418→   418→            <StatCardMini
+   419→   419→              title="Overdue"
+   420→   420→              titleVi="Qua han"
+   421→   421→              value={stats?.overdueShops || 0}
+   422→   422→              icon={<AlertTriangle className="h-4 w-4" />}
+   423→   423→              variant="danger"
+   424→   424→              locale={locale}
+   425→   425→            />
+   426→   426→            <StatCardMini
+   427→   427→              title="Total GMV"
+   428→   428→              titleVi="Tong GMV"
+   429→   429→              value={stats?.totalGmvFormatted || '0 VND'}
+   430→   430→              icon={<TrendingUp className="h-4 w-4" />}
+   431→   431→              variant="default"
+   432→   432→              locale={locale}
+   433→   433→              isSensitive={true}
+   434→   434→            />
+   435→   435→          </div>
+   436→   436→
+   437→   437→          {/* District Quick Stats */}
+   438→   438→          {stats && stats.topDistricts.length > 0 && (
+   439→   439→            <div className="flex flex-wrap gap-2">
+   440→   440→              {stats.topDistricts.slice(0, 6).map((d) => (
+   441→   441→                <div
+   442→   442→                  key={d.district}
+   443→   443→                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs"
+   444→   444→                >
+   445→   445→                  <MapPin className="h-3 w-3 text-muted-foreground" />
+   446→   446→                  <span className="font-medium">{d.district || t('Unknown', 'Khong ro')}</span>
+   447→   447→                  <span className="text-muted-foreground">({d.count})</span>
+   448→   448→                </div>
+   449→   449→              ))}
+   450→   450→            </div>
+   451→   451→          )}
+   452→   452→
+   453→   453→          {/* Filters Bar */}
+   454→   454→          <Card>
+   455→   455→            <CardContent className="p-4">
+   456→   456→              <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+   457→   457→                {/* Search */}
+   458→   458→                <div className="relative flex-1 min-w-[200px] max-w-sm">
+   459→   459→                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+   460→   460→                  <Input
+   461→   461→                    type="search"
+   462→   462→                    placeholder={t('Search by name, phone, district...', 'Tim theo ten, SDT, quan...')}
+   463→   463→                    className="pl-8 h-9"
+   464→   464→                    value={searchQuery}
+   465→   465→                    onChange={(e) => setSearchQuery(e.target.value)}
+   466→   466→                  />
+   467→   467→                </div>
+   468→   468→
+   469→   469→                {/* Credit Status Filter */}
+   470→   470→                <Select value={creditStatusFilter} onValueChange={(val) => { setCreditStatusFilter(val); setPage(1); }}>
+   471→   471→                  <SelectTrigger className="w-full sm:w-[155px] h-9">
+   472→   472→                    <SelectValue placeholder={t('Credit Status', 'TT cong no')} />
+   473→   473→                  </SelectTrigger>
+   474→   474→                  <SelectContent>
+   475→   475→                    <SelectItem value="all">{t('All Credit', 'Tat ca')}</SelectItem>
+   476→   476→                    <SelectItem value="ACTIVE">
+   477→   477→                      <span className="flex items-center gap-1.5">
+   478→   478→                        <span className="h-2 w-2 rounded-full bg-red-500" />
+   479→   479→                        {t('Active', 'Hoat dong')}
+   480→   480→                      </span>
+   481→   481→                    </SelectItem>
+   482→   482→                    <SelectItem value="LOCKED">
+   483→   483→                      <span className="flex items-center gap-1.5">
+   484→   484→                        <span className="h-2 w-2 rounded-full bg-red-500" />
+   485→   485→                        {t('Locked', 'Bi khoa')}
+   486→   486→                      </span>
+   487→   487→                    </SelectItem>
+   488→   488→                    <SelectItem value="OVERDUE">
+   489→   489→                      <span className="flex items-center gap-1.5">
+   490→   490→                        <span className="h-2 w-2 rounded-full bg-amber-500" />
+   491→   491→                        {t('Overdue', 'Qua han')}
+   492→   492→                      </span>
+   493→   493→                    </SelectItem>
+   494→   494→                  </SelectContent>
+   495→   495→                </Select>
+   496→   496→
+   497→   497→                {/* Loyalty Tier Filter */}
+   498→   498→                <Select value={loyaltyTierFilter} onValueChange={(val) => { setLoyaltyTierFilter(val); setPage(1); }}>
+   499→   499→                  <SelectTrigger className="w-full sm:w-[140px] h-9">
+   500→   500→                    <SelectValue placeholder={t('Loyalty Tier', 'Cap TV')} />
+   501→   501→                  </SelectTrigger>
+   502→   502→                  <SelectContent>
+   503→   503→                    <SelectItem value="all">{t('All Tiers', 'Tat cap')}</SelectItem>
+   504→   504→                    <SelectItem value="BRONZE">
+   505→   505→                      <span className="flex items-center gap-1.5">
+   506→   506→                        <span className="h-2 w-2 rounded-full bg-orange-500" />
+   507→   507→                        {t('Bronze', 'Dong')}
+   508→   508→                      </span>
+   509→   509→                    </SelectItem>
+   510→   510→                    <SelectItem value="SILVER">
+   511→   511→                      <span className="flex items-center gap-1.5">
+   512→   512→                        <span className="h-2 w-2 rounded-full bg-gray-400" />
+   513→   513→                        {t('Silver', 'Bac')}
+   514→   514→                      </span>
+   515→   515→                    </SelectItem>
+   516→   516→                    <SelectItem value="GOLD">
+   517→   517→                      <span className="flex items-center gap-1.5">
+   518→   518→                        <span className="h-2 w-2 rounded-full bg-yellow-500" />
+   519→   519→                        {t('Gold', 'Vang')}
+   520→   520→                      </span>
+   521→   521→                    </SelectItem>
+   522→   522→                    <SelectItem value="PLATINUM">
+   523→   523→                      <span className="flex items-center gap-1.5">
+   524→   524→                        <span className="h-2 w-2 rounded-full bg-purple-500" />
+   525→   525→                        {t('Platinum', 'Bach Kim')}
+   526→   526→                      </span>
+   527→   527→                    </SelectItem>
+   528→   528→                  </SelectContent>
+   529→   529→                </Select>
+   530→   530→
+   531→   531→                {/* Shop Type Filter */}
+   532→   532→                <Select value={shopTypeFilter} onValueChange={(val) => { setShopTypeFilter(val); setPage(1); }}>
+   533→   533→                  <SelectTrigger className="w-full sm:w-[145px] h-9">
+   534→   534→                    <SelectValue placeholder={t('Shop Type', 'Loai CH')} />
+   535→   535→                  </SelectTrigger>
+   536→   536→                  <SelectContent>
+   537→   537→                    <SelectItem value="all">{t('All Types', 'Tat loai')}</SelectItem>
+   538→   538→                    <SelectItem value="TAPHOA">{t('Mom-and-pop', 'Tap hoa')}</SelectItem>
+   539→   539→                    <SelectItem value="CONVENIENCE">{t('Convenience', 'Tien loi')}</SelectItem>
+   540→   540→                    <SelectItem value="FACTORY">{t('Factory', 'Cong nghiep')}</SelectItem>
+   541→   541→                  </SelectContent>
+   542→   542→                </Select>
+   543→   543→
+   544→   544→                {/* Sort */}
+   545→   545→                <Select value={sortBy} onValueChange={setSortBy}>
+   546→   546→                  <SelectTrigger className="w-full sm:w-[140px] h-9">
+   547→   547→                    <SelectValue placeholder={t('Sort by', 'Sap xep')} />
+   548→   548→                  </SelectTrigger>
+   549→   549→                  <SelectContent>
+   550→   550→                    <SelectItem value="createdAt">{t('Newest', 'Moi nhat')}</SelectItem>
+   551→   551→                    <SelectItem value="name">{t('Name', 'Ten')}</SelectItem>
+   552→   552→                    <SelectItem value="totalGmv">{t('Total GMV', 'Tong GMV')}</SelectItem>
+   553→   553→                    <SelectItem value="totalOrders">{t('Orders', 'Don hang')}</SelectItem>
+   554→   554→                    <SelectItem value="creditBalance">{t('Credit Used', 'No da dung')}</SelectItem>
+   555→   555→                    <SelectItem value="avgOrderValue">{t('Avg Order', 'TB don hang')}</SelectItem>
+   556→   556→                  </SelectContent>
+   557→   557→                </Select>
+   558→   558→
+   559→   559→                <Button
+   560→   560→                  variant="ghost"
+   561→   561→                  size="icon"
+   562→   562→                  className="h-9 w-9"
+   563→   563→                  onClick={() => setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
+   564→   564→                  title={sortOrder === 'desc' ? t('Descending', 'Giam dan') : t('Ascending', 'Tang dan')}
+   565→   565→                >
+   566→   566→                  <ArrowUpDown className="h-4 w-4" />
+   567→   567→                </Button>
+   568→   568→
+   569→   569→                {/* Reset */}
+   570→   570→                {hasActiveFilters && (
+   571→   571→                  <Button
+   572→   572→                    variant="ghost"
+   573→   573→                    size="sm"
+   574→   574→                    className="h-9"
+   575→   575→                    onClick={handleResetFilters}
+   576→   576→                  >
+   577→   577→                    <RotateCcw className="h-3.5 w-3.5 mr-1" />
+   578→   578→                    {t('Reset', 'Dat lai')}
+   579→   579→                  </Button>
+   580→   580→                )}
+   581→   581→              </div>
+   582→   582→            </CardContent>
+   583→   583→          </Card>
+   584→   584→
+   585→   585→          {/* Shops Table */}
+   586→   586→          <Card>
+   587→   587→            <CardContent className="p-0">
+   588→   588→              {loading ? (
+   589→   589→                <div className="p-4 space-y-3">
+   590→   590→                  <Skeleton className="h-10 w-full" />
+   591→   591→                  {Array.from({ length: 8 }).map((_, i) => (
+   592→   592→                    <Skeleton key={i} className="h-12 w-full" />
+   593→   593→                  ))}
+   594→   594→                </div>
+   595→   595→              ) : shops.length === 0 ? (
+   596→   596→                /* Empty State */
+   597→   597→                <div className="text-center py-16 px-4">
+   598→   598→                  <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+   599→   599→                    <Store className="h-8 w-8 text-muted-foreground" />
+   600→   600→                  </div>
+   601→   601→                  <h3 className="text-lg font-semibold">
+   602→   602→                    {t('No shops found', 'Khong tim thay cua hang')}
+   603→   603→                  </h3>
+   604→   604→                  <p className="text-sm text-muted-foreground mt-1 max-w-md mx-auto">
+   605→   605→                    {hasActiveFilters
+   606→   606→                      ? t(
+   607→   607→                          'Try adjusting your search or filters to find what you are looking for.',
+   608→   608→                          'Thu thay doi tim kiem hoac bo loc de tim cua hang.'
+   609→   609→                        )
+   610→   610→                      : t(
+   611→   611→                          'Shops will appear here once owners register via Zalo bot.',
+   612→   612→                          'Cua hang se xuat hien o day khi chu cua hang dang ky qua bot Zalo.'
+   613→   613→                        )}
+   614→   614→                  </p>
+   615→   615→                </div>
+   616→   616→              ) : (
+   617→   617→                <div>
+   618→   618→                  <Table>
+   619→   619→                    <TableHeader>
+   620→   620→                      <TableRow className="bg-muted/30">
+   621→   621→                        <TableHead>{t('Shop', 'Cua hang')}</TableHead>
+   622→   622→                        <TableHead>{t('Tier', 'Cap')}</TableHead>
+   623→   623→                        <TableHead>{t('Credit', 'Cong no')}</TableHead>
+   624→   624→                        <TableHead className="hidden md:table-cell">{t('Type', 'Loai')}</TableHead>
+   625→   625→                        <TableHead className="hidden sm:table-cell text-center">{t('Orders', 'DH')}</TableHead>
+   626→   626→                        <TableHead className="hidden lg:table-cell text-right">{t('GMV', 'GMV')}</TableHead>
+   627→   627→                        <TableHead className="hidden lg:table-cell">{t('District', 'Quan')}</TableHead>
+   628→   628→                        <TableHead className="hidden xl:table-cell">{t('Joined', 'Ngay TH')}</TableHead>
+   629→   629→                        <TableHead className="text-right">{t('Actions', 'TH')}</TableHead>
+   630→   630→                      </TableRow>
+   631→   631→                    </TableHeader>
+   632→   632→                    <TableBody>
+   633→   633→                      {shops.map((shop) => (
+   634→   634→                        <TableRow
+   635→   635→                          key={shop.id}
+   636→   636→                          className="cursor-pointer hover:bg-muted/50 transition-colors"
+   637→   637→                          onClick={() => handleRowClick(shop.id)}
+   638→   638→                        >
+   639→   639→                          {/* Shop Name + Phone */}
+   640→   640→                          <TableCell>
+   641→   641→                            <div className="space-y-0.5">
+   642→   642→                              <p className="text-sm font-medium truncate max-w-[180px]">
+   643→   643→                                {shop.name}
+   644→   644→                              </p>
+   645→   645→                              {shop.user?.phone && (
+   646→   646→                                <p className="text-[10px] text-muted-foreground">
+   647→   647→                                  <SensitiveValue value={shop.user.phone} maskType="phone" />
+   648→   648→                                </p>
+   649→   649→                              )}
+   650→   650→                            </div>
+   651→   651→                          </TableCell>
+   652→   652→
+   653→   653→                          {/* Loyalty Tier */}
+   654→   654→                          <TableCell>
+   655→   655→                            <LoyaltyTierBadge tier={shop.loyaltyTier} locale={locale} />
+   656→   656→                          </TableCell>
+   657→   657→
+   658→   658→                          {/* Credit Status + Available */}
+   659→   659→                          <TableCell>
+   660→   660→                            <div className="space-y-0.5">
+   661→   661→                              <CreditStatusBadge status={shop.creditStatus} locale={locale} />
+   662→   662→                              <p className="text-[10px] text-muted-foreground">
+   663→   663→                                <SensitiveValue value={shop.creditAvailable} maskType="amount" formatOptions={{ formatCurrency: true }} />
+   664→   664→                                {' '}{t('left', 'con lai')}
+   665→   665→                              </p>
+   666→   666→                            </div>
+   667→   667→                          </TableCell>
+   668→   668→
+   669→   669→                          {/* Shop Type */}
+   670→   670→                          <TableCell className="hidden md:table-cell">
+   671→   671→                            <ShopTypeBadge type={shop.shopType} locale={locale} />
+   672→   672→                          </TableCell>
+   673→   673→
+   674→   674→                          {/* Orders */}
+   675→   675→                          <TableCell className="hidden sm:table-cell text-center">
+   676→   676→                            <span className="text-xs text-muted-foreground">
+   677→   677→                              {shop.totalOrders}
+   678→   678→                            </span>
+   679→   679→                          </TableCell>
+   680→   680→
+   681→   681→                          {/* GMV */}
+   682→   682→                          <TableCell className="hidden lg:table-cell text-right">
+   683→   683→                            <span className="text-xs font-semibold">
+   684→   684→                              <SensitiveValue value={shop.totalGmv} maskType="amount" formatOptions={{ formatCurrency: true }} />
+   685→   685→                            </span>
+   686→   686→                          </TableCell>
+   687→   687→
+   688→   688→                          {/* District */}
+   689→   689→                          <TableCell className="hidden lg:table-cell">
+   690→   690→                            <span className="text-xs text-muted-foreground">
+   691→   691→                              {shop.district || '-'}
+   692→   692→                            </span>
+   693→   693→                          </TableCell>
+   694→   694→
+   695→   695→                          {/* Created */}
+   696→   696→                          <TableCell className="hidden xl:table-cell">
+   697→   697→                            <span className="text-xs text-muted-foreground">
+   698→   698→                              {new Date(shop.createdAt).toLocaleDateString('vi-VN', {
+   699→   699→                                day: '2-digit',
+   700→   700→                                month: '2-digit',
+   701→   701→                                year: 'numeric',
+   702→   702→                              })}
+   703→   703→                            </span>
+   704→   704→                          </TableCell>
+   705→   705→
+   706→   706→                          {/* Actions */}
+   707→   707→                          <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+   708→   708→                            <Button
+   709→   709→                              variant="ghost"
+   710→   710→                              size="sm"
+   711→   711→                              className="h-8 text-xs"
+   712→   712→                              onClick={(e) => handleEdit(e, shop.id)}
+   713→   713→                            >
+   714→   714→                              <Edit className="h-3.5 w-3.5 mr-1" />
+   715→   715→                              {t('Edit', 'Sua')}
+   716→   716→                            </Button>
+   717→   717→                          </TableCell>
+   718→   718→                        </TableRow>
+   719→   719→                      ))}
+   720→   720→                    </TableBody>
+   721→   721→                  </Table>
+   722→   722→
+   723→   723→                  {/* Pagination */}
+   724→   724→                  {totalPages > 1 && (
+   725→   725→                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t">
+   726→   726→                      <p className="text-xs text-muted-foreground">
+   727→   727→                        {t(
+   728→   728→                          `Showing ${(page - 1) * limit + 1}–${Math.min(page * limit, totalShopsCount)} of ${totalShopsCount} shops`,
+   729→   729→                          `Hien thi ${(page - 1) * limit + 1}–${Math.min(page * limit, totalShopsCount)} / ${totalShopsCount} cua hang`
+   730→   730→                        )}
+   731→   731→                      </p>
+   732→   732→                      <div className="flex items-center gap-1">
+   733→   733→                        <Button
+   734→   734→                          variant="outline"
+   735→   735→                          size="icon"
+   736→   736→                          className="h-8 w-8"
+   737→   737→                          disabled={page <= 1}
+   738→   738→                          onClick={() => setPage((p) => Math.max(1, p - 1))}
+   739→   739→                        >
+   740→   740→                          <ChevronLeft className="h-4 w-4" />
+   741→   741→                        </Button>
+   742→   742→                        {getPageNumbers().map((p) => (
+   743→   743→                          <Button
+   744→   744→                            key={p}
+   745→   745→                            variant={p === page ? 'default' : 'outline'}
+   746→   746→                            size="icon"
+   747→   747→                            className={`h-8 w-8 text-xs ${p === page ? 'bg-red-600 hover:bg-red-700 text-white' : ''}`}
+   748→   748→                            onClick={() => setPage(p)}
+   749→   749→                          >
+   750→   750→                            {p}
+   751→   751→                          </Button>
+   752→   752→                        ))}
+   753→   753→                        <Button
+   754→   754→                          variant="outline"
+   755→   755→                          size="icon"
+   756→   756→                          className="h-8 w-8"
+   757→   757→                          disabled={page >= totalPages}
+   758→   758→                          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+   759→   759→                        >
+   760→   760→                          <ChevronRight className="h-4 w-4" />
+   761→   761→                        </Button>
+   762→   762→                      </div>
+   763→   763→                    </div>
+   764→   764→                  )}
+   765→   765→                </div>
+   766→   766→              )}
+   767→   767→            </CardContent>
+   768→   768→          </Card>
+   769→   769→
+   770→   770→          {/* Loyalty Tier Distribution */}
+   771→   771→          {stats && stats.tierDistribution && (
+   772→   772→            <Card>
+   773→   773→              <CardContent className="p-4">
+   774→   774→                <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+   775→   775→                  <Crown className="h-4 w-4" />
+   776→   776→                  {t('Loyalty Tier Distribution', 'Phan bo cap thanh vien')}
+   777→   777→                </h4>
+   778→   778→                <div className="grid grid-cols-4 gap-3">
+   779→   779→                  {[
+   780→   780→                    { tier: 'BRONZE', color: 'bg-orange-500', icon: '&#9679;' },
+   781→   781→                    { tier: 'SILVER', color: 'bg-gray-400', icon: '&#9679;' },
+   782→   782→                    { tier: 'GOLD', color: 'bg-yellow-500', icon: '&#9733;' },
+   783→   783→                    { tier: 'PLATINUM', color: 'bg-purple-500', icon: '&#9670;' },
+   784→   784→                  ].map(({ tier, color }) => {
+   785→   785→                    const count = stats.tierDistribution[tier] || 0;
+   786→   786→                    const pct = stats.totalShops > 0 ? Math.round((count / stats.totalShops) * 100) : 0;
+   787→   787→                    return (
+   788→   788→                      <div key={tier} className="text-center">
+   789→   789→                        <div className="flex items-center justify-center gap-1.5 mb-1">
+   790→   790→                          <span className={`h-2.5 w-2.5 rounded-full ${color}`} />
+   791→   791→                          <LoyaltyTierBadge tier={tier} locale={locale} />
+   792→   792→                        </div>
+   793→   793→                        <p className="text-lg font-bold">{count}</p>
+   794→   794→                        <p className="text-xs text-muted-foreground">{pct}%</p>
+   795→   795→                      </div>
+   796→   796→                    );
+   797→   797→                  })}
+   798→   798→                </div>
+   799→   799→              </CardContent>
+   800→   800→            </Card>
+   801→   801→          )}
+   802→   802→        </main>
+   803→   803→
+   804→   804→        {/* Shop Detail Drawer */}
+   805→   805→        <ShopDetailDrawer
+   806→   806→          open={drawerOpen}
+   807→   807→          onOpenChange={setDrawerOpen}
+   808→   808→          shopId={selectedShopId}
+   809→   809→          locale={locale}
+   810→   810→          onShopUpdated={handleDataChanged}
+   811→   811→        />
+   812→   812→
+   813→   813→        {/* Shop Edit Dialog */}
+   814→   814→        <ShopEditDialog
+   815→   815→          open={editDialogOpen}
+   816→   816→          onOpenChange={setEditDialogOpen}
+   817→   817→          shopId={selectedShopId}
+   818→   818→          locale={locale}
+   819→   819→          onUpdated={handleDataChanged}
+   820→   820→        />
+   821→   821→      </SidebarInset>
+   822→   822→    </div>
+   823→   823→  );
+   824→   824→}
+   825→   825→
