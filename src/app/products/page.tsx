@@ -1,4 +1,5 @@
 'use client';
+import { adminFetch } from '@/lib/admin-fetch';
 import { useLocale } from '@/providers/app-provider';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -245,7 +246,7 @@ export default function ProductsPage() {
   // Fetch categories
   const fetchCategories = useCallback(async () => {
     try {
-      const res = await fetch('/api/categories');
+      const res = await adminFetch('/api/categories');
       const json = await res.json();
       if (json.success) {
         setCategories(json.data.items || []);
@@ -274,7 +275,7 @@ export default function ProductsPage() {
       else if (statusFilter === 'lowStock') params.set('lowStock', 'true');
       else if (statusFilter === 'outOfStock') params.set('outOfStock', 'true');
 
-      const res = await fetch(`/api/products?${params.toString()}`);
+      const res = await adminFetch(`/api/products?${params.toString()}`);
       const json = await res.json();
 
       if (json.success) {
@@ -368,7 +369,7 @@ export default function ProductsPage() {
   const confirmDelete = async () => {
     if (!deletingProduct) return;
     try {
-      const res = await fetch(`/api/products/${deletingProduct.id}`, { method: 'DELETE' });
+      const res = await adminFetch(`/api/products/${deletingProduct.id}`, { method: 'DELETE' });
       const json = await res.json();
       if (json.success) {
         setDeleteDialogOpen(false);
@@ -384,7 +385,7 @@ export default function ProductsPage() {
   const handleToggleActive = async (product: Product) => {
     try {
       setTogglingId(product.id);
-      const res = await fetch(`/api/products/${product.id}`, {
+      const res = await adminFetch(`/api/products/${product.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'toggle_active' }),

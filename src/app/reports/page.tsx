@@ -1,4 +1,5 @@
 'use client';
+import { adminFetch } from '@/lib/admin-fetch';
 import { useLocale } from '@/providers/app-provider';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -250,7 +251,7 @@ export default function ReportsPage() {
   const fetchOverview = useCallback(async () => {
     try {
       setOverviewLoading(true);
-      const res = await fetch(`/api/reports/overview?period=${period}`);
+      const res = await adminFetch(`/api/reports/overview?period=${period}`);
       const json = await res.json();
       if (json.success) setOverview(json.data);
     } catch (err) { console.error('Overview fetch error:', err); }
@@ -262,7 +263,7 @@ export default function ReportsPage() {
     if (tab === 'overview') return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/reports/${tab === 'revenue' ? 'revenue' : tab === 'orders' ? 'orders' : tab === 'products' ? 'products' : tab === 'shops' ? 'shops-analytics' : tab === 'shipments' ? 'shipments-analytics' : ''}?period=${period}`);
+      const res = await adminFetch(`/api/reports/${tab === 'revenue' ? 'revenue' : tab === 'orders' ? 'orders' : tab === 'products' ? 'products' : tab === 'shops' ? 'shops-analytics' : tab === 'shipments' ? 'shipments-analytics' : ''}?period=${period}`);
       const json = await res.json();
       if (json.success) {
         switch (tab) {

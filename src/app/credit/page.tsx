@@ -1,4 +1,5 @@
 'use client';
+import { adminFetch } from '@/lib/admin-fetch';
 import { useLocale } from '@/providers/app-provider';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -150,7 +151,7 @@ export default function CreditPage() {
   const fetchSummary = useCallback(async () => {
     try {
       setSummaryLoading(true);
-      const res = await fetch('/api/credit/summary');
+      const res = await adminFetch('/api/credit/summary');
       const json = await res.json();
       if (json.success) setSummary(json.data);
     } catch (err) {
@@ -173,7 +174,7 @@ export default function CreditPage() {
         params.set('status', statusTab.toUpperCase());
       }
 
-      const res = await fetch(`/api/credit/shops?${params.toString()}`);
+      const res = await adminFetch(`/api/credit/shops?${params.toString()}`);
       const json = await res.json();
       if (json.success) {
         const data: ShopsResponse = json.data;
@@ -221,7 +222,7 @@ export default function CreditPage() {
   const handleProcessOverdue = async () => {
     setProcessingOverdue(true);
     try {
-      const res = await fetch('/api/credit/process-overdue', { method: 'POST' });
+      const res = await adminFetch('/api/credit/process-overdue', { method: 'POST' });
       const json = await res.json();
       if (json.success) {
         const locked = json.data.lockedCount;

@@ -1,4 +1,5 @@
 'use client';
+import { adminFetch } from '@/lib/admin-fetch';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
@@ -117,7 +118,7 @@ export function OrderCreateDialog({
       setLoadingShops(true);
       const params = new URLSearchParams({ limit: '50' });
       if (shopSearch) params.set('search', shopSearch);
-      const res = await fetch(`/api/shops?${params.toString()}`);
+      const res = await adminFetch(`/api/shops?${params.toString()}`);
       const json = await res.json();
       if (json.success) {
         setShops(json.data.items || []);
@@ -135,7 +136,7 @@ export function OrderCreateDialog({
       setLoadingProducts(true);
       const params = new URLSearchParams({ limit: '20', isActive: 'true' });
       if (productSearchDebounced) params.set('search', productSearchDebounced);
-      const res = await fetch(`/api/products?${params.toString()}`);
+      const res = await adminFetch(`/api/products?${params.toString()}`);
       const json = await res.json();
       if (json.success) {
         setProducts(json.data.items || []);
@@ -242,7 +243,7 @@ export function OrderCreateDialog({
 
     try {
       setSubmitting(true);
-      const res = await fetch('/api/orders', {
+      const res = await adminFetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

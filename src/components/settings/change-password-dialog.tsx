@@ -1,4 +1,5 @@
 'use client';
+import { adminFetch } from '@/lib/admin-fetch';
 
 import { useState } from 'react';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
@@ -77,7 +78,7 @@ export function ChangePasswordDialog({ open, onOpenChange, locale = 'vi' }: Chan
 
     setLoading(true);
     try {
-      const res = await fetch('/api/users/change-password', {
+      const res = await adminFetch('/api/users/change-password', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

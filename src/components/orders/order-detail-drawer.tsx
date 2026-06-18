@@ -1,4 +1,5 @@
 'use client';
+import { adminFetch } from '@/lib/admin-fetch';
 
 import { useState, useEffect, useCallback } from 'react';
 import {
@@ -257,7 +258,7 @@ export function OrderDetailDrawer({
     if (!orderId) return;
     try {
       setLoading(true);
-      const res = await fetch(`/api/orders/${orderId}`);
+      const res = await adminFetch(`/api/orders/${orderId}`);
       const json = await res.json();
       if (json.success) {
         setOrder(json.data);
@@ -290,7 +291,7 @@ export function OrderDetailDrawer({
 
     try {
       setActionLoading(true);
-      const res = await fetch(`/api/orders/${order.id}/status`, {
+      const res = await adminFetch(`/api/orders/${order.id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: action.nextStatus }),
@@ -320,7 +321,7 @@ export function OrderDetailDrawer({
 
     try {
       setActionLoading(true);
-      const res = await fetch(`/api/orders/${order.id}/cancel`, {
+      const res = await adminFetch(`/api/orders/${order.id}/cancel`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason: cancelReason.trim() }),

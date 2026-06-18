@@ -1,4 +1,5 @@
 'use client';
+import { adminFetch } from '@/lib/admin-fetch';
 import { useLocale } from '@/providers/app-provider';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -173,7 +174,7 @@ export default function GroupBuyPage() {
       if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter);
       if (wardFilter && wardFilter !== 'all') params.set('wardId', wardFilter);
 
-      const res = await fetch(`/api/group-deals?${params.toString()}`);
+      const res = await adminFetch(`/api/group-deals?${params.toString()}`);
       const json = await res.json();
       if (json.success) {
         const data: DealsResponse = json.data;
@@ -192,7 +193,7 @@ export default function GroupBuyPage() {
   // Fetch stats
   const fetchStats = useCallback(async () => {
     try {
-      const res = await fetch('/api/group-deals/stats');
+      const res = await adminFetch('/api/group-deals/stats');
       const json = await res.json();
       if (json.success) {
         setStats(json.data);
@@ -231,7 +232,7 @@ export default function GroupBuyPage() {
     if (!selectedDeal) return;
     try {
       setUpdating(true);
-      const res = await fetch(`/api/group-deals/${selectedDeal.id}`, {
+      const res = await adminFetch(`/api/group-deals/${selectedDeal.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: statusAction }),

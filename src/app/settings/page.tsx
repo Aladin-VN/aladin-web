@@ -1,4 +1,5 @@
 'use client';
+import { adminFetch } from '@/lib/admin-fetch';
 import { useLocale } from '@/providers/app-provider';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -74,7 +75,7 @@ export default function SettingsPage() {
   const fetchSettings = useCallback(async () => {
     try {
       setSettingsLoading(true);
-      const res = await fetch('/api/settings/platform');
+      const res = await adminFetch('/api/settings/platform');
       const json = await res.json();
       if (json.success) {
         setSettings(json.data);
@@ -103,7 +104,7 @@ export default function SettingsPage() {
 
     setSavingSettings(true);
     try {
-      const res = await fetch('/api/settings/platform', {
+      const res = await adminFetch('/api/settings/platform', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ settings: changes }),

@@ -1,4 +1,5 @@
 'use client';
+import { adminFetch } from '@/lib/admin-fetch';
 import { useLocale } from '@/providers/app-provider';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -220,7 +221,7 @@ export default function ShipmentsPage() {
       if (dateFrom) params.set('dateFrom', dateFrom);
       if (dateTo) params.set('dateTo', dateTo);
 
-      const res = await fetch(`/api/shipments?${params.toString()}`);
+      const res = await adminFetch(`/api/shipments?${params.toString()}`);
       const json = await res.json();
 
       if (json.success) {
@@ -239,7 +240,7 @@ export default function ShipmentsPage() {
   // Fetch stats
   const fetchStats = useCallback(async () => {
     try {
-      const res = await fetch('/api/shipments/stats');
+      const res = await adminFetch('/api/shipments/stats');
       const json = await res.json();
       if (json.success) {
         setStats(json.data);

@@ -1,4 +1,5 @@
 'use client';
+import { adminFetch } from '@/lib/admin-fetch';
 
 import { useState, useEffect, useCallback } from 'react';
 import {
@@ -81,7 +82,7 @@ export function ShopEditDialog({
     if (!shopId) return;
     try {
       setLoading(true);
-      const res = await fetch(`/api/shops/${shopId}`);
+      const res = await adminFetch(`/api/shops/${shopId}`);
       const json = await res.json();
       if (json.success) {
         const data = json.data;
@@ -141,7 +142,7 @@ export function ShopEditDialog({
 
     try {
       setSaving(true);
-      const res = await fetch(`/api/shops/${shopId}`, {
+      const res = await adminFetch(`/api/shops/${shopId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

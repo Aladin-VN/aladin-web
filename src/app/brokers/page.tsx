@@ -1,4 +1,5 @@
 'use client';
+import { adminFetch } from '@/lib/admin-fetch';
 import { useLocale } from '@/providers/app-provider';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -182,7 +183,7 @@ export default function BrokersPage() {
       if (tierFilter !== 'all') params.set('tier', tierFilter);
       if (wardFilter !== 'all') params.set('wardId', wardFilter);
 
-      const res = await fetch(`/api/brokers?${params.toString()}`);
+      const res = await adminFetch(`/api/brokers?${params.toString()}`);
       const json = await res.json();
       if (json.success) {
         const data: BrokersResponse = json.data;
@@ -201,7 +202,7 @@ export default function BrokersPage() {
   // Fetch stats
   const fetchStats = useCallback(async () => {
     try {
-      const res = await fetch('/api/brokers/stats?period=month');
+      const res = await adminFetch('/api/brokers/stats?period=month');
       const json = await res.json();
       if (json.success) setStats(json.data);
     } catch (err) {

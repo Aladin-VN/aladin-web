@@ -1,4 +1,5 @@
 'use client';
+import { adminFetch } from '@/lib/admin-fetch';
 import { useLocale } from '@/providers/app-provider';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -85,7 +86,7 @@ export default function BrokerCommissionsPage() {
       if (tierFilter !== 'all') params.set('tier', tierFilter);
       if (hasEarnings !== 'all') params.set('hasEarnings', hasEarnings);
 
-      const res = await fetch(`/api/brokers/commissions?${params.toString()}`);
+      const res = await adminFetch(`/api/brokers/commissions?${params.toString()}`);
       const json = await res.json();
       if (json.success) {
         setItems(json.data.items || []);

@@ -1,4 +1,5 @@
 'use client';
+import { adminFetch } from '@/lib/admin-fetch';
 
 import { useState, useEffect, useCallback } from 'react';
 import {
@@ -103,7 +104,7 @@ export function BrokerDetailDrawer({
     if (!brokerId) return;
     try {
       setLoading(true);
-      const res = await fetch(`/api/brokers/${brokerId}`);
+      const res = await adminFetch(`/api/brokers/${brokerId}`);
       const json = await res.json();
       if (json.success) {
         setBroker(json.data);
@@ -136,7 +137,7 @@ export function BrokerDetailDrawer({
 
     try {
       setDeleting(true);
-      const res = await fetch(`/api/brokers/${broker.id}`, { method: 'DELETE' });
+      const res = await adminFetch(`/api/brokers/${broker.id}`, { method: 'DELETE' });
       const json = await res.json();
       if (json.success) {
         toast.success(t('Broker removed', 'Xoa dai ly thanh cong'));

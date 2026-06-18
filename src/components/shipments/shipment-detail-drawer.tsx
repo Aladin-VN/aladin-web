@@ -1,4 +1,5 @@
 'use client';
+import { adminFetch } from '@/lib/admin-fetch';
 
 import { useState, useEffect, useCallback } from 'react';
 import {
@@ -129,7 +130,7 @@ export function ShipmentDetailDrawer({
     if (!shipmentId) return;
     try {
       setLoading(true);
-      const res = await fetch(`/api/shipments/${shipmentId}`);
+      const res = await adminFetch(`/api/shipments/${shipmentId}`);
       const json = await res.json();
       if (json.success) {
         setShipment(json.data);
@@ -155,7 +156,7 @@ export function ShipmentDetailDrawer({
 
     setUpdating(true);
     try {
-      const res = await fetch(`/api/shipments/${shipmentId}/status`, {
+      const res = await adminFetch(`/api/shipments/${shipmentId}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: nextStatus }),

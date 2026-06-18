@@ -1,4 +1,5 @@
 'use client';
+import { adminFetch } from '@/lib/admin-fetch';
 
 import { useState, useEffect, useCallback } from 'react';
 import { Loader2, Banknote, Smartphone } from 'lucide-react';
@@ -71,7 +72,7 @@ export function RepaymentDialog({
     if (!shop) return;
     try {
       setLoadingOrders(true);
-      const res = await fetch(`/api/orders?shopId=${shop.shopId}&paymentMethod=CREDIT&paymentStatus=PENDING&limit=50`);
+      const res = await adminFetch(`/api/orders?shopId=${shop.shopId}&paymentMethod=CREDIT&paymentStatus=PENDING&limit=50`);
       const json = await res.json();
       if (json.success) {
         setOrders(json.data.items || []);
@@ -123,7 +124,7 @@ export function RepaymentDialog({
 
     setLoading(true);
     try {
-      const res = await fetch('/api/credit/repay', {
+      const res = await adminFetch('/api/credit/repay', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

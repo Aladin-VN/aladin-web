@@ -1,4 +1,5 @@
 'use client';
+import { adminFetch } from '@/lib/admin-fetch';
 import { useLocale } from '@/providers/app-provider';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -174,7 +175,7 @@ export default function PromotionsPage() {
       if (manufacturerFilter && manufacturerFilter !== 'all') params.set('manufacturerId', manufacturerFilter);
       if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter);
 
-      const res = await fetch(`/api/promotions?${params.toString()}`);
+      const res = await adminFetch(`/api/promotions?${params.toString()}`);
       const json = await res.json();
       if (json.success) {
         const data: PromotionsResponse = json.data;
@@ -193,7 +194,7 @@ export default function PromotionsPage() {
   // Fetch stats
   const fetchStats = useCallback(async () => {
     try {
-      const res = await fetch('/api/promotions/stats');
+      const res = await adminFetch('/api/promotions/stats');
       const json = await res.json();
       if (json.success) {
         setStats(json.data);
@@ -231,7 +232,7 @@ export default function PromotionsPage() {
     if (!selectedPromotion) return;
     try {
       setDeleting(true);
-      const res = await fetch(`/api/promotions/${selectedPromotion.id}`, { method: 'DELETE' });
+      const res = await adminFetch(`/api/promotions/${selectedPromotion.id}`, { method: 'DELETE' });
       const json = await res.json();
       if (json.success) {
         toast.success(t('Promotion deleted', 'Xoa khuyen mai thanh cong'));

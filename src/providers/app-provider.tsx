@@ -1,4 +1,5 @@
 'use client';
+import { adminFetch } from '@/lib/admin-fetch';
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
@@ -128,7 +129,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     // Clear server-side cookie
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      await adminFetch('/api/auth/logout', { method: 'POST' });
     } catch {}
 
     setUser(null);

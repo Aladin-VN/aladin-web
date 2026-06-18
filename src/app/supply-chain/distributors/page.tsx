@@ -1,4 +1,5 @@
 'use client';
+import { adminFetch } from '@/lib/admin-fetch';
 import { useLocale } from '@/providers/app-provider';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -126,7 +127,7 @@ export default function DistributorsPage() {
       setLoading(true);
       const params = new URLSearchParams({ page: String(page), limit: String(limit), search: debouncedSearch });
       if (statusFilter !== 'all') params.set('status', statusFilter);
-      const res = await fetch(`/api/distributors?${params.toString()}`);
+      const res = await adminFetch(`/api/distributors?${params.toString()}`);
       const json = await res.json();
       if (json.success) {
         const data: DistributorsResponse = json.data;
@@ -163,7 +164,7 @@ export default function DistributorsPage() {
     if (!selectedDistributor) return;
     try {
       setDeleting(true);
-      const res = await fetch(`/api/distributors/${selectedDistributor.id}`, { method: 'DELETE' });
+      const res = await adminFetch(`/api/distributors/${selectedDistributor.id}`, { method: 'DELETE' });
       const json = await res.json();
       if (json.success) {
         toast.success(t('Distributor deleted', 'Xoa nha phan phoi thanh cong'));
@@ -183,7 +184,7 @@ export default function DistributorsPage() {
 
   const toggleActive = async (dist: DistributorListItem) => {
     try {
-      const res = await fetch(`/api/distributors/${dist.id}`, {
+      const res = await adminFetch(`/api/distributors/${dist.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isActive: !dist.isActive }),

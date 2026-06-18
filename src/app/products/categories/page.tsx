@@ -1,4 +1,5 @@
 'use client';
+import { adminFetch } from '@/lib/admin-fetch';
 import { useLocale } from '@/providers/app-provider';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -106,7 +107,7 @@ export default function CategoriesPage() {
   const fetchCategories = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/categories');
+      const res = await adminFetch('/api/categories');
       const json = await res.json();
       if (json.success) {
         setCategories(json.data.items || []);
@@ -230,7 +231,7 @@ export default function CategoriesPage() {
   const confirmDelete = async () => {
     if (!deletingCategory) return;
     try {
-      const res = await fetch(`/api/categories/${deletingCategory.id}`, { method: 'DELETE' });
+      const res = await adminFetch(`/api/categories/${deletingCategory.id}`, { method: 'DELETE' });
       const json = await res.json();
       if (json.success) {
         setDeleteDialogOpen(false);
@@ -246,7 +247,7 @@ export default function CategoriesPage() {
   const handleToggleActive = async (cat: CategoryItem) => {
     try {
       setTogglingId(cat.id);
-      const res = await fetch(`/api/categories/${cat.id}`, {
+      const res = await adminFetch(`/api/categories/${cat.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'toggle_active' }),
@@ -288,7 +289,7 @@ export default function CategoriesPage() {
 
     try {
       setReorderingId(cat.id);
-      const res = await fetch(`/api/categories/${cat.id}`, {
+      const res = await adminFetch(`/api/categories/${cat.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'reorder', order }),

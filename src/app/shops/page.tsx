@@ -1,4 +1,5 @@
 'use client';
+import { adminFetch } from '@/lib/admin-fetch';
 import { useLocale } from '@/providers/app-provider';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -230,7 +231,7 @@ export default function ShopsPage() {
       if (loyaltyTierFilter !== 'all') params.set('loyaltyTier', loyaltyTierFilter);
       if (shopTypeFilter !== 'all') params.set('shopType', shopTypeFilter);
 
-      const res = await fetch(`/api/shops?${params.toString()}`);
+      const res = await adminFetch(`/api/shops?${params.toString()}`);
       const json = await res.json();
 
       if (json.success) {
@@ -249,7 +250,7 @@ export default function ShopsPage() {
   // Fetch stats
   const fetchStats = useCallback(async () => {
     try {
-      const res = await fetch('/api/shops/stats');
+      const res = await adminFetch('/api/shops/stats');
       const json = await res.json();
       if (json.success) {
         setStats(json.data);

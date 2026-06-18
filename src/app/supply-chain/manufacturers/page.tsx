@@ -1,4 +1,5 @@
 'use client';
+import { adminFetch } from '@/lib/admin-fetch';
 import { useLocale } from '@/providers/app-provider';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -117,7 +118,7 @@ export default function ManufacturersPage() {
     try {
       setLoading(true);
       const params = new URLSearchParams({ page: String(page), limit: String(limit), search: debouncedSearch });
-      const res = await fetch(`/api/manufacturers?${params.toString()}`);
+      const res = await adminFetch(`/api/manufacturers?${params.toString()}`);
       const json = await res.json();
       if (json.success) {
         const data: ManufacturersResponse = json.data;
@@ -155,7 +156,7 @@ export default function ManufacturersPage() {
     if (!selectedManufacturer) return;
     try {
       setDeleting(true);
-      const res = await fetch(`/api/manufacturers/${selectedManufacturer.id}`, { method: 'DELETE' });
+      const res = await adminFetch(`/api/manufacturers/${selectedManufacturer.id}`, { method: 'DELETE' });
       const json = await res.json();
       if (json.success) {
         toast.success(t('Manufacturer deleted', 'Xoa nha san xuat thanh cong'));

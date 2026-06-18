@@ -1,4 +1,5 @@
 'use client';
+import { adminFetch } from '@/lib/admin-fetch';
 
 import { useState } from 'react';
 import {
@@ -39,7 +40,7 @@ export function AuditReviewDialog({ open, onOpenChange, audit, locale = 'vi', on
     setAction(status);
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/merchandising/${audit.id}`, {
+      const res = await adminFetch(`/api/merchandising/${audit.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status, reviewNotes: reviewNotes || undefined }),

@@ -1,4 +1,5 @@
 'use client';
+import { adminFetch } from '@/lib/admin-fetch';
 import { useLocale } from '@/providers/app-provider';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -117,7 +118,7 @@ export default function MerchandisingPage() {
       });
       if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter);
 
-      const res = await fetch(`/api/merchandising?${params.toString()}`);
+      const res = await adminFetch(`/api/merchandising?${params.toString()}`);
       const json = await res.json();
       if (json.success) {
         const data = json.data;

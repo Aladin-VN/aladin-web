@@ -1,4 +1,5 @@
 'use client';
+import { adminFetch } from '@/lib/admin-fetch';
 
 import { useState } from 'react';
 import { Loader2, Check } from 'lucide-react';
@@ -101,7 +102,7 @@ export function CreditAdjustDialog({
 
     setLoading(true);
     try {
-      const res = await fetch('/api/credit/adjust', {
+      const res = await adminFetch('/api/credit/adjust', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

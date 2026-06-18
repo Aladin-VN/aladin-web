@@ -1,4 +1,5 @@
 'use client';
+import { adminFetch } from '@/lib/admin-fetch';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
@@ -120,7 +121,7 @@ export function TransactionLedgerDialog({
       if (dateFrom) params.set('dateFrom', dateFrom);
       if (dateTo) params.set('dateTo', dateTo);
 
-      const res = await fetch(`/api/credit/transactions?${params.toString()}`);
+      const res = await adminFetch(`/api/credit/transactions?${params.toString()}`);
       const json = await res.json();
 
       if (json.success) {

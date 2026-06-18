@@ -1,4 +1,5 @@
 'use client';
+import { adminFetch } from '@/lib/admin-fetch';
 import { useLocale } from '@/providers/app-provider';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -148,7 +149,7 @@ export default function UsersPage() {
       if (roleFilter !== 'all') params.set('role', roleFilter);
       if (statusFilter !== 'all') params.set('status', statusFilter);
 
-      const res = await fetch(`/api/users?${params.toString()}`);
+      const res = await adminFetch(`/api/users?${params.toString()}`);
       const json = await res.json();
       if (json.success) {
         setUsers(json.data.items || []);
@@ -165,7 +166,7 @@ export default function UsersPage() {
   // Fetch stats
   const fetchStats = useCallback(async () => {
     try {
-      const res = await fetch('/api/users/stats');
+      const res = await adminFetch('/api/users/stats');
       const json = await res.json();
       if (json.success) setStats(json.data);
     } catch (err) {
@@ -200,7 +201,7 @@ export default function UsersPage() {
     }
     setResettingPwd(true);
     try {
-      const res = await fetch(`/api/users/${resetPwdTarget.id}/reset-password`, {
+      const res = await adminFetch(`/api/users/${resetPwdTarget.id}/reset-password`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ newPassword }),

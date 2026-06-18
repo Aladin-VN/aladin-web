@@ -1,4 +1,5 @@
 'use client';
+import { adminFetch } from '@/lib/admin-fetch';
 
 import { useState, useEffect } from 'react';
 import {
@@ -96,7 +97,7 @@ export function DealDetailDrawer({ open, onOpenChange, dealId, locale = 'vi' }: 
     const controller = new AbortController();
     (async () => {
       try {
-        const res = await fetch(`/api/group-deals/${dealId}`, { signal: controller.signal });
+        const res = await adminFetch(`/api/group-deals/${dealId}`, { signal: controller.signal });
         const json = await res.json();
         if (!cancelled && json.success) setDetail(json.data);
       } catch (err) {

@@ -1,4 +1,5 @@
 'use client';
+import { adminFetch } from '@/lib/admin-fetch';
 
 import { useState, useEffect, useCallback } from 'react';
 import {
@@ -124,7 +125,7 @@ export function DealFormDialog({
     }
     setSearching(true);
     try {
-      const res = await fetch(`/api/products?search=${encodeURIComponent(query)}&limit=10`);
+      const res = await adminFetch(`/api/products?search=${encodeURIComponent(query)}&limit=10`);
       const json = await res.json();
       if (json.success && json.data?.items) {
         setProductResults(

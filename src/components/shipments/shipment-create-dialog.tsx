@@ -1,4 +1,5 @@
 'use client';
+import { adminFetch } from '@/lib/admin-fetch';
 
 import { useState, useEffect, useCallback } from 'react';
 import {
@@ -79,7 +80,7 @@ export function ShipmentCreateDialog({
   const fetchDrivers = useCallback(async () => {
     try {
       setLoadingDrivers(true);
-      const res = await fetch('/api/shipments/drivers');
+      const res = await adminFetch('/api/shipments/drivers');
       const json = await res.json();
       if (json.success) {
         setDrivers(json.data.drivers || []);
@@ -110,7 +111,7 @@ export function ShipmentCreateDialog({
           limit: '10',
           status: 'CONFIRMED,PROCESSING,PACKED,OUT_FOR_DELIVERY',
         });
-        const res = await fetch(`/api/orders?${params.toString()}`);
+        const res = await adminFetch(`/api/orders?${params.toString()}`);
         const json = await res.json();
         if (json.success && json.data?.items) {
           setOrderResults(
@@ -159,7 +160,7 @@ export function ShipmentCreateDialog({
 
     setSaving(true);
     try {
-      const res = await fetch('/api/shipments', {
+      const res = await adminFetch('/api/shipments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

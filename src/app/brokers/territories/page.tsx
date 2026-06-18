@@ -1,4 +1,5 @@
 'use client';
+import { adminFetch } from '@/lib/admin-fetch';
 import { useLocale } from '@/providers/app-provider';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -75,7 +76,7 @@ export default function BrokerTerritoriesPage() {
       const params = new URLSearchParams();
       if (districtFilter !== 'all') params.set('district', districtFilter);
 
-      const res = await fetch(`/api/brokers/territories?${params.toString()}`);
+      const res = await adminFetch(`/api/brokers/territories?${params.toString()}`);
       const json = await res.json();
       if (json.success) {
         setTerritories(json.data.territories || []);

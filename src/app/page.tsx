@@ -1,4 +1,5 @@
 'use client';
+import { adminFetch } from '@/lib/admin-fetch';
 import { useLocale, useAuth } from '@/providers/app-provider';
 import { AuthGuard } from '@/components/auth/auth-guard';
 
@@ -251,10 +252,7 @@ export default function DashboardPage() {
   const fetchStats = useCallback(async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('aladin-access-token');
-      const res = await fetch('/api/dashboard/stats', {
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-      });
+      const res = await adminFetch('/api/dashboard/stats');
       const json = await res.json();
       if (json.success) {
         setStats(json.data);

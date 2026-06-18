@@ -1,4 +1,5 @@
 'use client';
+import { adminFetch } from '@/lib/admin-fetch';
 
 import { useState, useEffect, useCallback } from 'react';
 import {
@@ -77,7 +78,7 @@ export function UserDetailDrawer({
     if (!userId) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/users/${userId}`);
+      const res = await adminFetch(`/api/users/${userId}`);
       const json = await res.json();
       if (json.success) {
         setUser(json.data);
@@ -103,7 +104,7 @@ export function UserDetailDrawer({
     setTogglingStatus(true);
     try {
       const newStatus = user.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
-      const res = await fetch(`/api/users/${user.id}`, {
+      const res = await adminFetch(`/api/users/${user.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
@@ -129,7 +130,7 @@ export function UserDetailDrawer({
 
     setDeleting(true);
     try {
-      const res = await fetch(`/api/users/${user.id}`, { method: 'DELETE' });
+      const res = await adminFetch(`/api/users/${user.id}`, { method: 'DELETE' });
       const json = await res.json();
       if (json.success) {
         toast.success(t('User deleted', 'Xoa nguoi dung thanh cong'));
