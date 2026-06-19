@@ -14,18 +14,20 @@ function createPrismaClient() {
 
   // During build time on Vercel, DATABASE_URL may not be available
   if (!connectionString) {
-    return new PrismaClient({
-      log: [],
-      datasources: {
-        db: {
-          url: 'postgresql://dummy:dummy@localhost/dummy',
-        },
-      },
-    })
+    connectionString = NEON_URL
   }
 
+  // CRITICAL: Always pass the resolved connection string explicitly to PrismaClient
+  // Prisma reads env("DATABASE_URL") from schema.prisma at runtime — if the env var
+  // is missing, queries fail silently with 0 results. By passing it here, we
+  // guarantee the Neon fallback works even without env var configuration.
   return new PrismaClient({
     log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
+    datasources: {
+      db: {
+        url: connectionString,
+      },
+    },
   })
 }
 
