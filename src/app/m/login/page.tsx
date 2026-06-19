@@ -69,15 +69,23 @@ export default function MobileLoginPage() {
 
   return (
     <div className="min-h-screen flex flex-col justify-center px-6 py-8 bg-background">
+      {/* Top brand accent bar */}
+      <div className="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-accent to-primary" />
+
       {/* Logo & branding */}
       <div className="text-center mb-8">
-        <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-primary-foreground mb-4">
-          <span className="text-2xl font-bold">A</span>
+        <div className="inline-flex h-18 w-18 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-red-700 text-primary-foreground mb-4 shadow-lg shadow-primary/20">
+          <span className="text-3xl font-black tracking-tighter">A</span>
         </div>
-        <h1 className="text-2xl font-bold tracking-tight">ALADIN</h1>
+        <h1 className="text-2xl font-black tracking-tight text-primary">ALADIN</h1>
         <p className="text-sm text-muted-foreground mt-1">
           {t('Đặt hàng trong 10 giây', 'Order in 10 seconds')}
         </p>
+        <div className="flex items-center justify-center gap-1.5 mt-2">
+          <div className="h-1.5 w-1.5 rounded-full bg-accent" />
+          <div className="h-1.5 w-1.5 rounded-full bg-primary/40" />
+          <div className="h-1.5 w-1.5 rounded-full bg-accent/40" />
+        </div>
       </div>
 
       {/* Login form */}

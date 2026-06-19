@@ -33,6 +33,7 @@ import { AnnouncementBanner, type Announcement } from '@/components/mobile/annou
 import { PullToRefreshIndicator } from '@/components/mobile/pull-to-refresh-indicator';
 import { useAuthStore } from '@/stores/auth.store';
 import { useAppStore } from '@/stores/app.store';
+import { ROLES } from '@/lib/security';
 import { api } from '@/lib/mobile/api';
 
 // ============================================
@@ -80,13 +81,13 @@ interface DashboardStats {
 // ============================================
 
 const STATUS_COLORS: Record<string, string> = {
-  PENDING: 'bg-yellow-100 text-yellow-700',
-  CONFIRMED: 'bg-blue-100 text-blue-700',
-  PROCESSING: 'bg-indigo-100 text-indigo-700',
-  PACKED: 'bg-purple-100 text-purple-700',
-  OUT_FOR_DELIVERY: 'bg-cyan-100 text-cyan-700',
-  DELIVERED: 'bg-yellow-50 text-red-700',
-  CANCELLED: 'bg-red-100 text-red-700',
+  PENDING: 'bg-amber-100 text-amber-700',
+  CONFIRMED: 'bg-orange-100 text-orange-700',
+  PROCESSING: 'bg-yellow-100 text-yellow-700',
+  PACKED: 'bg-red-50 text-red-700',
+  OUT_FOR_DELIVERY: 'bg-red-100 text-red-600',
+  DELIVERED: 'bg-green-50 text-green-700',
+  CANCELLED: 'bg-gray-100 text-gray-600',
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -198,6 +199,12 @@ function useSimplePullToRefresh(onRefresh: () => Promise<void>) {
 export default function MobileDashboardPage() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
+  const userRole = user?.role;
+  const isAdmin = userRole === ROLES.ADMIN;
+  const isSalesRep = userRole === ROLES.SALES_REP;
+  const isShopOwner = userRole === ROLES.SHOP_OWNER;
+  const isDriver = userRole === ROLES.DRIVER;
+  const isBroker = userRole === ROLES.BROKER;
   const locale = useAppStore((s) => s.locale);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -305,7 +312,7 @@ export default function MobileDashboardPage() {
           />
         )}
 
-        {/* KPI Grid */}
+        {/* KPI Grid — Role-based */}
         {loading ? (
           <div className="grid grid-cols-2 gap-3">
             {Array.from({ length: 4 }).map((_, i) => (
@@ -314,40 +321,197 @@ export default function MobileDashboardPage() {
           </div>
         ) : stats ? (
           <div className="grid grid-cols-2 gap-3">
-            <MobileKpiCard
-              label="Monthly GMV"
-              labelVi="GMV tháng này"
-              value={stats.monthlyGmvFormatted}
-              icon={<DollarSign className="h-4 w-4" />}
-              trend={12.5}
-              trendLabel={t('vs LM', 'vs LM')}
-              variant="success"
-              locale={locale}
-            />
-            <MobileKpiCard
-              label="Total Orders"
-              labelVi="Đơn hàng"
-              value={stats.monthlyOrderCount.toLocaleString()}
-              icon={<ShoppingCart className="h-4 w-4" />}
-              trend={8.3}
-              trendLabel={t('vs LM', 'vs LM')}
-              locale={locale}
-            />
-            <MobileKpiCard
-              label="Avg Order"
-              labelVi="TB đơn hàng"
-              value={stats.avgOrderValueFormatted}
-              icon={<TrendingUp className="h-4 w-4" />}
-              locale={locale}
-            />
-            <MobileKpiCard
-              label="Overdue"
-              labelVi="Quá hạn"
-              value={stats.overdueAccounts}
-              icon={<AlertTriangle className="h-4 w-4" />}
-              variant={stats.overdueAccounts > 0 ? 'danger' : 'default'}
-              locale={locale}
-            />
+            {/* ADMIN & SALES_REP: GMV, Orders, Shops, Overdue */}
+            {(isAdmin || isSalesRep) && (
+              <>
+                <MobileKpiCard
+                  label="Monthly GMV"
+                  labelVi="GMV tháng này"
+                  value={stats.monthlyGmvFormatted}
+                  icon={<DollarSign className="h-4 w-4" />}
+                  trend={12.5}
+                  trendLabel={t('vs LM', 'vs LM')}
+                  variant="success"
+                  locale={locale}
+                />
+                <MobileKpiCard
+                  label="Total Orders"
+                  labelVi="Đơn hàng"
+                  value={stats.monthlyOrderCount.toLocaleString()}
+                  icon={<ShoppingCart className="h-4 w-4" />}
+                  trend={8.3}
+                  trendLabel={t('vs LM', 'vs LM')}
+                  locale={locale}
+                />
+                <MobileKpiCard
+                  label="Active Shops"
+                  labelVi="Shop hoạt động"
+                  value={stats.activeShops.toLocaleString()}
+                  icon={<Store className="h-4 w-4" />}
+                  locale={locale}
+                />
+                <MobileKpiCard
+                  label="Overdue"
+                  labelVi="Quá hạn"
+                  value={stats.overdueAccounts}
+                  icon={<AlertTriangle className="h-4 w-4" />}
+                  variant={stats.overdueAccounts > 0 ? 'danger' : 'default'}
+                  locale={locale}
+                />
+              </>
+            )}
+            {/* SHOP_OWNER: Orders, Avg Order, Credit, Retention */}
+            {isShopOwner && (
+              <>
+                <MobileKpiCard
+                  label="Monthly Orders"
+                  labelVi="Đơn hàng"
+                  value={stats.monthlyOrderCount.toLocaleString()}
+                  icon={<ShoppingCart className="h-4 w-4" />}
+                  trend={8.3}
+                  trendLabel={t('vs LM', 'vs LM')}
+                  locale={locale}
+                />
+                <MobileKpiCard
+                  label="Avg Order"
+                  labelVi="TB đơn hàng"
+                  value={stats.avgOrderValueFormatted}
+                  icon={<TrendingUp className="h-4 w-4" />}
+                  locale={locale}
+                />
+                <MobileKpiCard
+                  label="Credit Used"
+                  labelVi="Công nợ"
+                  value={stats.creditExposureFormatted}
+                  icon={<CreditCard className="h-4 w-4" />}
+                  variant={stats.creditExposure > 0 ? 'warning' : 'default'}
+                  locale={locale}
+                />
+                <MobileKpiCard
+                  label="Retention"
+                  labelVi="Tỷ lệ giữ"
+                  value={`${stats.retentionRate}%`}
+                  icon={<Users className="h-4 w-4" />}
+                  trend={stats.retentionRate}
+                  trendLabel={t('tỷ lệ', 'rate')}
+                  variant="success"
+                  locale={locale}
+                />
+              </>
+            )}
+            {/* DRIVER: Pending Shipments, Monthly Deliveries, Completed, GMV */}
+            {isDriver && (
+              <>
+                <MobileKpiCard
+                  label="Pending"
+                  labelVi="Chờ giao"
+                  value={stats.pendingShipments}
+                  icon={<Truck className="h-4 w-4" />}
+                  variant={stats.pendingShipments > 0 ? 'warning' : 'default'}
+                  locale={locale}
+                />
+                <MobileKpiCard
+                  label="Delivered"
+                  labelVi="Đã giao"
+                  value={stats.monthlyOrderCount.toLocaleString()}
+                  icon={<Package className="h-4 w-4" />}
+                  trend={5.2}
+                  trendLabel={t('tháng này', 'this month')}
+                  variant="success"
+                  locale={locale}
+                />
+                <MobileKpiCard
+                  label="Total Deliveries"
+                  labelVi="Tổng giao"
+                  value={stats.totalOrders.toLocaleString()}
+                  icon={<BarChart3 className="h-4 w-4" />}
+                  locale={locale}
+                />
+                <MobileKpiCard
+                  label="GMV Delivered"
+                  labelVi="GMV đã giao"
+                  value={stats.monthlyGmvFormatted}
+                  icon={<DollarSign className="h-4 w-4" />}
+                  locale={locale}
+                />
+              </>
+            )}
+            {/* BROKER: Referred Shops, GMV, Commission, Deals */}
+            {isBroker && (
+              <>
+                <MobileKpiCard
+                  label="Active Shops"
+                  labelVi="Shop active"
+                  value={stats.activeShops.toLocaleString()}
+                  icon={<Store className="h-4 w-4" />}
+                  locale={locale}
+                />
+                <MobileKpiCard
+                  label="GMV Generated"
+                  labelVi="GMV tạo ra"
+                  value={stats.monthlyGmvFormatted}
+                  icon={<DollarSign className="h-4 w-4" />}
+                  trend={12.5}
+                  trendLabel={t('vs LM', 'vs LM')}
+                  variant="success"
+                  locale={locale}
+                />
+                <MobileKpiCard
+                  label="Orders"
+                  labelVi="Đơn hàng"
+                  value={stats.monthlyOrderCount.toLocaleString()}
+                  icon={<ShoppingCart className="h-4 w-4" />}
+                  trend={8.3}
+                  trendLabel={t('vs LM', 'vs LM')}
+                  locale={locale}
+                />
+                <MobileKpiCard
+                  label="Group Deals"
+                  labelVi="Deal chung"
+                  value={stats.activeGroupDeals}
+                  icon={<Tag className="h-4 w-4" />}
+                  variant={stats.activeGroupDeals > 0 ? 'success' : 'default'}
+                  locale={locale}
+                />
+              </>
+            )}
+            {/* Fallback: if role is unknown, show generic KPIs */}
+            {!isAdmin && !isSalesRep && !isShopOwner && !isDriver && !isBroker && (
+              <>
+                <MobileKpiCard
+                  label="Monthly GMV"
+                  labelVi="GMV tháng này"
+                  value={stats.monthlyGmvFormatted}
+                  icon={<DollarSign className="h-4 w-4" />}
+                  trend={12.5}
+                  trendLabel={t('vs LM', 'vs LM')}
+                  variant="success"
+                  locale={locale}
+                />
+                <MobileKpiCard
+                  label="Total Orders"
+                  labelVi="Đơn hàng"
+                  value={stats.monthlyOrderCount.toLocaleString()}
+                  icon={<ShoppingCart className="h-4 w-4" />}
+                  locale={locale}
+                />
+                <MobileKpiCard
+                  label="Avg Order"
+                  labelVi="TB đơn hàng"
+                  value={stats.avgOrderValueFormatted}
+                  icon={<TrendingUp className="h-4 w-4" />}
+                  locale={locale}
+                />
+                <MobileKpiCard
+                  label="Overdue"
+                  labelVi="Quá hạn"
+                  value={stats.overdueAccounts}
+                  icon={<AlertTriangle className="h-4 w-4" />}
+                  variant={stats.overdueAccounts > 0 ? 'danger' : 'default'}
+                  locale={locale}
+                />
+              </>
+            )}
           </div>
         ) : null}
 
@@ -360,11 +524,11 @@ export default function MobileDashboardPage() {
               </CardTitle>
               <div className="flex gap-3">
                 <div className="flex items-center gap-1">
-                  <div className="h-2 w-2 rounded-full bg-red-500" />
+                  <div className="h-2 w-2 rounded-full bg-primary" />
                   <span className="text-[10px] text-muted-foreground">{t('Doanh thu', 'Revenue')}</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="h-2 w-2 rounded-full bg-blue-500" />
+                  <div className="h-2 w-2 rounded-full bg-accent" />
                   <span className="text-[10px] text-muted-foreground">{t('Đơn hàng', 'Orders')}</span>
                 </div>
               </div>
@@ -375,8 +539,8 @@ export default function MobileDashboardPage() {
               <div className="flex-1">
                 <SparklineChart
                   data={revenueSparkline}
-                  color="#10b981"
-                  fillColor="#10b981"
+                  color="#DC2626"
+                  fillColor="#DC2626"
                   width={140}
                   height={48}
                   showDots
@@ -386,8 +550,8 @@ export default function MobileDashboardPage() {
               <div className="flex-1">
                 <SparklineChart
                   data={orderSparkline}
-                  color="#3b82f6"
-                  fillColor="#3b82f6"
+                  color="#EAB308"
+                  fillColor="#EAB308"
                   width={140}
                   height={48}
                   showDots
@@ -398,17 +562,19 @@ export default function MobileDashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Quick Actions */}
+        {/* Quick Actions — Role-based */}
         <div>
           <h3 className="text-sm font-semibold mb-3">{t('Lối tắt', 'Quick Actions')}</h3>
           <div className="grid grid-cols-4 gap-2">
-            <QuickAction
-              icon={<Package className="h-5 w-5" />}
-              label="Products"
-              labelVi="Sản phẩm"
-              href="/m/products"
-              locale={locale}
-            />
+            {(isAdmin || isSalesRep || isShopOwner) && (
+              <QuickAction
+                icon={<Package className="h-5 w-5" />}
+                label="Products"
+                labelVi="Sản phẩm"
+                href="/m/products"
+                locale={locale}
+              />
+            )}
             <QuickAction
               icon={<ShoppingCart className="h-5 w-5" />}
               label="Orders"
@@ -417,51 +583,61 @@ export default function MobileDashboardPage() {
               locale={locale}
               badge={stats?.pendingShipments}
             />
-            <QuickAction
-              icon={<CreditCard className="h-5 w-5" />}
-              label="Credit"
-              labelVi="Công nợ"
-              href="/m/credit"
-              locale={locale}
-              badge={stats?.overdueAccounts}
-            />
-            <QuickAction
-              icon={<Tag className="h-5 w-5" />}
-              label="Group Buy"
-              labelVi="Mua chung"
-              href="/m/group-buy"
-              locale={locale}
-              badge={stats?.activeGroupDeals}
-            />
-            <QuickAction
-              icon={<Gift className="h-5 w-5" />}
-              label="Promos"
-              labelVi="Khuyến mãi"
-              href="/m/promotions"
-              locale={locale}
-            />
-            <QuickAction
-              icon={<Camera className="h-5 w-5" />}
-              label="Shelf Audit"
-              labelVi="Trung bay"
-              href="/m/merchandising"
-              locale={locale}
-            />
+            {(isAdmin || isSalesRep || isShopOwner) && (
+              <QuickAction
+                icon={<CreditCard className="h-5 w-5" />}
+                label="Credit"
+                labelVi="Công nợ"
+                href="/m/credit"
+                locale={locale}
+                badge={stats?.overdueAccounts}
+              />
+            )}
+            {(isAdmin || isSalesRep || isShopOwner || isBroker) && (
+              <QuickAction
+                icon={<Tag className="h-5 w-5" />}
+                label="Group Buy"
+                labelVi="Mua chung"
+                href="/m/group-buy"
+                locale={locale}
+                badge={stats?.activeGroupDeals}
+              />
+            )}
+            {(isAdmin || isSalesRep || isShopOwner || isBroker) && (
+              <QuickAction
+                icon={<Gift className="h-5 w-5" />}
+                label="Promos"
+                labelVi="Khuyến mãi"
+                href="/m/promotions"
+                locale={locale}
+              />
+            )}
+            {(isAdmin || isSalesRep) && (
+              <QuickAction
+                icon={<Camera className="h-5 w-5" />}
+                label="Shelf Audit"
+                labelVi="Trung bay"
+                href="/m/merchandising"
+                locale={locale}
+              />
+            )}
             <QuickAction
               icon={<Truck className="h-5 w-5" />}
               label="Shipments"
               labelVi="Vận chuyển"
               href="/m/shipments"
               locale={locale}
-              badge={stats?.pendingShipments}
+              badge={isDriver ? stats?.pendingShipments : undefined}
             />
-            <QuickAction
-              icon={<Store className="h-5 w-5" />}
-              label="My Shop"
-              labelVi="Cửa hàng"
-              href="/m/shop"
-              locale={locale}
-            />
+            {(isAdmin || isShopOwner) && (
+              <QuickAction
+                icon={<Store className="h-5 w-5" />}
+                label="My Shop"
+                labelVi="Cửa hàng"
+                href="/m/shop"
+                locale={locale}
+              />
+            )}
             <QuickAction
               icon={<MessageCircle className="h-5 w-5" />}
               label="Support"
@@ -469,20 +645,22 @@ export default function MobileDashboardPage() {
               href="/m/chat"
               locale={locale}
             />
-            <QuickAction
-              icon={<FileText className="h-5 w-5" />}
-              label="Reports"
-              labelVi="Báo cáo"
-              href="/m/reports"
-              locale={locale}
-            />
+            {(isAdmin || isSalesRep || isBroker) && (
+              <QuickAction
+                icon={<FileText className="h-5 w-5" />}
+                label="Reports"
+                labelVi="Báo cáo"
+                href="/m/reports"
+                locale={locale}
+              />
+            )}
           </div>
         </div>
 
         <Separator />
 
-        {/* Shop Profile Quick Access */}
-        {user?.shopId && (
+        {/* Shop Profile Quick Access — only for shop-linked roles */}
+        {(isAdmin || isShopOwner) && user?.shopId && (
           <Card
             className="cursor-pointer active:scale-[0.99] transition-transform"
             onClick={() => router.push('/m/shop')}
@@ -507,8 +685,8 @@ export default function MobileDashboardPage() {
           </Card>
         )}
 
-        {/* Credit Snapshot */}
-        {user?.shop && (
+        {/* Credit Snapshot — only for credit-managing roles */}
+        {(isAdmin || isShopOwner) && user?.shop && (
           <Card>
             <CardHeader className="pb-2 pt-4 px-4">
               <div className="flex items-center justify-between">
@@ -556,8 +734,8 @@ export default function MobileDashboardPage() {
           </Card>
         )}
 
-        {/* Active Group Deals */}
-        {stats && stats.activeGroupDeals > 0 && (
+        {/* Active Group Deals — not for drivers */}
+        {!isDriver && stats && stats.activeGroupDeals > 0 && (
           <Card>
             <CardHeader className="pb-2 pt-4 px-4">
               <div className="flex items-center justify-between">
@@ -610,8 +788,8 @@ export default function MobileDashboardPage() {
           </Card>
         )}
 
-        {/* Top Products with Donut */}
-        {stats && stats.topProducts && stats.topProducts.length > 0 && (
+        {/* Top Products — not for drivers */}
+        {!isDriver && stats && stats.topProducts && stats.topProducts.length > 0 && (
           <div>
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold">
@@ -630,7 +808,7 @@ export default function MobileDashboardPage() {
                       segments={stats.topProducts.slice(0, 5).map((p, i) => ({
                         label: p.productName,
                         value: p.totalRevenue,
-                        color: ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ef4444'][i],
+                        color: ['#DC2626', '#EAB308', '#F59E0B', '#EF4444', '#FBBF24'][i],
                       }))}
                       size={70}
                       strokeWidth={10}

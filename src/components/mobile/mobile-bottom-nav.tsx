@@ -7,10 +7,13 @@ import {
   ShoppingCart,
   CreditCard,
   User,
+  Truck,
+  HandCoins,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useCartStore } from '@/stores/cart.store';
 import { useAppStore } from '@/stores/app.store';
+import { useAuthStore } from '@/stores/auth.store';
 import { ROLES } from '@/lib/security';
 
 // ============================================
@@ -56,6 +59,20 @@ const tabs: NavTab[] = [
     roles: [ROLES.ADMIN, ROLES.SALES_REP, ROLES.SHOP_OWNER],
   },
   {
+    href: '/m/shipments',
+    labelVi: 'Vận chuyển',
+    labelEn: 'Shipments',
+    icon: <Truck className="h-5 w-5" />,
+    roles: [ROLES.ADMIN, ROLES.DRIVER],
+  },
+  {
+    href: '/m/broker',
+    labelVi: 'Hoa hồng',
+    labelEn: 'Commission',
+    icon: <HandCoins className="h-5 w-5" />,
+    roles: [ROLES.ADMIN, ROLES.BROKER],
+  },
+  {
     href: '/m/profile',
     labelVi: 'Tài khoản',
     labelEn: 'Account',
@@ -76,7 +93,7 @@ export function MobileBottomNav({ locale = 'vi' }: MobileBottomNavProps) {
   const pathname = usePathname();
   const router = useRouter();
   const cartItemCount = useCartStore((s) => s.itemCount());
-  const user = useAppStore((s) => s.user);
+  const user = useAuthStore((s) => s.user);
   const userRole = user?.role;
 
   // Filter tabs by role
@@ -127,7 +144,7 @@ export function MobileBottomNav({ locale = 'vi' }: MobileBottomNavProps) {
               </span>
               {/* Active indicator bar */}
               {active && (
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-primary rounded-full" />
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-accent rounded-full" />
               )}
             </button>
           );

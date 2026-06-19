@@ -149,6 +149,15 @@ html, body {
   }
 }
 
+/* Hide scrollbar utility */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* Smooth touch scrolling */
 @media (hover: none) and (pointer: coarse) {
   * {
