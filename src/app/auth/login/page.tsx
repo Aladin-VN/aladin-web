@@ -74,7 +74,7 @@ function LoginForm() {
           phone: user.phone,
           name: user.name,
           role: user.role,
-          shopId: user.shopId,
+          shopId: user.shop?.id || user.shopId || null,
           shop: user.shop || null,
         }));
 
