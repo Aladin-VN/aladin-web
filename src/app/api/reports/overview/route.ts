@@ -45,9 +45,13 @@ function getDateRange(request: NextRequest) {
       prevStart = new Date(now.getFullYear(), now.getMonth() - 2, 1);
       return { start, end: lastOfPrev, prevStart, prevEnd: new Date(now.getFullYear(), now.getMonth() - 1, 0, 23, 59, 59, 999) };
     }
+    case 'all':
+      start = new Date(2020, 0, 1);
+      prevStart = new Date(2020, 0, 1);
+      break;
     default:
-      start = new Date(now.getTime() - 30 * 86400000);
-      prevStart = new Date(now.getTime() - 60 * 86400000);
+      start = new Date(2020, 0, 1);
+      prevStart = new Date(2020, 0, 1);
   }
 
   return { start, end: now, prevStart, prevEnd: start };

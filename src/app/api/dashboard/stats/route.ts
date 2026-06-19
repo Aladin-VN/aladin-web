@@ -1,5 +1,6 @@
 // ALADIN Dashboard Stats API — Role-filtered
 // GET /api/dashboard/stats
+// Shows ALL-TIME data from the platform (no month filter)
 // ADMIN: sees all shops, all orders, all revenue
 // SHOP_OWNER: sees only their shop's data
 // SALES_REP: sees all shops (territory-wide)
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
     const shopId = payload.shopId;
 
     // Build role-specific filters
-    const orderWhere: Record<string, unknown> = {};
+    const orderWhere: Record<string, unknown> = { status: { not: 'CANCELLED' } };
     const shopWhere: Record<string, unknown> = { deletedAt: null };
 
     if (role === ROLES.SHOP_OWNER && shopId) {
@@ -40,7 +41,6 @@ export async function GET(request: NextRequest) {
         { shipments: { some: { assignedDriverId: userId } } },
       ];
     } else if (role === ROLES.BROKER) {
-      // Broker sees shops they referred
       const brokerShops = await db.shop.findMany({
         where: { broker: { userId } },
         select: { id: true },
@@ -51,47 +51,38 @@ export async function GET(request: NextRequest) {
         orderWhere.shopId = { in: brokerShopIds };
       }
     }
-    // ADMIN and SALES_REP see everything (no filter)
 
-    // Run all queries in parallel
+    // Run all queries in parallel — ALL-TIME data
     const [
       totalShops,
       activeShops,
-      monthlyOrders,
+      allOrders,
       totalTransactions,
       pendingShipments,
       activeGroupDeals,
       totalProducts,
+      totalOrderCount,
     ] = await Promise.all([
       // Total shops
       db.shop.count({ where: shopWhere }),
-      // Active shops
+      // Active shops (have at least one order)
       db.shop.count({
         where: {
           ...shopWhere,
-          orders: {
-            some: {
-              createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
-              status: { not: 'CANCELLED' },
-            },
-          },
+          orders: { some: { status: { not: 'CANCELLED' } } },
         },
       }),
-      // Monthly orders & GMV (role-filtered)
+      // ALL non-cancelled orders (for GMV, avg, etc.)
       db.order.findMany({
-        where: {
-          ...orderWhere,
-          createdAt: { gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) },
-          status: { not: 'CANCELLED' },
-        },
-        select: { totalAmount: true },
+        where: orderWhere,
+        select: { totalAmount: true, createdAt: true, paymentMethod: true, status: true, shopId: true },
       }),
       // Credit exposure
       db.transaction.aggregate({
         where: { type: 'CREDIT_USED' },
         _sum: { amount: true },
       }),
-      // Pending shipments (role-filtered)
+      // Pending shipments
       db.shipment.count({
         where: {
           status: { in: ['PENDING', 'IN_TRANSIT'] },
@@ -99,53 +90,61 @@ export async function GET(request: NextRequest) {
         },
       }),
       // Active group deals
-      db.groupDeal.count({
-        where: { status: 'ACTIVE' },
-      }),
+      db.groupDeal.count({ where: { status: 'ACTIVE' } }),
       // Total active products
       db.product.count({ where: { deletedAt: null, isActive: true } }),
+      // Total order count (including cancelled)
+      db.order.count({ where: role === ROLES.SHOP_OWNER && shopId ? { shopId } : role === ROLES.DRIVER ? { OR: [{ assignedDriverId: userId }] } : {} }),
     ]);
 
-    const monthlyGmv = monthlyOrders.reduce((sum, o) => sum + o.totalAmount, 0);
+    // Calculate KPIs from real data
+    const totalGmv = allOrders.reduce((sum, o) => sum + o.totalAmount, 0);
     const creditExposure = totalTransactions._sum.amount || 0;
+    const avgOrderValue = allOrders.length > 0 ? Math.round(totalGmv / allOrders.length) : 0;
+
+    // Delivered orders
+    const deliveredOrders = allOrders.filter(o => o.status === 'DELIVERED');
+    const deliveredGmv = deliveredOrders.reduce((s, o) => s + o.totalAmount, 0);
+
+    // Retention: shops that ordered in 2+ different months / shops that ever ordered
+    const shopMonths = new Map<string, Set<string>>();
+    allOrders.forEach(o => {
+      const month = o.createdAt.toISOString().slice(0, 7); // "2025-01"
+      if (!shopMonths.has(o.shopId)) shopMonths.set(o.shopId, new Set());
+      shopMonths.get(o.shopId)!.add(month);
+    });
+    const shopsWithMultipleMonths = [...shopMonths.values()].filter(months => months.size >= 2).length;
+    const shopsThatOrdered = shopMonths.size;
+    const retentionRate = shopsThatOrdered > 0 ? Math.round((shopsWithMultipleMonths / shopsThatOrdered) * 100) : 0;
+
+    // Overdue accounts
     const overdueAccounts = await db.shop.count({
       where: { ...shopWhere, creditStatus: 'OVERDUE' },
     });
-    const totalOrders = await db.order.count({ where: orderWhere });
 
-    const avgOrderValue = monthlyOrders.length > 0 ? monthlyGmv / monthlyOrders.length : 0;
+    // Payment method breakdown
+    const paymentBreakdown: Record<string, { count: number; revenue: number }> = {};
+    allOrders.forEach(o => {
+      if (!paymentBreakdown[o.paymentMethod]) paymentBreakdown[o.paymentMethod] = { count: 0, revenue: 0 };
+      paymentBreakdown[o.paymentMethod].count++;
+      paymentBreakdown[o.paymentMethod].revenue += o.totalAmount;
+    });
 
-    // Retention rate
-    const thisMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-    const lastMonth = new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1);
-    const lastMonthEnd = new Date(new Date().getFullYear(), new Date().getMonth(), 0, 23, 59, 59);
+    // Monthly trend (last 6 months that have data)
+    const monthMap = new Map<string, { orders: number; gmv: number }>();
+    allOrders.forEach(o => {
+      const month = o.createdAt.toISOString().slice(0, 7);
+      const entry = monthMap.get(month) || { orders: 0, gmv: 0 };
+      entry.orders++;
+      entry.gmv += o.totalAmount;
+      monthMap.set(month, entry);
+    });
+    const monthlyTrend = [...monthMap.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .slice(-6)
+      .map(([month, data]) => ({ month, ...data }));
 
-    const [shopsThisMonth, shopsLastMonth, shopsBoth] = await Promise.all([
-      db.shop.count({
-        where: {
-          ...shopWhere,
-          orders: { some: { createdAt: { gte: thisMonth }, status: { not: 'CANCELLED' } } },
-        },
-      }),
-      db.shop.count({
-        where: {
-          ...shopWhere,
-          orders: { some: { createdAt: { gte: lastMonth, lte: lastMonthEnd }, status: { not: 'CANCELLED' } } },
-        },
-      }),
-      db.shop.count({
-        where: {
-          AND: [
-            { ...shopWhere, orders: { some: { createdAt: { gte: thisMonth }, status: { not: 'CANCELLED' } } } },
-            { ...shopWhere, orders: { some: { createdAt: { gte: lastMonth, lte: lastMonthEnd }, status: { not: 'CANCELLED' } } } },
-          ],
-        },
-      }),
-    ]);
-
-    const retentionRate = shopsLastMonth > 0 ? Math.round((shopsBoth / shopsLastMonth) * 100) : 0;
-
-    // Recent orders (role-filtered, last 10)
+    // Recent orders (last 10)
     const recentOrders = await db.order.findMany({
       where: orderWhere,
       take: 10,
@@ -156,13 +155,12 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Top products by revenue this month (role-filtered)
+    // Top products by revenue ALL-TIME
     const topProducts = await db.orderItem.groupBy({
       by: ['productId', 'productName', 'productSku'],
       where: {
         order: {
           ...orderWhere,
-          createdAt: { gte: thisMonth },
           status: { not: 'CANCELLED' },
         },
       },
@@ -171,13 +169,10 @@ export async function GET(request: NextRequest) {
       take: 5,
     });
 
-    // Pipeline: count orders by status (all orders, not just monthly, for full pipeline visibility)
+    // Pipeline: count orders by status (all non-cancelled orders)
     const pipelineRaw = await db.order.groupBy({
       by: ['status'],
-      where: {
-        ...orderWhere,
-        status: { not: 'CANCELLED' },
-      },
+      where: orderWhere,
       _count: { id: true },
     });
 
@@ -187,17 +182,64 @@ export async function GET(request: NextRequest) {
       count: pipelineRaw.find((p) => p.status === status)?._count.id || 0,
     }));
 
+    // Top ordering shops ALL-TIME
+    const topShops = await db.order.groupBy({
+      by: ['shopId'],
+      where: orderWhere,
+      _sum: { totalAmount: true },
+      _count: { id: true },
+      orderBy: { _sum: { totalAmount: 'desc' } },
+      take: 5,
+    });
+    const topShopIds = topShops.map(s => s.shopId);
+    const shopNames = await db.shop.findMany({
+      where: { id: { in: topShopIds } },
+      select: { id: true, name: true },
+    });
+    const shopNameMap = new Map(shopNames.map(s => [s.id, s.name]));
+
+    // Category breakdown
+    const categoryBreakdown = await db.orderItem.groupBy({
+      by: ['productId'],
+      where: { order: { ...orderWhere } },
+      _sum: { totalPrice: true, quantity: true },
+      orderBy: { _sum: { totalPrice: 'desc' } },
+      take: 20,
+    });
+    const catProductIds = categoryBreakdown.map(c => c.productId);
+    const catProducts = await db.product.findMany({
+      where: { id: { in: catProductIds } },
+      select: { id: true, categoryId: true, category: { select: { name: true } } },
+    });
+    const catMap = new Map(catProducts.map(p => [p.id, p.category?.name || 'Other']));
+    const categoryTotals: Record<string, { revenue: number; qty: number }> = {};
+    categoryBreakdown.forEach(c => {
+      const cat = catMap.get(c.productId) || 'Other';
+      if (!categoryTotals[cat]) categoryTotals[cat] = { revenue: 0, qty: 0 };
+      categoryTotals[cat].revenue += c._sum.totalPrice || 0;
+      categoryTotals[cat].qty += c._sum.quantity || 0;
+    });
+    const topCategories = Object.entries(categoryTotals)
+      .sort((a, b) => b[1].revenue - a[1].revenue)
+      .slice(0, 5)
+      .map(([name, data]) => ({
+        name,
+        revenue: data.revenue,
+        revenueFormatted: formatVND(data.revenue),
+        qty: data.qty,
+      }));
+
     return NextResponse.json({
       success: true,
       data: {
         totalShops,
         activeShops,
-        totalOrders,
-        monthlyOrderCount: monthlyOrders.length,
-        monthlyGmv,
-        monthlyGmvFormatted: formatVND(monthlyGmv),
-        avgOrderValue: Math.round(avgOrderValue),
-        avgOrderValueFormatted: formatVND(Math.round(avgOrderValue)),
+        totalOrders: allOrders.length,
+        monthlyOrderCount: allOrders.length,
+        monthlyGmv: totalGmv,
+        monthlyGmvFormatted: formatVND(totalGmv),
+        avgOrderValue,
+        avgOrderValueFormatted: formatVND(avgOrderValue),
         retentionRate,
         creditExposure,
         creditExposureFormatted: formatVND(creditExposure),
@@ -205,7 +247,25 @@ export async function GET(request: NextRequest) {
         pendingShipments,
         activeGroupDeals,
         totalProducts,
+        deliveredOrders: deliveredOrders.length,
+        deliveredGmv,
+        deliveredGmvFormatted: formatVND(deliveredGmv),
         pipeline,
+        monthlyTrend,
+        paymentBreakdown: Object.fromEntries(
+          Object.entries(paymentBreakdown).map(([method, data]) => [
+            method,
+            { ...data, revenueFormatted: formatVND(data.revenue) },
+          ])
+        ),
+        topShops: topShops.map(s => ({
+          shopId: s.shopId,
+          shopName: shopNameMap.get(s.shopId) || 'Unknown',
+          orderCount: s._count.id,
+          totalRevenue: s._sum.totalAmount || 0,
+          totalRevenueFormatted: formatVND(s._sum.totalAmount || 0),
+        })),
+        topCategories,
         recentOrders: recentOrders.map((o) => ({
           id: o.id,
           orderNumber: o.orderNumber,

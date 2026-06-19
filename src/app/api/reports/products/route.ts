@@ -33,8 +33,11 @@ function getDateRange(request: NextRequest) {
     case 'lastMonth':
       start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       break;
+    case 'all':
+      start = new Date(2020, 0, 1);
+      break;
     default:
-      start = new Date(now.getTime() - 30 * 86400000);
+      start = new Date(2020, 0, 1);
   }
 
   return { start, end: now };

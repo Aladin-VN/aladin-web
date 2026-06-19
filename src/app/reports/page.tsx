@@ -233,7 +233,7 @@ export default function ReportsPage() {
   const { locale } = useLocale();
   const t = (en: string, vi: string) => locale === 'vi' ? vi : en;
 
-  const [period, setPeriod] = useState('30d');
+  const [period, setPeriod] = useState('all');
   const [activeTab, setActiveTab] = useState('overview');
 
   // Data state

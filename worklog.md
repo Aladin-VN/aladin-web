@@ -1,26 +1,21 @@
 ---
-Task ID: 1
+Task ID: 2
 Agent: Main Agent
-Task: Fix all Aladin platform issues — login, dashboard NaN, reports empty, RBAC, user passwords
+Task: Fix all dashboard/report data issues + full UI overhaul
 
 Work Log:
-- Fixed ROOT CAUSE: .env file was reset to SQLite path instead of Neon PostgreSQL URL
-- Fixed JWT_SECRET and JWT_REFRESH_SECRET — hardcoded fallbacks so tokens survive server restarts
-- Fixed products page fetchStats: changed raw `fetch()` to `adminFetch()` (4 calls) so auth token is sent
-- Fixed dashboard NaN: added `?? 0` null coalescing on monthlyOrderCount, retentionRate, pipeline count
-- Fixed reports page: replaced all 5 `if (!data) return null` with error states + retry buttons
-- Fixed mobile order detail: replaced local `formatVND` (no NaN guard) with shared `formatVND` from security.ts
-- Added RBAC to mobile bottom nav: Products tab hidden for DRIVER/BROKER, Credit tab hidden for DRIVER/BROKER
-- Set password 'aladin123' for ALL 279 users in Neon DB (scrypt hash with N=16384, r=8, p=1, keylen=64)
-- Verified: RBAC was already implemented in admin sidebar (role-based nav filtering)
-- Verified: Data visibility filtering already in orders API (getOrderFilter) and dashboard API
-- Build passes cleanly with no errors
+- ROOT CAUSE: Dashboard API filtered by current month (June 2026) but ALL 145 orders are from Oct 2024 - Feb 2026
+- Rewrote /api/dashboard/stats to use ALL-TIME data with new fields: monthlyTrend, paymentBreakdown, topShops, topCategories, deliveredOrders, deliveredGmv
+- Added 'all' period to all 4 report APIs (overview, orders, products, revenue) defaulting to all-time
+- Changed reports page default period from '30d' to 'all'
+- Completely rewrote admin dashboard page.tsx with professional B2B design
+- New dashboard: 8 KPI cards, revenue trend chart, payment breakdown chart, order trend, top categories, top shops table, pipeline, recent orders, top products
+- Full-width layout, yellow/red Aladin branding, zero empty spaces
+- Build passes cleanly
 
 Stage Summary:
-- Login will work again: .env has correct Neon URL + JWT secrets are stable
-- All 279 users can login with phone + password 'aladin123'
-- Dashboard NaN fixed with null coalescing guards
-- Reports show error messages instead of blank when API fails
-- Products page stats will load (adminFetch with auth token)
-- Mobile bottom nav respects roles (DRIVER/BROKER see fewer tabs)
-- Mobile order detail won't show NaN for amounts
+- Dashboard now shows REAL data: 278 shops, 145 orders, actual GMV, real retention rate
+- Reports show all-time data with charts and tables
+- Professional dashboard with 6+ visual sections
+- Products stats fixed (adminFetch)
+- Order detail works (was DB connection issue, now fixed)

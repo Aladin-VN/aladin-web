@@ -40,8 +40,11 @@ function getDateRange(request: NextRequest) {
       start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       prevStart = new Date(now.getFullYear(), now.getMonth() - 2, 1);
       break;
+    case 'all':
+      start = new Date(2020, 0, 1);
+      break;
     default:
-      start = new Date(now.getTime() - 30 * 86400000);
+      start = new Date(2020, 0, 1);
       prevStart = new Date(now.getTime() - 60 * 86400000);
   }
 
