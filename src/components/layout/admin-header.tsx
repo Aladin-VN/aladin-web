@@ -39,7 +39,7 @@ export function AdminHeader() {
   const initials = displayName.split(' ').map((n: string) => n[0]).join('').slice(0, 2);
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60 px-4">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-red-100 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 px-4 shadow-sm">
       <SidebarTrigger className="-ml-1" />
       <Separator orientation="vertical" className="h-6" />
 
@@ -50,7 +50,7 @@ export function AdminHeader() {
           <Input
             type="search"
             placeholder={t('Search...', 'Tim kiem...')}
-            className="pl-8 h-9 bg-muted/50 border-0 focus-visible:bg-background focus-visible:ring-1"
+            className="pl-8 h-9 bg-gray-50 border border-gray-200 focus-visible:bg-white focus-visible:ring-1 focus-visible:ring-red-200 focus-visible:border-red-200"
           />
         </div>
       </div>
@@ -61,9 +61,9 @@ export function AdminHeader() {
           variant="outline"
           size="sm"
           onClick={toggleLocale}
-          className="h-8 px-2.5 gap-1.5 text-xs font-semibold border-yellow-300 bg-yellow-50 hover:bg-yellow-100 dark:border-yellow-700 dark:bg-yellow-950/30"
+          className="h-8 px-2.5 gap-1.5 text-xs font-bold border-yellow-400 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 hover:border-yellow-500 shadow-sm"
         >
-          <Globe className="h-3.5 w-3.5" />
+          <Globe className="h-3.5 w-3.5 text-yellow-600" />
           {locale === 'vi' ? 'VI' : 'EN'}
         </Button>
 
@@ -72,7 +72,7 @@ export function AdminHeader() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-9 w-9 relative">
               <Bell className="h-4 w-4" />
-              <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white font-bold">
+              <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[10px] text-white font-bold ring-2 ring-white">
                 3
               </span>
             </Button>
@@ -113,9 +113,9 @@ export function AdminHeader() {
         {/* User Menu with Logout */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-9 gap-2 px-2">
+            <Button variant="ghost" className="h-9 gap-2 px-2 hover:bg-red-50">
               <Avatar className="h-7 w-7">
-                <AvatarFallback className="bg-yellow-100 text-red-700 text-xs font-bold">
+                <AvatarFallback className="bg-red-600 text-white text-xs font-bold">
                   {initials}
                 </AvatarFallback>
               </Avatar>

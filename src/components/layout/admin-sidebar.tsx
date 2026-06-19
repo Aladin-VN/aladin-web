@@ -201,12 +201,12 @@ export function AdminSidebar() {
     <Sidebar>
       <SidebarHeader className="border-b border-sidebar-border px-6 py-4">
         <Link href="/" className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-yellow-400 to-yellow-500 shadow-lg shadow-yellow-500/20 text-red-700 font-bold text-base">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-yellow-400 to-yellow-500 shadow-lg shadow-yellow-500/30 text-red-700 font-extrabold text-base ring-1 ring-yellow-400/30">
             A
           </div>
           <div>
-            <h1 className="text-lg font-extrabold tracking-tight text-yellow-400">ALADIN</h1>
-            <p className="text-[10px] text-sidebar-foreground/60 leading-tight font-medium">
+            <h1 className="text-lg font-extrabold tracking-tight bg-gradient-to-r from-yellow-300 to-yellow-500 bg-clip-text text-transparent">ALADIN</h1>
+            <p className="text-[10px] text-sidebar-foreground/50 leading-tight font-medium uppercase tracking-widest">
               {locale === 'vi' ? 'AI Thương mại B2B' : 'AI B2B Commerce'}
             </p>
           </div>
@@ -215,7 +215,7 @@ export function AdminSidebar() {
 
       <SidebarContent className="px-3 py-2">
         <SidebarGroup>
-          <SidebarGroupLabel className="px-3 text-xs text-muted-foreground">
+          <SidebarGroupLabel className="px-3 text-[10px] uppercase tracking-widest text-yellow-500/60 font-semibold">
             {locale === 'vi' ? 'DIEU HUONG' : 'NAVIGATION'}
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -281,7 +281,7 @@ export function AdminSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t p-3">
+      <SidebarFooter className="border-t border-sidebar-border p-3">
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>

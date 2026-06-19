@@ -137,31 +137,39 @@ function KpiCard({
   const t = locale === 'vi' ? titleVi : title;
 
   const accentTop = accent === 'yellow'
-    ? 'border-t-yellow-400'
+    ? 'border-t-yellow-500'
     : accent === 'red'
-      ? 'border-t-red-500'
+      ? 'border-t-red-600'
       : accent === 'green'
         ? 'border-t-green-500'
-        : 'border-t-muted';
+        : 'border-t-gray-300';
 
   const iconBg = accent === 'yellow'
-    ? 'bg-yellow-50 text-yellow-600 dark:bg-yellow-950/50 dark:text-yellow-400'
+    ? 'bg-yellow-100 text-yellow-600 dark:bg-yellow-950/50 dark:text-yellow-400'
     : accent === 'red'
-      ? 'bg-red-50 text-red-600 dark:bg-red-950/50 dark:text-red-400'
+      ? 'bg-red-100 text-red-600 dark:bg-red-950/50 dark:text-red-400'
       : accent === 'green'
-        ? 'bg-green-50 text-green-600 dark:bg-green-950/50 dark:text-green-400'
-        : 'bg-muted text-muted-foreground';
+        ? 'bg-green-100 text-green-600 dark:bg-green-950/50 dark:text-green-400'
+        : 'bg-gray-100 text-gray-500';
+
+  const cardHover = accent === 'yellow'
+    ? 'hover:border-yellow-300'
+    : accent === 'red'
+      ? 'hover:border-red-300'
+      : accent === 'green'
+        ? 'hover:border-green-300'
+        : 'hover:border-gray-300';
 
   return (
-    <Card className={`border-t-2 ${accentTop} hover:shadow-md transition-shadow`}>
+    <Card className={`border-t-[3px] ${accentTop} ${cardHover} transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5`}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t}</CardTitle>
-        <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${iconBg}`}>
+        <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t}</CardTitle>
+        <div className={`h-9 w-9 rounded-xl flex items-center justify-center shadow-sm ${iconBg}`}>
           {icon}
         </div>
       </CardHeader>
       <CardContent className="pb-3">
-        <div className="text-2xl font-bold tracking-tight">
+        <div className="text-2xl font-extrabold tracking-tight">
           {isSensitive ? (
             <SensitiveValue value={String(formattedValue || value)} maskType="amount" formatOptions={{ formatCurrency: true }} />
           ) : (
@@ -169,7 +177,7 @@ function KpiCard({
           )}
         </div>
         {subtitle && (
-          <p className="text-[11px] text-muted-foreground mt-1">{subtitle}</p>
+          <p className="text-[11px] text-muted-foreground mt-1.5 font-medium">{subtitle}</p>
         )}
       </CardContent>
     </Card>
@@ -182,11 +190,11 @@ function KpiCard({
 
 const PIPELINE_STAGES = [
   { key: 'pending', label: 'Pending', labelVi: 'Cho XL', color: 'bg-gray-200 dark:bg-gray-700', textColor: 'text-gray-700 dark:text-gray-300', icon: Clock },
-  { key: 'confirmed', label: 'Confirmed', labelVi: 'Da XL', color: 'bg-blue-100 dark:bg-blue-900/50', textColor: 'text-blue-700 dark:text-blue-300', icon: ShieldCheck },
-  { key: 'processing', label: 'Processing', labelVi: 'Dang XL', color: 'bg-purple-100 dark:bg-purple-900/50', textColor: 'text-purple-700 dark:text-purple-300', icon: Package },
-  { key: 'packed', label: 'Packed', labelVi: 'Dong goi', color: 'bg-amber-100 dark:bg-amber-900/50', textColor: 'text-amber-700 dark:text-amber-300', icon: Package },
-  { key: 'outForDelivery', label: 'Out for Delivery', labelVi: 'Dang giao', color: 'bg-yellow-100 dark:bg-yellow-900/50', textColor: 'text-yellow-700 dark:text-yellow-300', icon: Truck },
-  { key: 'delivered', label: 'Delivered', labelVi: 'Da giao', color: 'bg-green-100 dark:bg-green-900/50', textColor: 'text-green-700 dark:text-green-300', icon: CheckCircle2 },
+  { key: 'confirmed', label: 'Confirmed', labelVi: 'Da XL', color: 'bg-yellow-200 dark:bg-yellow-800/60', textColor: 'text-yellow-800 dark:text-yellow-200', icon: ShieldCheck },
+  { key: 'processing', label: 'Processing', labelVi: 'Dang XL', color: 'bg-orange-200 dark:bg-orange-800/60', textColor: 'text-orange-800 dark:text-orange-200', icon: Package },
+  { key: 'packed', label: 'Packed', labelVi: 'Dong goi', color: 'bg-amber-200 dark:bg-amber-800/60', textColor: 'text-amber-800 dark:text-amber-200', icon: Package },
+  { key: 'outForDelivery', label: 'Out for Delivery', labelVi: 'Dang giao', color: 'bg-red-200 dark:bg-red-800/60', textColor: 'text-red-800 dark:text-red-200', icon: Truck },
+  { key: 'delivered', label: 'Delivered', labelVi: 'Da giao', color: 'bg-emerald-200 dark:bg-emerald-800/60', textColor: 'text-emerald-800 dark:text-emerald-200', icon: CheckCircle2 },
 ];
 
 function PipelineBar({ stats, locale }: { stats: DashboardStats; locale: string }) {
@@ -195,15 +203,15 @@ function PipelineBar({ stats, locale }: { stats: DashboardStats; locale: string 
   const total = pipeline.reduce((sum, s) => sum + s.count, 0) || 1;
 
   return (
-    <Card>
+    <Card className="border shadow-sm">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-red-50 text-red-600 dark:bg-red-950/50 dark:text-red-400 flex items-center justify-center">
+            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-red-500 to-red-600 text-white flex items-center justify-center shadow-md shadow-red-500/20">
               <Package className="h-4 w-4" />
             </div>
             <div>
-              <CardTitle className="text-sm font-semibold">
+              <CardTitle className="text-sm font-bold">
                 {t('Order Pipeline', 'Luong Don hang')}
               </CardTitle>
               <CardDescription className="text-xs">
@@ -211,14 +219,14 @@ function PipelineBar({ stats, locale }: { stats: DashboardStats; locale: string 
               </CardDescription>
             </div>
           </div>
-          <Badge className="bg-red-600 hover:bg-red-700 text-white font-mono text-xs">
+          <Badge className="bg-red-600 hover:bg-red-700 text-white font-mono text-xs font-bold shadow-sm">
             {stats.monthlyOrderCount ?? 0} {t('orders', 'don')}
           </Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Visual Pipeline Bar */}
-        <div className="flex h-10 rounded-lg overflow-hidden border">
+        <div className="flex h-12 rounded-xl overflow-hidden border shadow-inner">
           {pipeline.map((stage, i) => {
             const widthPct = Math.max((stage.count / total) * 100, stage.count > 0 ? 3 : 0);
             const stageConfig = PIPELINE_STAGES[i] || PIPELINE_STAGES[0];
@@ -305,7 +313,7 @@ function KpiGridSkeleton() {
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
       {Array.from({ length: 8 }).map((_, i) => (
-        <Card key={i} className="border-t-2 border-t-muted">
+        <Card key={i} className="border-t-[3px] border-t-gray-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <Skeleton className="h-3 w-20" />
             <Skeleton className="h-8 w-8 rounded-lg" />
@@ -421,15 +429,20 @@ export default function DashboardPage() {
 
             {/* ===== Page Header ===== */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight">
-                  {getGreeting()}
-                </h1>
-                <p className="text-sm text-muted-foreground mt-0.5">
-                  {t('Real-time business metrics and KPIs', 'Chi so kinh doanh va KPI theo thoi gian thuc')}
-                </p>
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-red-600 to-red-700 flex items-center justify-center shadow-lg shadow-red-600/20">
+                  <BarChart3 className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-extrabold tracking-tight text-foreground">
+                    {getGreeting()}
+                  </h1>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    {t('Real-time business metrics and KPIs', 'Chi so kinh doanh va KPI theo thoi gian thuc')}
+                  </p>
+                </div>
               </div>
-              <Button variant="outline" size="sm" onClick={fetchStats} className="w-fit gap-1.5">
+              <Button variant="outline" size="sm" onClick={fetchStats} className="w-fit gap-1.5 border-red-200 text-red-700 hover:bg-red-50 hover:border-red-300 hover:text-red-700 font-semibold">
                 <RefreshCw className="h-3.5 w-3.5" />
                 {t('Refresh', 'Lam moi')}
               </Button>
@@ -623,7 +636,7 @@ export default function DashboardPage() {
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
-                      <div className="h-8 w-8 rounded-lg bg-yellow-50 text-yellow-600 dark:bg-yellow-950/50 dark:text-yellow-400 flex items-center justify-center">
+                      <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-yellow-400 to-yellow-500 text-yellow-800 flex items-center justify-center shadow-md shadow-yellow-500/20">
                         <Store className="h-4 w-4" />
                       </div>
                       <div>
@@ -635,7 +648,7 @@ export default function DashboardPage() {
                         </CardDescription>
                       </div>
                     </div>
-                    <Badge variant="outline" className="font-mono text-xs">
+                    <Badge variant="outline" className="font-mono text-xs border-yellow-300 text-yellow-700">
                       {stats.topShops?.length || 0} {t('shops', 'cua hang')}
                     </Badge>
                   </div>
@@ -692,11 +705,11 @@ export default function DashboardPage() {
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
-                      <div className="h-8 w-8 rounded-lg bg-red-50 text-red-600 dark:bg-red-950/50 dark:text-red-400 flex items-center justify-center">
+                      <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-red-500 to-red-600 text-white flex items-center justify-center shadow-md shadow-red-500/20">
                         <ShoppingCart className="h-4 w-4" />
                       </div>
                       <div>
-                        <CardTitle className="text-sm font-semibold">
+                        <CardTitle className="text-sm font-bold">
                           {t('Recent Orders', 'Don hang gan day')}
                         </CardTitle>
                         <CardDescription className="text-xs">
@@ -704,7 +717,7 @@ export default function DashboardPage() {
                         </CardDescription>
                       </div>
                     </div>
-                    <Badge variant="outline" className="font-mono text-xs">
+                    <Badge variant="outline" className="font-mono text-xs border-red-200 text-red-600">
                       {stats?.recentOrders?.length || 0}
                     </Badge>
                   </div>
@@ -759,11 +772,11 @@ export default function DashboardPage() {
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
-                      <div className="h-8 w-8 rounded-lg bg-yellow-50 text-yellow-600 dark:bg-yellow-950/50 dark:text-yellow-400 flex items-center justify-center">
+                      <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-yellow-400 to-yellow-500 text-yellow-800 flex items-center justify-center shadow-md shadow-yellow-500/20">
                         <TrendingUp className="h-4 w-4" />
                       </div>
                       <div>
-                        <CardTitle className="text-sm font-semibold">
+                        <CardTitle className="text-sm font-bold">
                           {t('Top Products', 'San pham ban chay')}
                         </CardTitle>
                         <CardDescription className="text-xs">
@@ -771,7 +784,7 @@ export default function DashboardPage() {
                         </CardDescription>
                       </div>
                     </div>
-                    <Badge variant="outline" className="font-mono text-xs">
+                    <Badge variant="outline" className="font-mono text-xs border-yellow-300 text-yellow-700">
                       {stats?.topProducts?.length || 0}
                     </Badge>
                   </div>
@@ -824,7 +837,7 @@ export default function DashboardPage() {
             <Card className="border-dashed">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm flex items-center gap-2">
-                  <div className="h-6 w-6 rounded-md bg-red-50 text-red-600 dark:bg-red-950/50 dark:text-red-400 flex items-center justify-center">
+                  <div className="h-6 w-6 rounded-md bg-gradient-to-br from-red-500 to-red-600 text-white flex items-center justify-center">
                     <ShieldCheck className="h-3.5 w-3.5" />
                   </div>
                   {t('Active Automation Rules', 'Quy tac Tu dong hoa Dang hoat dong')}
@@ -833,11 +846,11 @@ export default function DashboardPage() {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="flex items-start gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-400 flex items-center justify-center shrink-0 mt-0.5">
+                    <div className="h-8 w-8 rounded-lg bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-400 flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
                       <Lock className="h-4 w-4" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium">{t('Credit Auto-Lock', 'Tu khoa Cong no')}</p>
+                      <p className="text-sm font-semibold">{t('Credit Auto-Lock', 'Tu khoa Cong no')}</p>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {t(
                           'Shops with unpaid credit after Day 7 are auto-locked from placing new orders.',
@@ -847,11 +860,11 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-400 flex items-center justify-center shrink-0 mt-0.5">
+                    <div className="h-8 w-8 rounded-lg bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-400 flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
                       <Clock className="h-4 w-4" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium">{t('Group Buy Threshold', 'Nguong Mua chung')}</p>
+                      <p className="text-sm font-semibold">{t('Group Buy Threshold', 'Nguong Mua chung')}</p>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {t(
                           'No PO sent to distributor until MOQ is met. Auto-cancel if timer expires.',
@@ -861,11 +874,11 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-green-100 text-green-600 dark:bg-green-900/50 dark:text-green-400 flex items-center justify-center shrink-0 mt-0.5">
+                    <div className="h-8 w-8 rounded-lg bg-green-100 text-green-600 dark:bg-green-900/50 dark:text-green-400 flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
                       <Truck className="h-4 w-4" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium">{t('Cash Reconciliation', 'Doi chieu Tien mat')}</p>
+                      <p className="text-sm font-semibold">{t('Cash Reconciliation', 'Doi chieu Tien mat')}</p>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {t(
                           'Drivers must confirm cash collection in app before shop can open new credit.',
