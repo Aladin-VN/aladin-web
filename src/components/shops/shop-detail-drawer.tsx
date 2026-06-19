@@ -105,10 +105,10 @@ interface ShopDetail {
     type: string;
     amount: number;
     amountFormatted: string;
-    balanceAfter: number | null;
-    balanceAfterFormatted: string | null;
+    runningBalance: number | null;
+    runningBalanceFormatted: string | null;
     description: string | null;
-    createdBy: string | null;
+    collectedBy: string | null;
     createdAt: string;
   }[];
   stats: {
@@ -563,9 +563,9 @@ export function ShopDetailDrawer({
                                   </span>
                                 </TableCell>
                                 <TableCell className="text-right hidden sm:table-cell">
-                                  {tx.balanceAfter !== null ? (
+                                  {tx.runningBalance !== null ? (
                                     <span className="text-xs text-muted-foreground">
-                                      <SensitiveValue value={tx.balanceAfter} maskType="amount" formatOptions={{ formatCurrency: true }} />
+                                      <SensitiveValue value={tx.runningBalance} maskType="amount" formatOptions={{ formatCurrency: true }} />
                                     </span>
                                   ) : '-'}
                                 </TableCell>

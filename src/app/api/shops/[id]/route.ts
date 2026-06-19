@@ -40,9 +40,9 @@ export async function GET(
             paymentMethod: true,
             paymentStatus: true,
             totalAmount: true,
-            itemCount: true,
             createdAt: true,
             deliveredAt: true,
+            items: { select: { id: true } },
           },
         },
         transactions: {
@@ -52,9 +52,9 @@ export async function GET(
             id: true,
             type: true,
             amount: true,
-            balanceAfter: true,
+            runningBalance: true,
             description: true,
-            createdBy: true,
+            collectedBy: true,
             createdAt: true,
           },
         },
@@ -70,29 +70,29 @@ export async function GET(
 
     // Calculate summary stats
     const orderStats = await db.order.aggregate({
-      where: { shopId: id, deletedAt: null },
+      where: { shopId: id },
       _count: true,
       _sum: { totalAmount: true },
       _avg: { totalAmount: true },
     });
 
     const pendingOrders = await db.order.count({
-      where: { shopId: id, deletedAt: null, status: 'PENDING' },
+      where: { shopId: id, status: 'PENDING' },
     });
 
     const deliveredOrders = await db.order.count({
-      where: { shopId: id, deletedAt: null, status: 'DELIVERED' },
+      where: { shopId: id, status: 'DELIVERED' },
     });
 
     // Recent 30-day orders
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const recentOrders = await db.order.count({
-      where: { shopId: id, deletedAt: null, createdAt: { gte: thirtyDaysAgo } },
+      where: { shopId: id, createdAt: { gte: thirtyDaysAgo } },
     });
 
     const recentGmv = await db.order.aggregate({
-      where: { shopId: id, deletedAt: null, createdAt: { gte: thirtyDaysAgo } },
+      where: { shopId: id, createdAt: { gte: thirtyDaysAgo } },
       _sum: { totalAmount: true },
     });
 
@@ -132,15 +132,29 @@ export async function GET(
 
       // Recent orders with formatted amounts
       recentOrdersList: shop.orders.map((o) => ({
-        ...o,
+        id: o.id,
+        orderNumber: o.orderNumber,
+        status: o.status,
+        paymentMethod: o.paymentMethod,
+        paymentStatus: o.paymentStatus,
+        totalAmount: o.totalAmount,
         totalAmountFormatted: formatVND(o.totalAmount),
+        itemCount: o.items.length,
+        createdAt: o.createdAt,
+        deliveredAt: o.deliveredAt,
       })),
 
       // Transaction history
       transactionHistory: shop.transactions.map((t) => ({
-        ...t,
+        id: t.id,
+        type: t.type,
+        amount: t.amount,
         amountFormatted: formatVND(t.amount),
-        balanceAfterFormatted: t.balanceAfter ? formatVND(t.balanceAfter) : null,
+        runningBalance: t.runningBalance,
+        runningBalanceFormatted: t.runningBalance ? formatVND(t.runningBalance) : null,
+        description: t.description,
+        collectedBy: t.collectedBy,
+        createdAt: t.createdAt,
       })),
 
       // Calculated stats
