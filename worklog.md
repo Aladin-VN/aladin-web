@@ -1,28 +1,26 @@
 ---
 Task ID: 1
-Agent: main
-Task: Import real Aladin Excel data into Neon PostgreSQL, push to GitHub
+Agent: Main Agent
+Task: Fix all Aladin platform issues — login, dashboard NaN, reports empty, RBAC, user passwords
 
 Work Log:
-- Read and analyzed all 17 sheets in the Excel workbook
-- Identified 6 data sheets: Customer (295), Product (387), Order (149), OrderDetails (2998), ProductCategory (17), Telesale (1000)
-- Mapped Excel schema to Prisma schema, identified mismatches (flat Customer→User+Shop, INT IDs→CUID, prices in thousands, etc.)
-- Created import script using direct pg (bypasses Prisma Client Neon adapter issues)
-- Fixed phone normalization (VN phones without leading 0, multi-line phones, empty phones)
-- Fixed date parsing (Excel serial dates, invalid dates)
-- Truncated all existing seed data, ran clean import
-- Created admin user (0900000001 / aladin123) and platform settings
-- Updated shop statistics (totalOrders, totalGmv, avgOrderValue) from actual order data
-- Committed and pushed to GitHub
+- Fixed ROOT CAUSE: .env file was reset to SQLite path instead of Neon PostgreSQL URL
+- Fixed JWT_SECRET and JWT_REFRESH_SECRET — hardcoded fallbacks so tokens survive server restarts
+- Fixed products page fetchStats: changed raw `fetch()` to `adminFetch()` (4 calls) so auth token is sent
+- Fixed dashboard NaN: added `?? 0` null coalescing on monthlyOrderCount, retentionRate, pipeline count
+- Fixed reports page: replaced all 5 `if (!data) return null` with error states + retry buttons
+- Fixed mobile order detail: replaced local `formatVND` (no NaN guard) with shared `formatVND` from security.ts
+- Added RBAC to mobile bottom nav: Products tab hidden for DRIVER/BROKER, Credit tab hidden for DRIVER/BROKER
+- Set password 'aladin123' for ALL 279 users in Neon DB (scrypt hash with N=16384, r=8, p=1, keylen=64)
+- Verified: RBAC was already implemented in admin sidebar (role-based nav filtering)
+- Verified: Data visibility filtering already in orders API (getOrderFilter) and dashboard API
+- Build passes cleanly with no errors
 
 Stage Summary:
-- 17 categories imported
-- 387 products imported (8 skipped: no name)
-- 278 customers imported as User+Shop pairs (17 skipped: no name)
-- 145 orders imported (4 skipped: customer not found)
-- 486 order items imported (1870 skipped: reference orders not in Order sheet)
-- Total GMV: 219.6M VND across 144 delivered orders
-- 57 active shops with computed order statistics
-- Admin user created for platform access
-- Code pushed to GitHub: Aladin-VN/aladin-web main branch
-- Vercel deployment requires user to set DATABASE_URL env var (script provided)
+- Login will work again: .env has correct Neon URL + JWT secrets are stable
+- All 279 users can login with phone + password 'aladin123'
+- Dashboard NaN fixed with null coalescing guards
+- Reports show error messages instead of blank when API fails
+- Products page stats will load (adminFetch with auth token)
+- Mobile bottom nav respects roles (DRIVER/BROKER see fewer tabs)
+- Mobile order detail won't show NaN for amounts

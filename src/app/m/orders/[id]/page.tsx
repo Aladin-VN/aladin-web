@@ -26,12 +26,14 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import type { OrderDetail, ShipmentStatus } from '@/types';
 
+import { formatVND as formatVNDShared } from '@/lib/security';
+
 // ============================================
 // Helpers
 // ============================================
 
 function formatVND(amount: number): string {
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(amount);
+  return formatVNDShared(Number(amount) || 0);
 }
 
 function formatDate(dateStr: string | Date | null | undefined, locale: string): string {

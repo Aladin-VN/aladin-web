@@ -461,7 +461,7 @@ export default function ReportsPage() {
   // ============================================
   const renderRevenue = () => {
     if (loading) return <div className="space-y-4"><Skeleton className="h-8 w-full" /><div className="grid grid-cols-4 gap-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}</div><Skeleton className="h-64 w-full" /></div>;
-    if (!revenue) return null;
+    if (!revenue) return <div className="text-center py-12"><p className="text-sm text-muted-foreground">{t('Failed to load revenue data.', 'Khong the tai du lieu doanh thu.')}</p><Button variant="outline" size="sm" className="mt-3" onClick={() => fetchTabData('revenue')}>{t('Retry', 'Thu lai')}</Button></div>;
 
     const k = revenue.kpis;
 
@@ -582,7 +582,7 @@ export default function ReportsPage() {
   // ============================================
   const renderOrders = () => {
     if (loading) return <div className="space-y-4"><div className="grid grid-cols-4 gap-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}</div></div>;
-    if (!ordersData) return null;
+    if (!ordersData) return <div className="text-center py-12"><p className="text-sm text-muted-foreground">{t('Failed to load orders data.', 'Khong the tai du lieu don hang.')}</p><Button variant="outline" size="sm" className="mt-3" onClick={() => fetchTabData('orders')}>{t('Retry', 'Thu lai')}</Button></div>;
 
     const k = ordersData.kpis;
 
@@ -731,7 +731,7 @@ export default function ReportsPage() {
   // ============================================
   const renderProducts = () => {
     if (loading) return <div className="space-y-4"><div className="grid grid-cols-4 gap-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}</div></div>;
-    if (!productsData) return null;
+    if (!productsData) return <div className="text-center py-12"><p className="text-sm text-muted-foreground">{t('Failed to load products data.', 'Khong the tai du lieu san pham.')}</p><Button variant="outline" size="sm" className="mt-3" onClick={() => fetchTabData('products')}>{t('Retry', 'Thu lai')}</Button></div>;
 
     const k = productsData.kpis;
 
@@ -848,7 +848,7 @@ export default function ReportsPage() {
   // ============================================
   const renderShops = () => {
     if (loading) return <div className="space-y-4"><div className="grid grid-cols-4 gap-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}</div></div>;
-    if (!shopsData) return null;
+    if (!shopsData) return <div className="text-center py-12"><p className="text-sm text-muted-foreground">{t('Failed to load shops data.', 'Khong the tai du lieu cua hang.')}</p><Button variant="outline" size="sm" className="mt-3" onClick={() => fetchTabData('shops')}>{t('Retry', 'Thu lai')}</Button></div>;
 
     const k = shopsData.kpis;
     const ch = k.creditHealth;
@@ -963,7 +963,7 @@ export default function ReportsPage() {
   // ============================================
   const renderShipments = () => {
     if (loading) return <div className="space-y-4"><div className="grid grid-cols-4 gap-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}</div></div>;
-    if (!shipmentsData) return null;
+    if (!shipmentsData) return <div className="text-center py-12"><p className="text-sm text-muted-foreground">{t('Failed to load shipments data.', 'Khong the tai du lieu van chuyen.')}</p><Button variant="outline" size="sm" className="mt-3" onClick={() => fetchTabData('shipments')}>{t('Retry', 'Thu lai')}</Button></div>;
 
     const k = shipmentsData.kpis;
 

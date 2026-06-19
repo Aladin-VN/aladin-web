@@ -1,0 +1,1174 @@
+     1→'use client';
+     2→
+     3→import { useState, useEffect, useCallback, useRef } from 'react';
+     4→import { MobileHeader } from '@/components/mobile/mobile-header';
+     5→import { useAppStore } from '@/stores/app.store';
+     6→import { api } from '@/lib/mobile/api';
+     7→import { cn } from '@/lib/utils';
+     8→import {
+     9→  DollarSign,
+    10→  TrendingUp,
+    11→  Users,
+    12→  MapPin,
+    13→  RefreshCw,
+    14→  AlertCircle,
+    15→  CheckCircle2,
+    16→  MinusCircle,
+    17→  Trophy,
+    18→  ChevronDown,
+    19→  Filter,
+    20→  Building2,
+    21→  Store,
+    22→  Loader2,
+    23→} from 'lucide-react';
+    24→
+    25→// ============================================
+    26→// Types
+    27→// ============================================
+    28→
+    29→interface BrokerStats {
+    30→  totalBrokers: number;
+    31→  activeBrokers: number;
+    32→  newBrokersThisMonth: number;
+    33→  totalCommissionEarned: number;
+    34→  totalCommissionEarnedFormatted: string;
+    35→  totalGmvGenerated: number;
+    36→  totalGmvGeneratedFormatted: string;
+    37→  avgCommissionPerBroker: number;
+    38→  avgGmvPerBroker: number;
+    39→  tierDistribution: Record<string, number>;
+    40→  topPerformers: TopPerformer[];
+    41→  territoryCoverage: {
+    42→    totalWards: number;
+    43→    coveredWards: number;
+    44→    uncoveredWards: number;
+    45→    coveragePercent: number;
+    46→  };
+    47→  monthlyTrends: MonthlyTrend[];
+    48→}
+    49→
+    50→interface TopPerformer {
+    51→  id: string;
+    52→  name: string;
+    53→  phone: string;
+    54→  tier: string;
+    55→  gmvGenerated: number;
+    56→  gmvGeneratedFormatted: string;
+    57→  commissionEarned: number;
+    58→  commissionEarnedFormatted: string;
+    59→  shopsReferred: number;
+    60→}
+    61→
+    62→interface MonthlyTrend {
+    63→  month: string;
+    64→  brokers: number;
+    65→  gmv: number;
+    66→  gmvFormatted: string;
+    67→  commission: number;
+    68→  commissionFormatted: string;
+    69→}
+    70→
+    71→interface CommissionItem {
+    72→  id: string;
+    73→  userId: string;
+    74→  name: string;
+    75→  phone: string;
+    76→  status: string;
+    77→  tier: string;
+    78→  commissionRate: number;
+    79→  commissionRatePercent: string;
+    80→  totalShopsReferred: number;
+    81→  totalCommissionEarned: number;
+    82→  totalCommissionEarnedFormatted: string;
+    83→  totalGmvGenerated: number;
+    84→  totalGmvGeneratedFormatted: string;
+    85→  effectiveRate: string;
+    86→  ward: { id: string; name: string; district: string } | null;
+    87→  joinedAt: string;
+    88→}
+    89→
+    90→interface CommissionSummary {
+    91→  totalUnpaidCommission: number;
+    92→  totalUnpaidCommissionFormatted: string;
+    93→  totalGmvGenerated: number;
+    94→  totalGmvGeneratedFormatted: string;
+    95→  brokersWithEarnings: number;
+    96→  brokersWithoutEarnings: number;
+    97→}
+    98→
+    99→interface TerritoryWard {
+   100→  wardId: string;
+   101→  wardName: string;
+   102→  wardNameEn: string;
+   103→  district: string;
+   104→  shopCount: number;
+   105→  assignedBrokers: {
+   106→    brokerId: string;
+   107→    name: string;
+   108→    phone: string;
+   109→    tier: string;
+   110→    commissionRate: number;
+   111→    status: string;
+   112→    totalShopsReferred: number;
+   113→    totalGmvGenerated: number;
+   114→  }[];
+   115→  isCovered: boolean;
+   116→  brokerCount: number;
+   117→}
+   118→
+   119→interface TerritoryDistrict {
+   120→  district: string;
+   121→  wardCount: number;
+   122→}
+   123→
+   124→interface TerritorySummary {
+   125→  totalWards: number;
+   126→  coveredWards: number;
+   127→  uncoveredWards: number;
+   128→  coveragePercent: number;
+   129→  totalShops: number;
+   130→  coveredShops: number;
+   131→  uncoveredShops: number;
+   132→  shopCoveragePercent: number;
+   133→}
+   134→
+   135→// ============================================
+   136→// Tier Labels Map (outside component)
+   137→// ============================================
+   138→
+   139→const TIER_LABELS: Record<string, { vi: string; en: string; color: string }> = {
+   140→  WARD_LEVEL: { vi: 'Cấp phường', en: 'Ward Level', color: 'bg-blue-100 text-blue-700' },
+   141→  CATEGORY_SPECIALIST: { vi: 'Chuyên ngành', en: 'Category Specialist', color: 'bg-purple-100 text-purple-700' },
+   142→  FACTORY_GATE: { vi: 'Cổng nhà máy', en: 'Factory Gate', color: 'bg-yellow-50 text-red-700' },
+   143→};
+   144→
+   145→const STATUS_LABELS: Record<string, { vi: string; en: string; color: string }> = {
+   146→  ACTIVE: { vi: 'Hoạt động', en: 'Active', color: 'bg-yellow-50 text-red-700' },
+   147→  INACTIVE: { vi: 'Ngưng', en: 'Inactive', color: 'bg-gray-100 text-gray-600' },
+   148→  LOCKED: { vi: 'Bị khóa', en: 'Locked', color: 'bg-red-100 text-red-700' },
+   149→  SUSPENDED: { vi: 'Tạm đình chỉ', en: 'Suspended', color: 'bg-amber-100 text-amber-700' },
+   150→};
+   151→
+   152→const TABS = [
+   153→  { id: 'overview', vi: 'Tổng quan', en: 'Overview' },
+   154→  { id: 'commissions', vi: 'Hoa hồng', en: 'Commissions' },
+   155→  { id: 'territory', vi: 'Lãnh thổ', en: 'Territory' },
+   156→] as const;
+   157→
+   158→type TabId = (typeof TABS)[number]['id'];
+   159→
+   160→const VI_MONTHS = [
+   161→  'T1', 'T2', 'T3', 'T4', 'T5', 'T6',
+   162→  'T7', 'T8', 'T9', 'T10', 'T11', 'T12',
+   163→];
+   164→
+   165→// ============================================
+   166→// Helper: parse month string to short label
+   167→// ============================================
+   168→
+   169→function formatMonthLabel(monthStr: string, locale: string): string {
+   170→  const date = new Date(monthStr + '-01T00:00:00');
+   171→  if (isNaN(date.getTime())) return monthStr;
+   172→  if (locale === 'vi') {
+   173→    return `${VI_MONTHS[date.getMonth()]}/${String(date.getFullYear()).slice(2)}`;
+   174→  }
+   175→  const short = date.toLocaleDateString('en-US', { month: 'short' });
+   176→  return `${short} '${String(date.getFullYear()).slice(2)}`;
+   177→}
+   178→
+   179→// ============================================
+   180→// Pull-to-refresh hook
+   181→// ============================================
+   182→
+   183→function usePullToRefresh(onRefresh: () => Promise<void>) {
+   184→  const [pullDistance, setPullDistance] = useState(0);
+   185→  const [isRefreshing, setIsRefreshing] = useState(false);
+   186→  const startYRef = useRef(0);
+   187→  const THRESHOLD = 70;
+   188→
+   189→  const handleTouchStart = (e: React.TouchEvent) => {
+   190→    startYRef.current = e.touches[0].clientY;
+   191→  };
+   192→
+   193→  const handleTouchMove = (e: React.TouchEvent) => {
+   194→    if (isRefreshing) return;
+   195→    const delta = e.touches[0].clientY - startYRef.current;
+   196→    if (delta > 0 && window.scrollY <= 0) {
+   197→      const distance = Math.min(delta * 0.4, THRESHOLD * 1.3);
+   198→      setPullDistance(distance);
+   199→    }
+   200→  };
+   201→
+   202→  const handleTouchEnd = async () => {
+   203→    if (pullDistance >= THRESHOLD && !isRefreshing) {
+   204→      setIsRefreshing(true);
+   205→      setPullDistance(0);
+   206→      try { await onRefresh(); } catch { /* swallow */ }
+   207→      setIsRefreshing(false);
+   208→    } else {
+   209→      setPullDistance(0);
+   210→    }
+   211→  };
+   212→
+   213→  return {
+   214→    pullDistance,
+   215→    isRefreshing,
+   216→    THRESHOLD,
+   217→    pullHandlers: {
+   218→      onTouchStart: handleTouchStart,
+   219→      onTouchMove: handleTouchMove,
+   220→      onTouchEnd: handleTouchEnd,
+   221→    },
+   222→  };
+   223→}
+   224→
+   225→// ============================================
+   226→// Overview Tab Content
+   227→// ============================================
+   228→
+   229→function OverviewTab({
+   230→  stats,
+   231→  locale,
+   232→}: {
+   233→  stats: BrokerStats;
+   234→  locale: string;
+   235→}) {
+   236→  const t = (vi: string, en: string) => locale === 'vi' ? vi : en;
+   237→
+   238→  const maxCommission = Math.max(...stats.monthlyTrends.map((m) => m.commission), 1);
+   239→  const lastSixMonths = stats.monthlyTrends.slice(-6);
+   240→
+   241→  return (
+   242→    <div className="space-y-5">
+   243→      {/* Hero KPI Grid 2x2 */}
+   244→      <div className="grid grid-cols-2 gap-3">
+   245→        {/* Total Commission */}
+   246→        <div className="bg-yellow-50/50 border border-yellow-100 dark:border-red-900 dark:bg-emerald-950/30 rounded-xl p-3">
+   247→          <div className="flex items-start justify-between">
+   248→            <div className="flex-1 min-w-0">
+   249→              <p className="text-[11px] text-muted-foreground font-medium">
+   250→                {t('Tổng hoa hồng', 'Total Commission')}
+   251→              </p>
+   252→              <p className="text-base font-bold mt-1 truncate">
+   253→                {stats.totalCommissionEarnedFormatted}
+   254→              </p>
+   255→            </div>
+   256→            <div className="h-8 w-8 rounded-lg bg-yellow-50 text-red-600 flex items-center justify-center shrink-0 ml-2">
+   257→              <DollarSign className="h-4 w-4" />
+   258→            </div>
+   259→          </div>
+   260→          {stats.newBrokersThisMonth > 0 && (
+   261→            <div className="flex items-center mt-1.5">
+   262→              <TrendingUp className="h-3 w-3 text-red-600 mr-0.5" />
+   263→              <span className="text-[11px] text-red-600 font-medium">
+   264→                +{stats.newBrokersThisMonth} {t('đại lý mới', 'new')}
+   265→              </span>
+   266→            </div>
+   267→          )}
+   268→        </div>
+   269→
+   270→        {/* Total GMV */}
+   271→        <div className="rounded-xl border border-border p-3">
+   272→          <div className="flex items-start justify-between">
+   273→            <div className="flex-1 min-w-0">
+   274→              <p className="text-[11px] text-muted-foreground font-medium">
+   275→                {t('Tổng GMV', 'Total GMV')}
+   276→              </p>
+   277→              <p className="text-base font-bold mt-1 truncate">
+   278→                {stats.totalGmvGeneratedFormatted}
+   279→              </p>
+   280→            </div>
+   281→            <div className="h-8 w-8 rounded-lg bg-muted text-muted-foreground flex items-center justify-center shrink-0 ml-2">
+   282→              <TrendingUp className="h-4 w-4" />
+   283→            </div>
+   284→          </div>
+   285→        </div>
+   286→
+   287→        {/* Active Brokers */}
+   288→        <div className="rounded-xl border border-border p-3">
+   289→          <div className="flex items-start justify-between">
+   290→            <div className="flex-1 min-w-0">
+   291→              <p className="text-[11px] text-muted-foreground font-medium">
+   292→                {t('Đại lý hoạt động', 'Active Brokers')}
+   293→              </p>
+   294→              <p className="text-base font-bold mt-1">{stats.activeBrokers}</p>
+   295→            </div>
+   296→            <div className="h-8 w-8 rounded-lg bg-muted text-muted-foreground flex items-center justify-center shrink-0 ml-2">
+   297→              <Users className="h-4 w-4" />
+   298→            </div>
+   299→          </div>
+   300→          <p className="text-[11px] text-muted-foreground mt-1">
+   301→            {t(`trên ${stats.totalBrokers} tổng`, `of ${stats.totalBrokers} total`)}
+   302→          </p>
+   303→        </div>
+   304→
+   305→        {/* Territory Coverage */}
+   306→        <div className="rounded-xl border border-border p-3">
+   307→          <div className="flex items-start justify-between">
+   308→            <div className="flex-1 min-w-0">
+   309→              <p className="text-[11px] text-muted-foreground font-medium">
+   310→                {t('Phủ sóng lãnh thổ', 'Territory Coverage')}
+   311→              </p>
+   312→              <p className="text-base font-bold mt-1">
+   313→                {stats.territoryCoverage.coveragePercent}%
+   314→              </p>
+   315→            </div>
+   316→            <div className="h-8 w-8 rounded-lg bg-muted text-muted-foreground flex items-center justify-center shrink-0 ml-2">
+   317→              <MapPin className="h-4 w-4" />
+   318→            </div>
+   319→          </div>
+   320→          <p className="text-[11px] text-muted-foreground mt-1">
+   321→            {stats.territoryCoverage.coveredWards}/{stats.territoryCoverage.totalWards} {t('phường', 'wards')}
+   322→          </p>
+   323→        </div>
+   324→      </div>
+   325→
+   326→      {/* Top Performers */}
+   327→      {stats.topPerformers.length > 0 && (
+   328→        <section>
+   329→          <h3 className="text-sm font-semibold mb-3">
+   330→            {t('Top đại lý hiệu suất cao', 'Top Performers')}
+   331→          </h3>
+   332→          <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1 -mx-4 px-4">
+   333→            {stats.topPerformers.slice(0, 5).map((broker, idx) => {
+   334→              const rankColors = [
+   335→                'bg-amber-100 text-amber-700 border-amber-200',
+   336→                'bg-gray-100 text-gray-600 border-gray-200',
+   337→                'bg-orange-100 text-orange-700 border-orange-200',
+   338→                'bg-muted text-muted-foreground border-border',
+   339→                'bg-muted text-muted-foreground border-border',
+   340→              ];
+   341→              const tierInfo = TIER_LABELS[broker.tier];
+   342→              return (
+   343→                <div
+   344→                  key={broker.id}
+   345→                  className="shrink-0 w-52 bg-card border border-border rounded-xl p-3"
+   346→                >
+   347→                  {/* Rank + Name */}
+   348→                  <div className="flex items-center gap-2 mb-2">
+   349→                    <div className={cn(
+   350→                      'h-6 w-6 rounded-full flex items-center justify-center text-[11px] font-bold border',
+   351→                      rankColors[idx]
+   352→                    )}>
+   353→                      {idx + 1}
+   354→                    </div>
+   355→                    <div className="min-w-0 flex-1">
+   356→                      <p className="text-sm font-semibold truncate">{broker.name}</p>
+   357→                    </div>
+   358→                  </div>
+   359→                  {/* Tier badge */}
+   360→                  {tierInfo && (
+   361→                    <span className={cn('inline-block text-[10px] font-medium px-2 py-0.5 rounded-full mb-2', tierInfo.color)}>
+   362→                      {locale === 'vi' ? tierInfo.vi : tierInfo.en}
+   363→                    </span>
+   364→                  )}
+   365→                  {/* Stats */}
+   366→                  <div className="space-y-1">
+   367→                    <div className="flex items-center justify-between">
+   368→                      <span className="text-[11px] text-muted-foreground">{t('GMV', 'GMV')}</span>
+   369→                      <span className="text-xs font-semibold">{broker.gmvGeneratedFormatted}</span>
+   370→                    </div>
+   371→                    <div className="flex items-center justify-between">
+   372→                      <span className="text-[11px] text-muted-foreground">{t('Hoa hồng', 'Commission')}</span>
+   373→                      <span className="text-xs font-semibold text-red-600">{broker.commissionEarnedFormatted}</span>
+   374→                    </div>
+   375→                    <div className="flex items-center justify-between">
+   376→                      <span className="text-[11px] text-muted-foreground">{t('Cửa hàng', 'Shops')}</span>
+   377→                      <span className="text-xs font-medium">{broker.shopsReferred}</span>
+   378→                    </div>
+   379→                  </div>
+   380→                </div>
+   381→              );
+   382→            })}
+   383→          </div>
+   384→        </section>
+   385→      )}
+   386→
+   387→      {/* Monthly Commission Trend — Pure CSS Bar Chart */}
+   388→      {lastSixMonths.length > 0 && (
+   389→        <section>
+   390→          <h3 className="text-sm font-semibold mb-3">
+   391→            {t('Xu hướng hoa hồng theo tháng', 'Monthly Commission Trend')}
+   392→          </h3>
+   393→          <div className="bg-card border border-border rounded-xl p-4">
+   394→            <div className="flex items-end gap-2 h-36">
+   395→              {lastSixMonths.map((item) => {
+   396→                const height = Math.max((item.commission / maxCommission) * 100, 4);
+   397→                return (
+   398→                  <div key={item.month} className="flex-1 flex flex-col items-center gap-1.5">
+   399→                    <span className="text-[10px] text-muted-foreground font-medium whitespace-nowrap">
+   400→                      {item.commissionFormatted}
+   401→                    </span>
+   402→                    <div className="w-full flex items-end" style={{ height: '100px' }}>
+   403→                      <div
+   404→                        className="w-full rounded-t-md bg-primary/80 transition-all duration-500 min-h-[4px]"
+   405→                        style={{ height: `${height}%` }}
+   406→                      />
+   407→                    </div>
+   408→                    <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+   409→                      {formatMonthLabel(item.month, locale)}
+   410→                    </span>
+   411→                  </div>
+   412→                );
+   413→              })}
+   414→            </div>
+   415→          </div>
+   416→        </section>
+   417→      )}
+   418→
+   419→      {/* Tier Distribution */}
+   420→      <section>
+   421→        <h3 className="text-sm font-semibold mb-3">
+   422→          {t('Phân loại đại lý', 'Tier Distribution')}
+   423→        </h3>
+   424→        <div className="flex gap-2 flex-wrap">
+   425→          {Object.entries(TIER_LABELS).map(([tier, info]) => {
+   426→            const count = stats.tierDistribution[tier] || 0;
+   427→            return (
+   428→              <div
+   429→                key={tier}
+   430→                className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 py-2"
+   431→              >
+   432→                <span className={cn('text-[10px] font-medium px-2 py-0.5 rounded-full', info.color)}>
+   433→                  {locale === 'vi' ? info.vi : info.en}
+   434→                </span>
+   435→                <span className="text-sm font-bold">{count}</span>
+   436→              </div>
+   437→            );
+   438→          })}
+   439→        </div>
+   440→      </section>
+   441→    </div>
+   442→  );
+   443→}
+   444→
+   445→// ============================================
+   446→// Commissions Tab Content
+   447→// ============================================
+   448→
+   449→function CommissionsTabSkeleton() {
+   450→  return (
+   451→    <div className="space-y-4">
+   452→      {/* Summary banner skeleton */}
+   453→      <div className="bg-muted/50 rounded-xl p-4 space-y-3">
+   454→        <div className="h-5 w-40 bg-muted rounded animate-pulse" />
+   455→        <div className="grid grid-cols-3 gap-3">
+   456→          {[1, 2, 3].map((i) => (
+   457→            <div key={i} className="space-y-1">
+   458→              <div className="h-3 w-16 bg-muted rounded animate-pulse" />
+   459→              <div className="h-4 w-20 bg-muted rounded animate-pulse" />
+   460→            </div>
+   461→          ))}
+   462→        </div>
+   463→      </div>
+   464→      {/* Card skeletons */}
+   465→      {[1, 2, 3].map((i) => (
+   466→        <div key={i} className="bg-card border border-border rounded-xl p-4 space-y-3 animate-pulse">
+   467→          <div className="flex items-center gap-2">
+   468→            <div className="h-4 w-28 bg-muted rounded" />
+   469→            <div className="h-5 w-20 bg-muted rounded-full" />
+   470→          </div>
+   471→          <div className="h-4 w-36 bg-muted rounded" />
+   472→          <div className="grid grid-cols-2 gap-2">
+   473→            <div className="h-3 w-24 bg-muted rounded" />
+   474→            <div className="h-3 w-20 bg-muted rounded" />
+   475→          </div>
+   476→        </div>
+   477→      ))}
+   478→    </div>
+   479→  );
+   480→}
+   481→
+   482→function CommissionCard({
+   483→  item,
+   484→  locale,
+   485→}: {
+   486→  item: CommissionItem;
+   487→  locale: string;
+   488→}) {
+   489→  const t = (vi: string, en: string) => locale === 'vi' ? vi : en;
+   490→  const tierInfo = TIER_LABELS[item.tier];
+   491→  const statusInfo = STATUS_LABELS[item.status] || { vi: item.status, en: item.status, color: 'bg-gray-100 text-gray-600' };
+   492→
+   493→  return (
+   494→    <div className="bg-card border border-border rounded-xl p-4">
+   495→      {/* Header: Name + phone + tier + status */}
+   496→      <div className="flex items-start justify-between mb-2">
+   497→        <div className="min-w-0 flex-1">
+   498→          <div className="flex items-center gap-2 flex-wrap">
+   499→            <p className="text-sm font-semibold">{item.name}</p>
+   500→            <span className={cn('text-[10px] font-medium px-2 py-0.5 rounded-full', tierInfo?.color || 'bg-gray-100 text-gray-600')}>
+   501→              {tierInfo ? (locale === 'vi' ? tierInfo.vi : tierInfo.en) : item.tier}
+   502→            </span>
+   503→          </div>
+   504→          <p className="text-xs text-muted-foreground mt-0.5">{item.phone}</p>
+   505→        </div>
+   506→        <span className={cn('text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0 ml-2', statusInfo.color)}>
+   507→          {locale === 'vi' ? statusInfo.vi : statusInfo.en}
+   508→        </span>
+   509→      </div>
+   510→
+   511→      {/* Commission info */}
+   512→      <div className="bg-muted/30 rounded-lg p-2.5 mb-2">
+   513→        <div className="flex items-center justify-between">
+   514→          <span className="text-[11px] text-muted-foreground">{t('Hoa hồng đã kiếm', 'Commission Earned')}</span>
+   515→          <span className="text-sm font-bold text-red-600">{item.totalCommissionEarnedFormatted}</span>
+   516→        </div>
+   517→      </div>
+   518→
+   519→      {/* Detail grid */}
+   520→      <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[11px]">
+   521→        <div className="flex items-center justify-between">
+   522→          <span className="text-muted-foreground">{t('Tỷ lệ', 'Rate')}</span>
+   523→          <span className="font-medium">{item.commissionRatePercent}</span>
+   524→        </div>
+   525→        <div className="flex items-center justify-between">
+   526→          <span className="text-muted-foreground">{t('GMV', 'GMV')}</span>
+   527→          <span className="font-medium">{item.totalGmvGeneratedFormatted}</span>
+   528→        </div>
+   529→        <div className="flex items-center justify-between">
+   530→          <span className="text-muted-foreground">{t('Cửa hàng', 'Shops')}</span>
+   531→          <span className="font-medium">{item.totalShopsReferred}</span>
+   532→        </div>
+   533→        <div className="flex items-center justify-between">
+   534→          <span className="text-muted-foreground">{t('Hiệu quả', 'Effective')}</span>
+   535→          <span className="font-medium">{item.effectiveRate}</span>
+   536→        </div>
+   537→      </div>
+   538→
+   539→      {/* Ward info */}
+   540→      {item.ward && (
+   541→        <div className="flex items-center gap-1 mt-2 pt-2 border-t border-border/50">
+   542→          <MapPin className="h-3 w-3 text-muted-foreground" />
+   543→          <span className="text-[11px] text-muted-foreground">
+   544→            {item.ward.name}, {item.ward.district}
+   545→          </span>
+   546→        </div>
+   547→      )}
+   548→    </div>
+   549→  );
+   550→}
+   551→
+   552→// ============================================
+   553→// Territory Tab Content
+   554→// ============================================
+   555→
+   556→function TerritoryTabSkeleton() {
+   557→  return (
+   558→    <div className="space-y-4">
+   559→      {/* Coverage summary skeleton */}
+   560→      <div className="bg-card border border-border rounded-xl p-4 space-y-3 animate-pulse">
+   561→        <div className="h-4 w-32 bg-muted rounded" />
+   562→        <div className="h-3 bg-muted rounded-full" />
+   563→        <div className="grid grid-cols-2 gap-3">
+   564→          {[1, 2].map((i) => (
+   565→            <div key={i} className="space-y-1">
+   566→              <div className="h-3 w-20 bg-muted rounded" />
+   567→              <div className="h-4 w-16 bg-muted rounded" />
+   568→            </div>
+   569→          ))}
+   570→        </div>
+   571→      </div>
+   572→      {/* Filter skeleton */}
+   573→      <div className="h-10 w-full bg-muted rounded-xl animate-pulse" />
+   574→      {/* Ward card skeletons */}
+   575→      {[1, 2, 3].map((i) => (
+   576→        <div key={i} className="bg-card border border-border rounded-xl p-4 space-y-2 animate-pulse">
+   577→          <div className="flex items-center gap-2">
+   578→            <div className="h-4 w-24 bg-muted rounded" />
+   579→            <div className="h-5 w-16 bg-muted rounded-full" />
+   580→          </div>
+   581→          <div className="h-3 w-32 bg-muted rounded" />
+   582→        </div>
+   583→      ))}
+   584→    </div>
+   585→  );
+   586→}
+   587→
+   588→// ============================================
+   589→// Main Page Component
+   590→// ============================================
+   591→
+   592→export default function BrokerDashboardPage() {
+   593→  const locale = useAppStore((s) => s.locale);
+   594→  const t = (vi: string, en: string) => locale === 'vi' ? vi : en;
+   595→
+   596→  // Tab state
+   597→  const [activeTab, setActiveTab] = useState<TabId>('overview');
+   598→
+   599→  // Overview state
+   600→  const [stats, setStats] = useState<BrokerStats | null>(null);
+   601→  const [statsLoading, setStatsLoading] = useState(true);
+   602→  const [statsError, setStatsError] = useState('');
+   603→
+   604→  // Commissions state
+   605→  const [commissions, setCommissions] = useState<CommissionItem[]>([]);
+   606→  const [commissionSummary, setCommissionSummary] = useState<CommissionSummary | null>(null);
+   607→  const [commissionsLoading, setCommissionsLoading] = useState(true);
+   608→  const [commissionsError, setCommissionsError] = useState('');
+   609→  const [commissionPage, setCommissionPage] = useState(1);
+   610→  const [commissionHasMore, setCommissionHasMore] = useState(true);
+   611→
+   612→  // Territory state
+   613→  const [territories, setTerritories] = useState<TerritoryWard[]>([]);
+   614→  const [territoryDistricts, setTerritoryDistricts] = useState<TerritoryDistrict[]>([]);
+   615→  const [territorySummary, setTerritorySummary] = useState<TerritorySummary | null>(null);
+   616→  const [territoryLoading, setTerritoryLoading] = useState(true);
+   617→  const [territoryError, setTerritoryError] = useState('');
+   618→  const [selectedDistrict, setSelectedDistrict] = useState('');
+   619→
+   620→  // General refresh
+   621→  const [refreshing, setRefreshing] = useState(false);
+   622→  const observerRef = useRef<IntersectionObserver | null>(null);
+   623→  const sentinelRef = useRef<HTMLDivElement | null>(null);
+   624→
+   625→  // ============================================
+   626→  // Data Fetchers
+   627→  // ============================================
+   628→
+   629→  const fetchStats = useCallback(async () => {
+   630→    setStatsLoading(true);
+   631→    setStatsError('');
+   632→    try {
+   633→      const res = await api.get<BrokerStats>('/brokers/stats');
+   634→      if (res.success && res.data) {
+   635→        setStats(res.data);
+   636→      } else {
+   637→        setStatsError(t('Không thể tải thống kê', 'Failed to load stats'));
+   638→      }
+   639→    } catch {
+   640→      setStatsError(t('Lỗi kết nối mạng', 'Network error'));
+   641→    } finally {
+   642→      setStatsLoading(false);
+   643→    }
+   644→  }, [t]);
+   645→
+   646→  const fetchCommissions = useCallback(async (page: number, reset: boolean) => {
+   647→    if (page === 1) setCommissionsLoading(true);
+   648→    setCommissionsError('');
+   649→    try {
+   650→      const res = await api.get<{
+   651→        items: CommissionItem[];
+   652→        pagination: { page: number; limit: number; total: number; totalPages: number };
+   653→        summary: CommissionSummary;
+   654→      }>('/brokers/commissions', {
+   655→        sortBy: 'totalCommissionEarned',
+   656→        sortOrder: 'desc',
+   657→        page,
+   658→        limit: 20,
+   659→      });
+   660→      if (res.success && res.data) {
+   661→        if (reset) {
+   662→          setCommissions(res.data.items);
+   663→        } else {
+   664→          setCommissions((prev) => [...prev, ...res.data!.items]);
+   665→        }
+   666→        setCommissionSummary(res.data.summary);
+   667→        setCommissionHasMore(page < res.data.pagination.totalPages);
+   668→      } else {
+   669→        setCommissionsError(t('Không thể tải dữ liệu hoa hồng', 'Failed to load commissions'));
+   670→      }
+   671→    } catch {
+   672→      setCommissionsError(t('Lỗi kết nối mạng', 'Network error'));
+   673→    } finally {
+   674→      setCommissionsLoading(false);
+   675→    }
+   676→  }, [t]);
+   677→
+   678→  const fetchTerritories = useCallback(async () => {
+   679→    setTerritoryLoading(true);
+   680→    setTerritoryError('');
+   681→    try {
+   682→      const res = await api.get<{
+   683→        territories: TerritoryWard[];
+   684→        districts: TerritoryDistrict[];
+   685→        summary: TerritorySummary;
+   686→      }>('/brokers/territories');
+   687→      if (res.success && res.data) {
+   688→        setTerritories(res.data.territories);
+   689→        setTerritoryDistricts(res.data.districts);
+   690→        setTerritorySummary(res.data.summary);
+   691→      } else {
+   692→        setTerritoryError(t('Không thể tải dữ liệu lãnh thổ', 'Failed to load territories'));
+   693→      }
+   694→    } catch {
+   695→      setTerritoryError(t('Lỗi kết nối mạng', 'Network error'));
+   696→    } finally {
+   697→      setTerritoryLoading(false);
+   698→    }
+   699→  }, [t]);
+   700→
+   701→  // ============================================
+   702→  // Effects
+   703→  // ============================================
+   704→
+   705→  // Initial load of all tabs
+   706→  useEffect(() => {
+   707→    fetchStats();
+   708→    fetchCommissions(1, true);
+   709→    fetchTerritories();
+   710→  }, [fetchStats, fetchCommissions, fetchTerritories]);
+   711→
+   712→  // Pull to refresh
+   713→  const handleRefresh = useCallback(async () => {
+   714→    setRefreshing(true);
+   715→    try {
+   716→      await Promise.all([
+   717→        fetchStats(),
+   718→        fetchCommissions(1, true),
+   719→        fetchTerritories(),
+   720→      ]);
+   721→      setCommissionPage(1);
+   722→    } catch { /* swallow */ }
+   723→    setRefreshing(false);
+   724→  }, [fetchStats, fetchCommissions, fetchTerritories]);
+   725→
+   726→  const { pullDistance, isRefreshing, THRESHOLD, pullHandlers } = usePullToRefresh(handleRefresh);
+   727→
+   728→  // Infinite scroll for commissions
+   729→  useEffect(() => {
+   730→    if (activeTab !== 'commissions') return;
+   731→    if (observerRef.current) observerRef.current.disconnect();
+   732→    observerRef.current = new IntersectionObserver(
+   733→      (entries) => {
+   734→        if (entries[0].isIntersecting && commissionHasMore && !commissionsLoading) {
+   735→          const nextPage = commissionPage + 1;
+   736→          setCommissionPage(nextPage);
+   737→          fetchCommissions(nextPage, false);
+   738→        }
+   739→      },
+   740→      { threshold: 0.5 }
+   741→    );
+   742→    if (sentinelRef.current) observerRef.current.observe(sentinelRef.current);
+   743→    return () => observerRef.current?.disconnect();
+   744→  }, [activeTab, commissionHasMore, commissionsLoading, commissionPage, fetchCommissions]);
+   745→
+   746→  // Filter territories by district
+   747→  const filteredTerritories = selectedDistrict
+   748→    ? territories.filter((w) => w.district === selectedDistrict)
+   749→    : territories;
+   750→
+   751→  // ============================================
+   752→  // Render
+   753→  // ============================================
+   754→
+   755→  return (
+   756→    <div className="min-h-screen bg-background" {...pullHandlers}>
+   757→      <MobileHeader
+   758→        title={t('Đại lý', 'Broker Dashboard')}
+   759→        showBack
+   760→        showNotifications={false}
+   761→      />
+   762→
+   763→      <main className="pb-4">
+   764→        {/* Pull to refresh spacer */}
+   765→        <div style={{ height: pullDistance, overflow: 'hidden' }} className="flex justify-center">
+   766→          {pullDistance > 0 && (
+   767→            <div className="flex items-center justify-center" style={{ height: Math.max(pullDistance, 40) }}>
+   768→              <div
+   769→                className={cn(
+   770→                  'h-8 w-8 rounded-full bg-muted flex items-center justify-center transition-all',
+   771→                  isRefreshing ? 'opacity-100' : 'opacity-70'
+   772→                )}
+   773→                style={{ transform: `rotate(${Math.min(pullDistance / THRESHOLD, 1) * 360}deg)` }}
+   774→              >
+   775→                <RefreshCw className={cn('h-4 w-4 text-muted-foreground', isRefreshing && 'animate-spin')} />
+   776→              </div>
+   777→            </div>
+   778→          )}
+   779→        </div>
+   780→
+   781→        {/* Refresh button row */}
+   782→        <div className="flex justify-end px-4 mb-2">
+   783→          <button
+   784→            onClick={handleRefresh}
+   785→            disabled={refreshing}
+   786→            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+   787→          >
+   788→            <RefreshCw className={cn('h-3.5 w-3.5', refreshing && 'animate-spin')} />
+   789→            {t('Làm mới', 'Refresh')}
+   790→          </button>
+   791→        </div>
+   792→
+   793→        {/* Sticky Tab Bar */}
+   794→        <div className="sticky top-14 z-40 bg-background border-b border-border">
+   795→          <div className="flex px-4">
+   796→            {TABS.map((tab) => (
+   797→              <button
+   798→                key={tab.id}
+   799→                onClick={() => setActiveTab(tab.id)}
+   800→                className={cn(
+   801→                  'flex-1 py-3 text-sm font-medium text-center relative transition-colors',
+   802→                  activeTab === tab.id
+   803→                    ? 'text-primary'
+   804→                    : 'text-muted-foreground hover:text-foreground'
+   805→                )}
+   806→              >
+   807→                {locale === 'vi' ? tab.vi : tab.en}
+   808→                {activeTab === tab.id && (
+   809→                  <div className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-primary rounded-full" />
+   810→                )}
+   811→              </button>
+   812→            ))}
+   813→          </div>
+   814→        </div>
+   815→
+   816→        {/* Tab Content */}
+   817→        <div className="px-4 pt-4">
+   818→          {/* ===== OVERVIEW TAB ===== */}
+   819→          {activeTab === 'overview' && (
+   820→            <>
+   821→              {statsLoading ? (
+   822→                <div className="space-y-5">
+   823→                  {/* KPI skeletons */}
+   824→                  <div className="grid grid-cols-2 gap-3">
+   825→                    {Array.from({ length: 4 }).map((_, i) => (
+   826→                      <div key={i} className="bg-muted/50 rounded-xl p-3 space-y-2 animate-pulse">
+   827→                        <div className="h-3 w-20 bg-muted rounded" />
+   828→                        <div className="h-5 w-28 bg-muted rounded" />
+   829→                      </div>
+   830→                    ))}
+   831→                  </div>
+   832→                  {/* Top performers skeleton */}
+   833→                  <div>
+   834→                    <div className="h-4 w-36 bg-muted rounded animate-pulse mb-3" />
+   835→                    <div className="flex gap-3 overflow-hidden">
+   836→                      {[1, 2].map((i) => (
+   837→                        <div key={i} className="shrink-0 w-52 bg-muted/50 rounded-xl p-3 space-y-2 animate-pulse">
+   838→                          <div className="h-4 w-24 bg-muted rounded" />
+   839→                          <div className="h-5 w-16 bg-muted rounded-full" />
+   840→                          <div className="h-3 w-28 bg-muted rounded" />
+   841→                        </div>
+   842→                      ))}
+   843→                    </div>
+   844→                  </div>
+   845→                  {/* Bar chart skeleton */}
+   846→                  <div>
+   847→                    <div className="h-4 w-40 bg-muted rounded animate-pulse mb-3" />
+   848→                    <div className="bg-muted/50 rounded-xl p-4">
+   849→                      <div className="flex items-end gap-2 h-36">
+   850→                        {[1, 2, 3, 4, 5, 6].map((i) => (
+   851→                          <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
+   852→                            <div className="h-3 w-12 bg-muted rounded animate-pulse" />
+   853→                            <div className="w-full bg-muted rounded-t-md animate-pulse" style={{ height: `${30 + Math.random() * 60}%` }} />
+   854→                            <div className="h-3 w-8 bg-muted rounded animate-pulse" />
+   855→                          </div>
+   856→                        ))}
+   857→                      </div>
+   858→                    </div>
+   859→                  </div>
+   860→                </div>
+   861→              ) : statsError ? (
+   862→                <div className="text-center py-12">
+   863→                  <AlertCircle className="h-10 w-10 mx-auto mb-3 text-destructive/50" />
+   864→                  <p className="text-sm font-medium">{statsError}</p>
+   865→                  <button
+   866→                    onClick={fetchStats}
+   867→                    className="mt-3 px-4 py-2 text-xs rounded-lg bg-primary text-primary-foreground"
+   868→                  >
+   869→                    {t('Thử lại', 'Retry')}
+   870→                  </button>
+   871→                </div>
+   872→              ) : stats ? (
+   873→                <OverviewTab stats={stats} locale={locale} />
+   874→              ) : null}
+   875→            </>
+   876→          )}
+   877→
+   878→          {/* ===== COMMISSIONS TAB ===== */}
+   879→          {activeTab === 'commissions' && (
+   880→            <>
+   881→              {commissionsLoading && commissions.length === 0 ? (
+   882→                <CommissionsTabSkeleton />
+   883→              ) : commissionsError && commissions.length === 0 ? (
+   884→                <div className="text-center py-12">
+   885→                  <AlertCircle className="h-10 w-10 mx-auto mb-3 text-destructive/50" />
+   886→                  <p className="text-sm font-medium">{commissionsError}</p>
+   887→                  <button
+   888→                    onClick={() => { setCommissionPage(1); setCommissionHasMore(true); fetchCommissions(1, true); }}
+   889→                    className="mt-3 px-4 py-2 text-xs rounded-lg bg-primary text-primary-foreground"
+   890→                  >
+   891→                    {t('Thử lại', 'Retry')}
+   892→                  </button>
+   893→                </div>
+   894→              ) : (
+   895→                <div className="space-y-4">
+   896→                  {/* Summary Banner */}
+   897→                  {commissionSummary && (
+   898→                    <div className="bg-yellow-50/50 border border-yellow-100 dark:border-red-900 dark:bg-emerald-950/30 rounded-xl p-4">
+   899→                      <p className="text-sm font-semibold text-red-800 dark:text-yellow-100 mb-3">
+   900→                        {t('Tổng quan hoa hồng', 'Commission Summary')}
+   901→                      </p>
+   902→                      <div className="grid grid-cols-2 gap-3">
+   903→                        <div>
+   904→                          <p className="text-[11px] text-muted-foreground">
+   905→                            {t('Chưa thanh toán', 'Unpaid')}
+   906→                          </p>
+   907→                          <p className="text-sm font-bold text-red-600">
+   908→                            {commissionSummary.totalUnpaidCommissionFormatted}
+   909→                          </p>
+   910→                        </div>
+   911→                        <div>
+   912→                          <p className="text-[11px] text-muted-foreground">
+   913→                            {t('Tổng GMV', 'Total GMV')}
+   914→                          </p>
+   915→                          <p className="text-sm font-bold">
+   916→                            {commissionSummary.totalGmvGeneratedFormatted}
+   917→                          </p>
+   918→                        </div>
+   919→                        <div>
+   920→                          <p className="text-[11px] text-muted-foreground">
+   921→                            {t('Có thu nhập', 'With earnings')}
+   922→                          </p>
+   923→                          <p className="text-sm font-semibold">{commissionSummary.brokersWithEarnings}</p>
+   924→                        </div>
+   925→                        <div>
+   926→                          <p className="text-[11px] text-muted-foreground">
+   927→                            {t('Chưa có thu nhập', 'No earnings')}
+   928→                          </p>
+   929→                          <p className="text-sm font-semibold text-muted-foreground">
+   930→                            {commissionSummary.brokersWithoutEarnings}
+   931→                          </p>
+   932→                        </div>
+   933→                      </div>
+   934→                    </div>
+   935→                  )}
+   936→
+   937→                  {/* Commission Cards List */}
+   938→                  <div className="space-y-3">
+   939→                    {commissions.map((item) => (
+   940→                      <CommissionCard key={item.id} item={item} locale={locale} />
+   941→                    ))}
+   942→                  </div>
+   943→
+   944→                  {/* Empty state */}
+   945→                  {commissions.length === 0 && !commissionsLoading && (
+   946→                    <div className="text-center py-12">
+   947→                      <DollarSign className="h-10 w-10 mx-auto mb-3 text-muted-foreground/50" />
+   948→                      <p className="text-sm font-medium">{t('Chưa có dữ liệu hoa hồng', 'No commission data yet')}</p>
+   949→                    </div>
+   950→                  )}
+   951→
+   952→                  {/* Infinite scroll sentinel */}
+   953→                  <div ref={activeTab === 'commissions' ? sentinelRef : null} className="h-1" />
+   954→
+   955→                  {/* Loading more indicator */}
+   956→                  {commissionsLoading && commissions.length > 0 && (
+   957→                    <div className="flex justify-center py-4">
+   958→                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+   959→                    </div>
+   960→                  )}
+   961→
+   962→                  {/* End of list indicator */}
+   963→                  {!commissionHasMore && commissions.length > 0 && (
+   964→                    <p className="text-center text-[10px] text-muted-foreground py-4">
+   965→                      {t('Đã hiển thị tất cả', 'All brokers shown')}
+   966→                    </p>
+   967→                  )}
+   968→                </div>
+   969→              )}
+   970→            </>
+   971→          )}
+   972→
+   973→          {/* ===== TERRITORY TAB ===== */}
+   974→          {activeTab === 'territory' && (
+   975→            <>
+   976→              {territoryLoading ? (
+   977→                <TerritoryTabSkeleton />
+   978→              ) : territoryError && territories.length === 0 ? (
+   979→                <div className="text-center py-12">
+   980→                  <AlertCircle className="h-10 w-10 mx-auto mb-3 text-destructive/50" />
+   981→                  <p className="text-sm font-medium">{territoryError}</p>
+   982→                  <button
+   983→                    onClick={fetchTerritories}
+   984→                    className="mt-3 px-4 py-2 text-xs rounded-lg bg-primary text-primary-foreground"
+   985→                  >
+   986→                    {t('Thử lại', 'Retry')}
+   987→                  </button>
+   988→                </div>
+   989→              ) : (
+   990→                <div className="space-y-4">
+   991→                  {/* Coverage Summary */}
+   992→                  {territorySummary && (
+   993→                    <div className="bg-card border border-border rounded-xl p-4">
+   994→                      <h3 className="text-sm font-semibold mb-3">
+   995→                        {t('Phủ sóng lãnh thổ', 'Territory Coverage')}
+   996→                      </h3>
+   997→
+   998→                      {/* Ward coverage progress bar */}
+   999→                      <div className="mb-3">
+  1000→                        <div className="flex items-center justify-between mb-1">
+  1001→                          <span className="text-[11px] text-muted-foreground">{t('Phường/Xã', 'Wards')}</span>
+  1002→                          <span className="text-[11px] font-medium">
+  1003→                            {territorySummary.coveredWards}/{territorySummary.totalWards} ({territorySummary.coveragePercent}%)
+  1004→                          </span>
+  1005→                        </div>
+  1006→                        <div className="h-2.5 bg-muted rounded-full overflow-hidden">
+  1007→                          <div
+  1008→                            className={cn(
+  1009→                              'h-full rounded-full transition-all duration-500',
+  1010→                              territorySummary.coveragePercent >= 70
+  1011→                                ? 'bg-red-500'
+  1012→                                : territorySummary.coveragePercent >= 40
+  1013→                                  ? 'bg-amber-500'
+  1014→                                  : 'bg-red-500'
+  1015→                            )}
+  1016→                            style={{ width: `${territorySummary.coveragePercent}%` }}
+  1017→                          />
+  1018→                        </div>
+  1019→                      </div>
+  1020→
+  1021→                      {/* Shop coverage progress bar */}
+  1022→                      <div className="mb-3">
+  1023→                        <div className="flex items-center justify-between mb-1">
+  1024→                          <span className="text-[11px] text-muted-foreground">{t('Cửa hàng', 'Shops')}</span>
+  1025→                          <span className="text-[11px] font-medium">
+  1026→                            {territorySummary.coveredShops}/{territorySummary.totalShops} ({territorySummary.shopCoveragePercent}%)
+  1027→                          </span>
+  1028→                        </div>
+  1029→                        <div className="h-2.5 bg-muted rounded-full overflow-hidden">
+  1030→                          <div
+  1031→                            className="h-full bg-primary rounded-full transition-all duration-500"
+  1032→                            style={{ width: `${territorySummary.shopCoveragePercent}%` }}
+  1033→                          />
+  1034→                        </div>
+  1035→                      </div>
+  1036→
+  1037→                      {/* Stats row */}
+  1038→                      <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border/50">
+  1039→                        <div className="flex items-center gap-1.5">
+  1040→                          <CheckCircle2 className="h-3.5 w-3.5 text-red-500" />
+  1041→                          <span className="text-[11px] text-muted-foreground">
+  1042→                            {territorySummary.coveredWards} {t('đã phủ', 'covered')}
+  1043→                          </span>
+  1044→                        </div>
+  1045→                        <div className="flex items-center gap-1.5">
+  1046→                          <MinusCircle className="h-3.5 w-3.5 text-red-400" />
+  1047→                          <span className="text-[11px] text-muted-foreground">
+  1048→                            {territorySummary.uncoveredWards} {t('chưa phủ', 'uncovered')}
+  1049→                          </span>
+  1050→                        </div>
+  1051→                      </div>
+  1052→                    </div>
+  1053→                  )}
+  1054→
+  1055→                  {/* District Filter */}
+  1056→                  {territoryDistricts.length > 1 && (
+  1057→                    <div className="relative">
+  1058→                      <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+  1059→                      <select
+  1060→                        value={selectedDistrict}
+  1061→                        onChange={(e) => setSelectedDistrict(e.target.value)}
+  1062→                        className="w-full h-10 pl-9 pr-10 text-sm rounded-xl border bg-card appearance-none outline-none focus:ring-2 focus:ring-primary/20"
+  1063→                      >
+  1064→                        <option value="">
+  1065→                          {t('Tất cả quận/huyện', 'All Districts')}
+  1066→                        </option>
+  1067→                        {territoryDistricts.map((d) => (
+  1068→                          <option key={d.district} value={d.district}>
+  1069→                            {d.district} ({d.wardCount} {locale === 'vi' ? 'phường' : 'wards'})
+  1070→                          </option>
+  1071→                        ))}
+  1072→                      </select>
+  1073→                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+  1074→                    </div>
+  1075→                  )}
+  1076→
+  1077→                  {/* Territory Ward List */}
+  1078→                  <div className="space-y-3">
+  1079→                    {filteredTerritories.map((ward) => {
+  1080→                      const tierInfo = ward.assignedBrokers.length > 0
+  1081→                        ? TIER_LABELS[ward.assignedBrokers[0].tier]
+  1082→                        : null;
+  1083→
+  1084→                      return (
+  1085→                        <div
+  1086→                          key={ward.wardId}
+  1087→                          className={cn(
+  1088→                            'bg-card border rounded-xl p-4 transition-colors',
+  1089→                            ward.isCovered
+  1090→                              ? 'border-border'
+  1091→                              : 'border-amber-200 bg-amber-50/30 dark:border-amber-900 dark:bg-amber-950/20'
+  1092→                          )}
+  1093→                        >
+  1094→                          {/* Ward header */}
+  1095→                          <div className="flex items-start justify-between mb-2">
+  1096→                            <div className="min-w-0 flex-1">
+  1097→                              <div className="flex items-center gap-2">
+  1098→                                <p className="text-sm font-semibold truncate">
+  1099→                                  {locale === 'vi' ? ward.wardName : ward.wardNameEn}
+  1100→                                </p>
+  1101→                                {ward.isCovered ? (
+  1102→                                  <CheckCircle2 className="h-4 w-4 text-red-500 shrink-0" />
+  1103→                                ) : (
+  1104→                                  <AlertCircle className="h-4 w-4 text-amber-500 shrink-0" />
+  1105→                                )}
+  1106→                              </div>
+  1107→                              <div className="flex items-center gap-1 mt-0.5">
+  1108→                                <Building2 className="h-3 w-3 text-muted-foreground" />
+  1109→                                <span className="text-[11px] text-muted-foreground">{ward.district}</span>
+  1110→                              </div>
+  1111→                            </div>
+  1112→                            <span className="flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground shrink-0 ml-2">
+  1113→                              <Store className="h-3 w-3" />
+  1114→                              {ward.shopCount}
+  1115→                            </span>
+  1116→                          </div>
+  1117→
+  1118→                          {/* Assigned brokers */}
+  1119→                          {ward.assignedBrokers.length > 0 ? (
+  1120→                            <div className="border-t border-border/50 pt-2 mt-1 space-y-1.5">
+  1121→                              {ward.assignedBrokers.map((broker) => {
+  1122→                                const bTierInfo = TIER_LABELS[broker.tier];
+  1123→                                const brokerGmvFormatted = broker.totalGmvGenerated
+  1124→                                  ? new Intl.NumberFormat('vi-VN').format(broker.totalGmvGenerated) + ' ₫'
+  1125→                                  : '0 ₫';
+  1126→                                return (
+  1127→                                  <div key={broker.brokerId} className="flex items-center gap-2">
+  1128→                                    <div className="flex-1 min-w-0">
+  1129→                                      <div className="flex items-center gap-1.5">
+  1130→                                        <Users className="h-3 w-3 text-muted-foreground" />
+  1131→                                        <span className="text-xs font-medium truncate">{broker.name}</span>
+  1132→                                        {bTierInfo && (
+  1133→                                          <span className={cn('text-[9px] font-medium px-1.5 py-px rounded-full', bTierInfo.color)}>
+  1134→                                            {(broker.commissionRate * 100).toFixed(1)}%
+  1135→                                          </span>
+  1136→                                        )}
+  1137→                                      </div>
+  1138→                                      <span className="text-[10px] text-muted-foreground ml-5">
+  1139→                                        {t(`${broker.totalShopsReferred} cửa hàng`, `${broker.totalShopsReferred} shops`)} · {brokerGmvFormatted}
+  1140→                                      </span>
+  1141→                                    </div>
+  1142→                                  </div>
+  1143→                                );
+  1144→                              })}
+  1145→                            </div>
+  1146→                          ) : (
+  1147→                            <div className="border-t border-border/50 pt-2 mt-1">
+  1148→                              <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+  1149→                                {t('Chưa có đại lý phụ trách', 'No broker assigned')}
+  1150→                              </p>
+  1151→                            </div>
+  1152→                          )}
+  1153→                        </div>
+  1154→                      );
+  1155→                    })}
+  1156→                  </div>
+  1157→
+  1158→                  {/* Empty territory state */}
+  1159→                  {filteredTerritories.length === 0 && !territoryLoading && (
+  1160→                    <div className="text-center py-12">
+  1161→                      <MapPin className="h-10 w-10 mx-auto mb-3 text-muted-foreground/50" />
+  1162→                      <p className="text-sm font-medium">{t('Không có dữ liệu lãnh thổ', 'No territory data')}</p>
+  1163→                    </div>
+  1164→                  )}
+  1165→                </div>
+  1166→              )}
+  1167→            </>
+  1168→          )}
+  1169→        </div>
+  1170→      </main>
+  1171→    </div>
+  1172→  );
+  1173→}
+  1174→

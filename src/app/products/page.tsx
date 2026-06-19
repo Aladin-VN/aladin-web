@@ -295,10 +295,10 @@ export default function ProductsPage() {
   const fetchStats = useCallback(async () => {
     try {
       const [allRes, activeRes, lowRes, outRes] = await Promise.all([
-        fetch('/api/products?limit=1'),
-        fetch('/api/products?isActive=true&limit=1'),
-        fetch('/api/products?lowStock=true&limit=1'),
-        fetch('/api/products?outOfStock=true&limit=1'),
+        adminFetch('/api/products?limit=1'),
+        adminFetch('/api/products?isActive=true&limit=1'),
+        adminFetch('/api/products?lowStock=true&limit=1'),
+        adminFetch('/api/products?outOfStock=true&limit=1'),
       ]);
       const [allJson, activeJson, lowJson, outJson] = await Promise.all([
         allRes.json(),

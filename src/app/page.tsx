@@ -348,7 +348,7 @@ export default function DashboardPage() {
               <StatCard
                 title="Total Orders"
                 titleVi="Tong don hang"
-                value={stats.monthlyOrderCount.toLocaleString()}
+                value={(stats.monthlyOrderCount ?? 0).toLocaleString()}
                 icon={<ShoppingCart className="h-4 w-4" />}
                 trend={8.3}
                 trendLabel={t('vs last month', 'so voi thang truoc')}
@@ -357,7 +357,7 @@ export default function DashboardPage() {
               <StatCard
                 title="Retention Rate"
                 titleVi="Ty giu chan"
-                value={`${stats.retentionRate}%`}
+                value={`${stats.retentionRate ?? 0}%`}
                 icon={<Users className="h-4 w-4" />}
                 trend={stats.retentionRate >= 80 ? 2.1 : -3.5}
                 trendLabel={t('vs last month', 'so voi thang truoc')}
@@ -414,7 +414,7 @@ export default function DashboardPage() {
                     </CardDescription>
                   </div>
                   <Badge className="bg-red-600 hover:bg-red-600 text-white font-mono">
-                    {stats.monthlyOrderCount} {t('orders', 'don')}
+                    {stats.monthlyOrderCount ?? 0} {t('orders', 'don')}
                   </Badge>
                 </div>
               </CardHeader>

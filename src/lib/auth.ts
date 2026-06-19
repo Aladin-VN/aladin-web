@@ -10,8 +10,8 @@ import { ROLES, type ApiResponse, errorResponse, successResponse, rateLimit } fr
 // CONFIGURATION
 // ============================================
 
-const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || crypto.randomBytes(32).toString('hex');
+const JWT_SECRET = process.env.JWT_SECRET || 'aladin-platform-jwt-secret-2024-secure-key-do-not-share';
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'aladin-platform-refresh-secret-2024-secure-key-do-not-share';
 
 const JWT_CONFIG = {
   accessToken: {

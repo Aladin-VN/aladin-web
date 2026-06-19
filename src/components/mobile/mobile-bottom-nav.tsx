@@ -10,9 +10,11 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useCartStore } from '@/stores/cart.store';
+import { useAppStore } from '@/stores/app.store';
+import { ROLES } from '@/lib/security';
 
 // ============================================
-// Tab configuration
+// Tab configuration with RBAC
 // ============================================
 
 interface NavTab {
@@ -21,6 +23,7 @@ interface NavTab {
   labelEn: string;
   icon: React.ReactNode;
   badge?: () => number | null;
+  roles?: string[]; // If set, only visible to these roles
 }
 
 const tabs: NavTab[] = [
@@ -29,30 +32,35 @@ const tabs: NavTab[] = [
     labelVi: 'Trang chủ',
     labelEn: 'Home',
     icon: <Home className="h-5 w-5" />,
+    // Visible to all roles
   },
   {
     href: '/m/products',
     labelVi: 'Sản phẩm',
     labelEn: 'Products',
     icon: <Package className="h-5 w-5" />,
+    roles: [ROLES.ADMIN, ROLES.SALES_REP, ROLES.SHOP_OWNER],
   },
   {
     href: '/m/orders',
     labelVi: 'Đơn hàng',
     labelEn: 'Orders',
     icon: <ShoppingCart className="h-5 w-5" />,
+    // Visible to all roles
   },
   {
     href: '/m/credit',
     labelVi: 'Công nợ',
     labelEn: 'Credit',
     icon: <CreditCard className="h-5 w-5" />,
+    roles: [ROLES.ADMIN, ROLES.SALES_REP, ROLES.SHOP_OWNER],
   },
   {
     href: '/m/profile',
     labelVi: 'Tài khoản',
     labelEn: 'Account',
     icon: <User className="h-5 w-5" />,
+    // Visible to all roles
   },
 ];
 
@@ -68,6 +76,13 @@ export function MobileBottomNav({ locale = 'vi' }: MobileBottomNavProps) {
   const pathname = usePathname();
   const router = useRouter();
   const cartItemCount = useCartStore((s) => s.itemCount());
+  const user = useAppStore((s) => s.user);
+  const userRole = user?.role;
+
+  // Filter tabs by role
+  const visibleTabs = userRole
+    ? tabs.filter((tab) => !tab.roles || tab.roles.includes(userRole))
+    : tabs; // Show all during hydration
 
   // Exact or child route match
   const isActive = (href: string) => {
@@ -78,7 +93,7 @@ export function MobileBottomNav({ locale = 'vi' }: MobileBottomNavProps) {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-t border-border safe-area-bottom">
       <div className="flex items-center justify-around h-16 max-w-lg mx-auto">
-        {tabs.map((tab) => {
+        {visibleTabs.map((tab) => {
           const active = isActive(tab.href);
           const badgeCount = tab.badge?.() || null;
           // Show cart count on orders tab if items exist
