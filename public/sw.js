@@ -1,8 +1,9 @@
-// ALADIN B2B — Service Worker
-// Strategy: Cache-first for static assets, Network-first for API calls
+// ALADIN B2B — Service Worker (Mobile PWA only)
+// Strategy: Only intercept /m/ (mobile) routes and static assets
+// Admin dashboard routes (/orders, /shops, etc.) are NEVER intercepted
 
-const CACHE_NAME = 'aladin-v1';
-const STATIC_CACHE = 'aladin-static-v1';
+const CACHE_NAME = 'aladin-v2';
+const STATIC_CACHE = 'aladin-static-v2';
 const OFFLINE_URL = '/m/offline';
 
 // ============================================
@@ -15,8 +16,9 @@ self.addEventListener('install', (event) => {
       return cache.addAll([
         OFFLINE_URL,
         '/manifest.json',
-        '/icons/icon-192x192.png',
       ]);
+    }).catch(() => {
+      // If pre-cache fails (e.g., offline page not available), continue anyway
     })
   );
   // Activate immediately
@@ -24,16 +26,14 @@ self.addEventListener('install', (event) => {
 });
 
 // ============================================
-// Activate — Clean old caches
+// Activate — Clean ALL old caches (forces fresh start)
 // ============================================
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
-        cacheNames
-          .filter((name) => name !== CACHE_NAME && name !== STATIC_CACHE)
-          .map((name) => caches.delete(name))
+        cacheNames.map((name) => caches.delete(name))
       );
     })
   );
@@ -42,103 +42,80 @@ self.addEventListener('activate', (event) => {
 });
 
 // ============================================
-// Fetch — Routing strategy
+// Fetch — Only handle mobile PWA routes
 // ============================================
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip non-GET requests
+  // Skip non-GET requests entirely
   if (request.method !== 'GET') return;
 
-  // Skip chrome-extension and other non-http(s) requests
+  // Skip non-http(s) requests
   if (!url.protocol.startsWith('http')) return;
 
-  // API routes — Network first, fallback to network error (no cache)
+  // ============================================
+  // CRITICAL: Skip ALL admin dashboard routes
+  // Let the browser handle them normally (no SW interception)
+  // ============================================
+  if (!url.pathname.startsWith('/m/') && !url.pathname.startsWith('/api/')) {
+    // Only handle static asset caching for _next/static and common assets
+    if (
+      url.pathname.match(/\.(png|jpg|jpeg|svg|gif|webp|ico|woff2?|ttf|eot)$/) ||
+      url.pathname.startsWith('/icons/')
+    ) {
+      event.respondWith(
+        caches.match(request).then((cached) => {
+          if (cached) return cached;
+          return fetch(request).then((response) => {
+            if (response && response.status === 200) {
+              const clone = response.clone();
+              caches.open(CACHE_NAME).then((cache) => {
+                cache.put(request, clone);
+              }).catch(() => {});
+            }
+            return response;
+          }).catch(() => {
+            return new Response('', { status: 408, statusText: 'Offline' });
+          });
+        })
+      );
+    }
+    // Do NOT intercept _next/static here — let Next.js handle its own caching
+    // Skip everything else (admin pages, etc.)
+    return;
+  }
+
+  // API routes — Network only, no caching
   if (url.pathname.startsWith('/api/')) {
-    event.respondWith(
-      fetch(request).catch(() => {
-        // Return a minimal offline response for API calls
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error: { code: 'OFFLINE', message: 'No internet connection' },
-          }),
-          {
-            headers: { 'Content-Type': 'application/json' },
-            status: 503,
-          }
-        );
-      })
-    );
-    return;
+    return; // Let the browser handle API calls directly
   }
 
-  // Static assets (images, fonts, icons) — Cache first, then network
-  if (
-    url.pathname.match(/\.(png|jpg|jpeg|svg|gif|webp|ico|woff2?|ttf|eot)$/) ||
-    url.pathname.startsWith('/icons/') ||
-    url.pathname.startsWith('/_next/static/')
-  ) {
-    event.respondWith(
-      caches.match(request).then((cached) => {
-        if (cached) return cached;
-        return fetch(request).then((response) => {
-          // Cache successful responses
-          if (response.status === 200) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, clone);
-            });
-          }
-          return response;
-        });
-      })
-    );
-    return;
-  }
-
-  // HTML pages — Network first, fallback to cache, then offline page
+  // Mobile PWA pages (/m/*) — Network first, cache fallback
   if (url.pathname.startsWith('/m/')) {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          // Cache successful page responses
-          if (response.status === 200) {
+          if (response && response.status === 200) {
             const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => {
               cache.put(request, clone);
-            });
+            }).catch(() => {});
           }
           return response;
         })
         .catch(() => {
-          // Try to serve from cache
           return caches.match(request).then((cached) => {
             if (cached) return cached;
-            // Fallback to offline page
-            return caches.match(OFFLINE_URL);
+            return caches.match(OFFLINE_URL).then((offline) => {
+              return offline || new Response('Offline', { status: 503 });
+            });
           });
         })
     );
     return;
   }
-
-  // Everything else — Network first, cache fallback
-  event.respondWith(
-    fetch(request)
-      .then((response) => {
-        if (response.status === 200) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, clone);
-          });
-        }
-        return response;
-      })
-      .catch(() => caches.match(request))
-  );
 });
 
 // ============================================
