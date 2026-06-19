@@ -1,0 +1,732 @@
+     1→'use client';
+     2→import { adminFetch } from '@/lib/admin-fetch';
+     3→import { useLocale } from '@/providers/app-provider';
+     4→
+     5→import { useState, useEffect, useCallback, useRef } from 'react';
+     6→import {
+     7→  Tag,
+     8→  Plus,
+     9→  Search,
+    10→  ChevronLeft,
+    11→  ChevronRight,
+    12→  RefreshCw,
+    13→  Edit,
+    14→  Eye,
+    15→  Users,
+    16→  Clock,
+    17→  BarChart3,
+    18→  RotateCcw,
+    19→  Loader2,
+    20→  TrendingUp,
+    21→  CheckCircle,
+    22→  XCircle,
+    23→  AlertTriangle,
+    24→  PiggyBank,
+    25→  MapPin,
+    26→  Percent,
+    27→} from 'lucide-react';
+    28→import { Card, CardContent } from '@/components/ui/card';
+    29→import { Button } from '@/components/ui/button';
+    30→import { Skeleton } from '@/components/ui/skeleton';
+    31→import { Input } from '@/components/ui/input';
+    32→import { Separator } from '@/components/ui/separator';
+    33→import {
+    34→  Select,
+    35→  SelectContent,
+    36→  SelectItem,
+    37→  SelectTrigger,
+    38→  SelectValue,
+    39→} from '@/components/ui/select';
+    40→import {
+    41→  Table,
+    42→  TableBody,
+    43→  TableCell,
+    44→  TableHead,
+    45→  TableHeader,
+    46→  TableRow,
+    47→} from '@/components/ui/table';
+    48→import {
+    49→  AlertDialog,
+    50→  AlertDialogAction,
+    51→  AlertDialogCancel,
+    52→  AlertDialogContent,
+    53→  AlertDialogDescription,
+    54→  AlertDialogFooter,
+    55→  AlertDialogHeader,
+    56→  AlertDialogTitle,
+    57→} from '@/components/ui/alert-dialog';
+    58→import { AdminSidebar } from '@/components/layout/admin-sidebar';
+    59→import { AdminHeader } from '@/components/layout/admin-header';
+    60→import { SidebarInset } from '@/components/ui/sidebar';
+    61→import { DealStatusBadge } from '@/components/group-buy/deal-status-badge';
+    62→import { DealFormDialog } from '@/components/group-buy/deal-form-dialog';
+    63→import { DealDetailDrawer } from '@/components/group-buy/deal-detail-drawer';
+    64→import { formatVND } from '@/lib/security';
+    65→import { toast } from 'sonner';
+    66→
+    67→// ============================================
+    68→// Types
+    69→// ============================================
+    70→
+    71→interface DealListItem {
+    72→  id: string;
+    73→  title: string;
+    74→  titleEn: string | null;
+    75→  productId: string;
+    76→  targetQty: number;
+    77→  currentQty: number;
+    78→  originalPrice: number;
+    79→  discountPrice: number;
+    80→  maxParticipants: number | null;
+    81→  startsAt: string;
+    82→  expiresAt: string;
+    83→  wardId: string | null;
+    84→  status: string;
+    85→  createdAt: string;
+    86→  progressPercent: number;
+    87→  savingsPercent: number;
+    88→  savingsPerUnit: number;
+    89→  savingsPerUnitFormatted: string;
+    90→  originalPriceFormatted: string;
+    91→  discountPriceFormatted: string;
+    92→  timeRemaining: string;
+    93→  participantCount: number;
+    94→  product: { id: string; name: string; sku: string; basePrice: number };
+    95→  ward: { id: string; name: string; district: string } | null;
+    96→}
+    97→
+    98→interface DealsResponse {
+    99→  items: DealListItem[];
+   100→  pagination: { page: number; limit: number; total: number; totalPages: number };
+   101→  filters: {
+   102→    wards: { id: string; name: string }[];
+   103→    products: { id: string; name: string; sku: string }[];
+   104→  };
+   105→}
+   106→
+   107→interface DealStats {
+   108→  totalDeals: number;
+   109→  activeDeals: number;
+   110→  completedDeals: number;
+   111→  expiredDeals: number;
+   112→  cancelledDeals: number;
+   113→  totalSavings: number;
+   114→  totalSavingsFormatted: string;
+   115→  totalParticipants: number;
+   116→  avgCompletionRate: number;
+   117→  statusDistribution: Record<string, { count: number; label: string; labelVi: string }>;
+   118→}
+   119→
+   120→// ============================================
+   121→// Main Group Buy Page
+   122→// ============================================
+   123→
+   124→export default function GroupBuyPage() {
+   125→  const { locale } = useLocale();
+   126→  const t = (en: string, vi: string) => locale === 'vi' ? vi : en;
+   127→
+   128→  // Data state
+   129→  const [deals, setDeals] = useState<DealListItem[]>([]);
+   130→  const [stats, setStats] = useState<DealStats | null>(null);
+   131→  const [loading, setLoading] = useState(true);
+   132→  const [wards, setWards] = useState<{ id: string; name: string }[]>([]);
+   133→
+   134→  // Filter state
+   135→  const [searchQuery, setSearchQuery] = useState('');
+   136→  const [debouncedSearch, setDebouncedSearch] = useState('');
+   137→  const [statusFilter, setStatusFilter] = useState('all');
+   138→  const [wardFilter, setWardFilter] = useState('all');
+   139→  const [page, setPage] = useState(1);
+   140→  const [totalPages, setTotalPages] = useState(1);
+   141→  const [totalCount, setTotalCount] = useState(0);
+   142→  const limit = 20;
+   143→
+   144→  // Dialog state
+   145→  const [formDialogOpen, setFormDialogOpen] = useState(false);
+   146→  const [selectedDeal, setSelectedDeal] = useState<DealListItem | null>(null);
+   147→  const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
+   148→  const [detailDealId, setDetailDealId] = useState<string | null>(null);
+   149→  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+   150→  const [statusAction, setStatusAction] = useState<'COMPLETED' | 'CANCELLED'>('COMPLETED');
+   151→  const [updating, setUpdating] = useState(false);
+   152→
+   153→  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+   154→
+   155→  // Debounced search
+   156→  useEffect(() => {
+   157→    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+   158→    searchTimeoutRef.current = setTimeout(() => {
+   159→      setDebouncedSearch(searchQuery);
+   160→      setPage(1);
+   161→    }, 300);
+   162→    return () => { if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current); };
+   163→  }, [searchQuery]);
+   164→
+   165→  // Fetch deals
+   166→  const fetchDeals = useCallback(async () => {
+   167→    try {
+   168→      setLoading(true);
+   169→      const params = new URLSearchParams({
+   170→        page: String(page),
+   171→        limit: String(limit),
+   172→        search: debouncedSearch,
+   173→      });
+   174→      if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter);
+   175→      if (wardFilter && wardFilter !== 'all') params.set('wardId', wardFilter);
+   176→
+   177→      const res = await adminFetch(`/api/group-deals?${params.toString()}`);
+   178→      const json = await res.json();
+   179→      if (json.success) {
+   180→        const data: DealsResponse = json.data;
+   181→        setDeals(data.items || []);
+   182→        setTotalPages(data.pagination.totalPages);
+   183→        setTotalCount(data.pagination.total);
+   184→        setWards(data.filters?.wards || []);
+   185→      }
+   186→    } catch (err) {
+   187→      console.error('Failed to fetch group deals:', err);
+   188→    } finally {
+   189→      setLoading(false);
+   190→    }
+   191→  }, [page, debouncedSearch, statusFilter, wardFilter, limit]);
+   192→
+   193→  // Fetch stats
+   194→  const fetchStats = useCallback(async () => {
+   195→    try {
+   196→      const res = await adminFetch('/api/group-deals/stats');
+   197→      const json = await res.json();
+   198→      if (json.success) {
+   199→        setStats(json.data);
+   200→      }
+   201→    } catch (err) {
+   202→      console.error('Failed to fetch group deal stats:', err);
+   203→    }
+   204→  }, []);
+   205→
+   206→  useEffect(() => { fetchDeals(); }, [fetchDeals]);
+   207→  useEffect(() => { fetchStats(); }, [fetchStats]);
+   208→
+   209→  // Handlers
+   210→  const handleCreate = () => {
+   211→    setSelectedDeal(null);
+   212→    setFormDialogOpen(true);
+   213→  };
+   214→
+   215→  const handleEdit = (deal: DealListItem) => {
+   216→    setSelectedDeal(deal);
+   217→    setFormDialogOpen(true);
+   218→  };
+   219→
+   220→  const handleView = (deal: DealListItem) => {
+   221→    setDetailDealId(deal.id);
+   222→    setDetailDrawerOpen(true);
+   223→  };
+   224→
+   225→  const handleStatusChange = (deal: DealListItem, newStatus: 'COMPLETED' | 'CANCELLED') => {
+   226→    setSelectedDeal(deal);
+   227→    setStatusAction(newStatus);
+   228→    setStatusDialogOpen(true);
+   229→  };
+   230→
+   231→  const confirmStatusChange = async () => {
+   232→    if (!selectedDeal) return;
+   233→    try {
+   234→      setUpdating(true);
+   235→      const res = await adminFetch(`/api/group-deals/${selectedDeal.id}`, {
+   236→        method: 'PATCH',
+   237→        headers: { 'Content-Type': 'application/json' },
+   238→        body: JSON.stringify({ status: statusAction }),
+   239→      });
+   240→      const json = await res.json();
+   241→      if (json.success) {
+   242→        toast.success(
+   243→          statusAction === 'COMPLETED'
+   244→            ? t('Deal marked as completed', 'Đánh dấu deal hoàn thành')
+   245→            : t('Deal cancelled', 'Hủy deal thành công')
+   246→        );
+   247→        setStatusDialogOpen(false);
+   248→        setSelectedDeal(null);
+   249→        fetchDeals();
+   250→        fetchStats();
+   251→      } else {
+   252→        toast.error(json.error?.message || t('Failed to update', 'Không thể cập nhật'));
+   253→      }
+   254→    } catch {
+   255→      toast.error(t('Network error', 'Lỗi mạng'));
+   256→    } finally {
+   257→      setUpdating(false);
+   258→    }
+   259→  };
+   260→
+   261→  const handleSaved = () => {
+   262→    fetchDeals();
+   263→    fetchStats();
+   264→  };
+   265→
+   266→  const resetFilters = () => {
+   267→    setSearchQuery('');
+   268→    setStatusFilter('all');
+   269→    setWardFilter('all');
+   270→    setPage(1);
+   271→  };
+   272→
+   273→  const hasFilters = debouncedSearch || (statusFilter && statusFilter !== 'all') || (wardFilter && wardFilter !== 'all');
+   274→
+   275→  const getPageNumbers = () => {
+   276→    const pages: number[] = [];
+   277→    const maxVisible = 5;
+   278→    let start = Math.max(1, page - Math.floor(maxVisible / 2));
+   279→    const end = Math.min(totalPages, start + maxVisible - 1);
+   280→    if (end - start + 1 < maxVisible) start = Math.max(1, end - maxVisible + 1);
+   281→    for (let i = start; i <= end; i++) pages.push(i);
+   282→    return pages;
+   283→  };
+   284→
+   285→  return (
+   286→    <div className="flex min-h-screen">
+   287→      <AdminSidebar />
+   288→      <SidebarInset>
+   289→        <AdminHeader />
+   290→
+   291→        <main className="flex-1 p-4 md:p-6 lg:p-8 space-y-6">
+   292→          {/* Header */}
+   293→          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+   294→            <div>
+   295→              <h1 className="text-2xl font-bold tracking-tight">
+   296→                {t('Group Buy Engine', 'Deal Mua Chung')}
+   297→              </h1>
+   298→              <p className="text-sm text-muted-foreground mt-1">
+   299→                {t(
+   300→                  'Pinduoduo-style group buying — consolidate orders, unlock volume discounts',
+   301→                  'Mô hình Pinduoduo — gom đơn hàng, mở khóa chiết khấu số lượng lớn'
+   302→                )}
+   303→              </p>
+   304→            </div>
+   305→            <div className="flex items-center gap-2">
+   306→              <Button variant="outline" size="sm" onClick={() => { fetchDeals(); fetchStats(); }}>
+   307→                <RefreshCw className="h-4 w-4 mr-1" />
+   308→                {t('Refresh', 'Làm mới')}
+   309→              </Button>
+   310→              <Button size="sm" onClick={handleCreate} className="bg-red-600 hover:bg-red-700 text-white">
+   311→                <Plus className="h-4 w-4 mr-1" />
+   312→                {t('Create Deal', 'Tạo Deal')}
+   313→              </Button>
+   314→            </div>
+   315→          </div>
+   316→
+   317→          <Separator />
+   318→
+   319→          {/* Stats Cards */}
+   320→          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+   321→            <Card>
+   322→              <CardContent className="p-4">
+   323→                <div className="flex items-center justify-between">
+   324→                  <div>
+   325→                    <p className="text-xs text-muted-foreground font-medium">{t('Active Deals', 'Deal hoạt động')}</p>
+   326→                    <p className="text-xl font-bold mt-1">{stats?.activeDeals || 0}</p>
+   327→                  </div>
+   328→                  <div className="h-9 w-9 rounded-lg bg-yellow-50 text-red-600 flex items-center justify-center">
+   329→                    <TrendingUp className="h-4 w-4" />
+   330→                  </div>
+   331→                </div>
+   332→              </CardContent>
+   333→            </Card>
+   334→            <Card>
+   335→              <CardContent className="p-4">
+   336→                <div className="flex items-center justify-between">
+   337→                  <div>
+   338→                    <p className="text-xs text-muted-foreground font-medium">{t('Completed Deals', 'Deal hoàn thành')}</p>
+   339→                    <p className="text-xl font-bold mt-1">{stats?.completedDeals || 0}</p>
+   340→                  </div>
+   341→                  <div className="h-9 w-9 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
+   342→                    <CheckCircle className="h-4 w-4" />
+   343→                  </div>
+   344→                </div>
+   345→              </CardContent>
+   346→            </Card>
+   347→            <Card>
+   348→              <CardContent className="p-4">
+   349→                <div className="flex items-center justify-between">
+   350→                  <div>
+   351→                    <p className="text-xs text-muted-foreground font-medium">{t('Total Savings', 'Tổng tiết kiệm')}</p>
+   352→                    <p className="text-sm font-bold mt-1">{stats?.totalSavingsFormatted || formatVND(0)}</p>
+   353→                  </div>
+   354→                  <div className="h-9 w-9 rounded-lg bg-green-100 text-green-600 flex items-center justify-center">
+   355→                    <PiggyBank className="h-4 w-4" />
+   356→                  </div>
+   357→                </div>
+   358→              </CardContent>
+   359→            </Card>
+   360→            <Card>
+   361→              <CardContent className="p-4">
+   362→                <div className="flex items-center justify-between">
+   363→                  <div>
+   364→                    <p className="text-xs text-muted-foreground font-medium">{t('Participants', 'Người tham gia')}</p>
+   365→                    <p className="text-xl font-bold mt-1">{stats?.totalParticipants || 0}</p>
+   366→                  </div>
+   367→                  <div className="h-9 w-9 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center">
+   368→                    <Users className="h-4 w-4" />
+   369→                  </div>
+   370→                </div>
+   371→              </CardContent>
+   372→            </Card>
+   373→          </div>
+   374→
+   375→          {/* Status Distribution */}
+   376→          {stats?.statusDistribution && (
+   377→            <Card>
+   378→              <CardContent className="p-4">
+   379→                <p className="text-xs font-medium text-muted-foreground mb-2">{t('Distribution by Status', 'Phân bố theo trạng thái')}</p>
+   380→                <div className="flex gap-3 flex-wrap">
+   381→                  {Object.entries(stats.statusDistribution).map(([key, val]) => (
+   382→                    <div key={key} className="flex items-center gap-1.5">
+   383→                      <DealStatusBadge status={key as 'ACTIVE' | 'COMPLETED' | 'EXPIRED' | 'CANCELLED'} locale={locale} />
+   384→                      <span className="text-sm font-medium">{val.count}</span>
+   385→                    </div>
+   386→                  ))}
+   387→                </div>
+   388→              </CardContent>
+   389→            </Card>
+   390→          )}
+   391→
+   392→          {/* Search + Filters */}
+   393→          <Card>
+   394→            <CardContent className="p-4">
+   395→              <div className="flex flex-col sm:flex-row gap-3">
+   396→                <div className="relative flex-1 max-w-sm">
+   397→                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+   398→                  <Input
+   399→                    type="search"
+   400→                    placeholder={t('Search deals, products...', 'Tìm deal, sản phẩm...')}
+   401→                    className="pl-8 h-9"
+   402→                    value={searchQuery}
+   403→                    onChange={(e) => setSearchQuery(e.target.value)}
+   404→                  />
+   405→                </div>
+   406→                <div className="flex flex-wrap gap-2">
+   407→                  <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
+   408→                    <SelectTrigger className="h-9 w-[140px] text-xs">
+   409→                      <SelectValue placeholder={t('All Status', 'Tất cả TT')} />
+   410→                    </SelectTrigger>
+   411→                    <SelectContent>
+   412→                      <SelectItem value="all">{t('All Status', 'Tất cả TT')}</SelectItem>
+   413→                      <SelectItem value="ACTIVE">{t('Active', 'Hoạt động')}</SelectItem>
+   414→                      <SelectItem value="COMPLETED">{t('Completed', 'Hoàn thành')}</SelectItem>
+   415→                      <SelectItem value="EXPIRED">{t('Expired', 'Hết hạn')}</SelectItem>
+   416→                      <SelectItem value="CANCELLED">{t('Cancelled', 'Đã hủy')}</SelectItem>
+   417→                    </SelectContent>
+   418→                  </Select>
+   419→                  <Select value={wardFilter} onValueChange={(v) => { setWardFilter(v); setPage(1); }}>
+   420→                    <SelectTrigger className="h-9 w-[160px] text-xs">
+   421→                      <SelectValue placeholder={t('All Wards', 'Tất cả phường')} />
+   422→                    </SelectTrigger>
+   423→                    <SelectContent>
+   424→                      <SelectItem value="all">{t('All Wards', 'Tất cả phường')}</SelectItem>
+   425→                      {wards.map((w) => (
+   426→                        <SelectItem key={w.id} value={w.id} className="text-xs">{w.name}</SelectItem>
+   427→                      ))}
+   428→                    </SelectContent>
+   429→                  </Select>
+   430→                  {hasFilters && (
+   431→                    <Button variant="ghost" size="sm" className="h-9" onClick={resetFilters}>
+   432→                      <RotateCcw className="h-3.5 w-3.5 mr-1" />
+   433→                      {t('Reset', 'Đặt lại')}
+   434→                    </Button>
+   435→                  )}
+   436→                </div>
+   437→              </div>
+   438→            </CardContent>
+   439→          </Card>
+   440→
+   441→          {/* Table */}
+   442→          <Card>
+   443→            <CardContent className="p-0">
+   444→              {loading ? (
+   445→                <div className="p-4 space-y-3">
+   446→                  <Skeleton className="h-10 w-full" />
+   447→                  {Array.from({ length: 5 }).map((_, i) => (
+   448→                    <Skeleton key={i} className="h-14 w-full" />
+   449→                  ))}
+   450→                </div>
+   451→              ) : deals.length === 0 ? (
+   452→                <div className="text-center py-16 px-4">
+   453→                  <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+   454→                    <Tag className="h-8 w-8 text-muted-foreground" />
+   455→                  </div>
+   456→                  <h3 className="text-lg font-semibold">{t('No group deals found', 'Không tìm thấy deal mua chung')}</h3>
+   457→                  <p className="text-sm text-muted-foreground mt-1">
+   458→                    {t(
+   459→                      'Create your first group buy deal to unlock volume discounts',
+   460→                      'Tạo deal mua chung đầu tiên để mở khóa chiết khấu số lượng'
+   461→                    )}
+   462→                  </p>
+   463→                  <Button className="mt-4 bg-red-600 hover:bg-red-700 text-white" onClick={handleCreate}>
+   464→                    <Plus className="h-4 w-4 mr-2" />
+   465→                    {t('Create First Deal', 'Tạo Deal đầu tiên')}
+   466→                  </Button>
+   467→                </div>
+   468→              ) : (
+   469→                <div>
+   470→                  <Table>
+   471→                    <TableHeader>
+   472→                      <TableRow className="bg-muted/30">
+   473→                        <TableHead>{t('Deal', 'Deal')}</TableHead>
+   474→                        <TableHead className="hidden md:table-cell">{t('Progress', 'Tiến độ')}</TableHead>
+   475→                        <TableHead className="hidden lg:table-cell">{t('Savings', 'Tiết kiệm')}</TableHead>
+   476→                        <TableHead className="hidden sm:table-cell text-center">{t('Participants', 'Tham gia')}</TableHead>
+   477→                        <TableHead className="hidden xl:table-cell">{t('Ward', 'Phường')}</TableHead>
+   478→                        <TableHead className="hidden sm:table-cell">{t('Status', 'TT')}</TableHead>
+   479→                        <TableHead className="hidden md:table-cell">{t('Expiry', 'Hết hạn')}</TableHead>
+   480→                        <TableHead className="text-right">{t('Actions', 'TH')}</TableHead>
+   481→                      </TableRow>
+   482→                    </TableHeader>
+   483→                    <TableBody>
+   484→                      {deals.map((deal) => (
+   485→                        <TableRow
+   486→                          key={deal.id}
+   487→                          className="hover:bg-muted/50 transition-colors cursor-pointer"
+   488→                          onClick={() => handleView(deal)}
+   489→                        >
+   490→                          {/* Deal */}
+   491→                          <TableCell>
+   492→                            <div>
+   493→                              <p className="text-sm font-medium truncate max-w-[200px]">{deal.title}</p>
+   494→                              <p className="text-[10px] text-muted-foreground truncate max-w-[200px]">
+   495→                                {deal.product.name} · {deal.product.sku}
+   496→                              </p>
+   497→                            </div>
+   498→                          </TableCell>
+   499→
+   500→                          {/* Progress */}
+   501→                          <TableCell className="hidden md:table-cell">
+   502→                            <div className="min-w-[120px]">
+   503→                              <div className="flex items-center justify-between text-[10px] mb-0.5">
+   504→                                <span>{deal.currentQty.toLocaleString()}/{deal.targetQty.toLocaleString()}</span>
+   505→                                <span className="font-medium">{deal.progressPercent}%</span>
+   506→                              </div>
+   507→                              <div className="h-2 bg-muted rounded-full overflow-hidden">
+   508→                                <div
+   509→                                  className={`h-full rounded-full transition-all ${
+   510→                                    deal.progressPercent >= 100
+   511→                                      ? 'bg-red-500'
+   512→                                      : deal.progressPercent >= 50
+   513→                                        ? 'bg-blue-500'
+   514→                                        : 'bg-amber-500'
+   515→                                  }`}
+   516→                                  style={{ width: `${Math.min(100, deal.progressPercent)}%` }}
+   517→                                />
+   518→                              </div>
+   519→                            </div>
+   520→                          </TableCell>
+   521→
+   522→                          {/* Savings */}
+   523→                          <TableCell className="hidden lg:table-cell">
+   524→                            <div className="flex items-center gap-1">
+   525→                              <Percent className="h-3 w-3 text-red-600" />
+   526→                              <span className="text-sm font-medium text-red-600">-{deal.savingsPercent}%</span>
+   527→                              <span className="text-[10px] text-muted-foreground">
+   528→                                ({deal.savingsPerUnitFormatted}/{t('unit', 'sp')})
+   529→                              </span>
+   530→                            </div>
+   531→                          </TableCell>
+   532→
+   533→                          {/* Participants */}
+   534→                          <TableCell className="hidden sm:table-cell text-center">
+   535→                            <div className="flex items-center justify-center gap-1">
+   536→                              <Users className="h-3.5 w-3.5 text-purple-600" />
+   537→                              <span className="text-sm font-medium">{deal.participantCount}</span>
+   538→                              {deal.maxParticipants && (
+   539→                                <span className="text-[10px] text-muted-foreground">/{deal.maxParticipants}</span>
+   540→                              )}
+   541→                            </div>
+   542→                          </TableCell>
+   543→
+   544→                          {/* Ward */}
+   545→                          <TableCell className="hidden xl:table-cell">
+   546→                            {deal.ward ? (
+   547→                              <div className="flex items-center gap-1">
+   548→                                <MapPin className="h-3 w-3 text-muted-foreground" />
+   549→                                <span className="text-xs">{deal.ward.name}</span>
+   550→                              </div>
+   551→                            ) : (
+   552→                              <span className="text-xs text-muted-foreground">{t('All wards', 'Toàn thành')}</span>
+   553→                            )}
+   554→                          </TableCell>
+   555→
+   556→                          {/* Status */}
+   557→                          <TableCell className="hidden sm:table-cell">
+   558→                            <DealStatusBadge
+   559→                              status={deal.status as 'ACTIVE' | 'COMPLETED' | 'CANCELLED' | 'EXPIRED'}
+   560→                              locale={locale}
+   561→                            />
+   562→                          </TableCell>
+   563→
+   564→                          {/* Expiry */}
+   565→                          <TableCell className="hidden md:table-cell">
+   566→                            <div className="flex items-center gap-1">
+   567→                              <Clock className="h-3 w-3 text-muted-foreground" />
+   568→                              <span className={`text-xs ${deal.timeRemaining === 'Đã hết hạn' ? 'text-red-600 font-medium' : 'text-muted-foreground'}`}>
+   569→                                {deal.timeRemaining === 'Đã hết hạn' ? t('Expired', 'Đã hết hạn') : deal.timeRemaining}
+   570→                              </span>
+   571→                            </div>
+   572→                          </TableCell>
+   573→
+   574→                          {/* Actions */}
+   575→                          <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+   576→                            <div className="flex items-center justify-end gap-1">
+   577→                              <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => handleView(deal)}>
+   578→                                <Eye className="h-3.5 w-3.5" />
+   579→                              </Button>
+   580→                              <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => handleEdit(deal)}>
+   581→                                <Edit className="h-3.5 w-3.5 mr-1" />
+   582→                                {t('Edit', 'Sửa')}
+   583→                              </Button>
+   584→                              {deal.status === 'ACTIVE' && (
+   585→                                <>
+   586→                                  <Button
+   587→                                    variant="ghost"
+   588→                                    size="sm"
+   589→                                    className="h-8 text-xs text-blue-600 hover:text-blue-700"
+   590→                                    onClick={() => handleStatusChange(deal, 'COMPLETED')}
+   591→                                  >
+   592→                                    <CheckCircle className="h-3.5 w-3.5" />
+   593→                                  </Button>
+   594→                                  <Button
+   595→                                    variant="ghost"
+   596→                                    size="sm"
+   597→                                    className="h-8 text-xs text-red-600 hover:text-red-700"
+   598→                                    onClick={() => handleStatusChange(deal, 'CANCELLED')}
+   599→                                  >
+   600→                                    <XCircle className="h-3.5 w-3.5" />
+   601→                                  </Button>
+   602→                                </>
+   603→                              )}
+   604→                            </div>
+   605→                          </TableCell>
+   606→                        </TableRow>
+   607→                      ))}
+   608→                    </TableBody>
+   609→                  </Table>
+   610→
+   611→                  {/* Pagination */}
+   612→                  {totalPages > 1 && (
+   613→                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t">
+   614→                      <p className="text-xs text-muted-foreground">
+   615→                        {t(
+   616→                          `Showing ${(page - 1) * limit + 1}–${Math.min(page * limit, totalCount)} of ${totalCount} deals`,
+   617→                          `Hiển thị ${(page - 1) * limit + 1}–${Math.min(page * limit, totalCount)} / ${totalCount} deal`
+   618→                        )}
+   619→                      </p>
+   620→                      <div className="flex items-center gap-1">
+   621→                        <Button variant="outline" size="icon" className="h-8 w-8" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+   622→                          <ChevronLeft className="h-4 w-4" />
+   623→                        </Button>
+   624→                        {getPageNumbers().map((p) => (
+   625→                          <Button key={p} variant={p === page ? 'default' : 'outline'} size="icon"
+   626→                            className={`h-8 w-8 text-xs ${p === page ? 'bg-red-600 hover:bg-red-700 text-white' : ''}`}
+   627→                            onClick={() => setPage(p)}>{p}</Button>
+   628→                        ))}
+   629→                        <Button variant="outline" size="icon" className="h-8 w-8" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+   630→                          <ChevronRight className="h-4 w-4" />
+   631→                        </Button>
+   632→                      </div>
+   633→                    </div>
+   634→                  )}
+   635→                </div>
+   636→              )}
+   637→            </CardContent>
+   638→          </Card>
+   639→
+   640→          {/* Info Banner */}
+   641→          <Card className="border-yellow-100 bg-yellow-50/50 dark:bg-emerald-950/20">
+   642→            <CardContent className="p-4">
+   643→              <div className="flex items-start gap-3">
+   644→                <div className="h-8 w-8 rounded-lg bg-yellow-50 text-red-600 flex items-center justify-center shrink-0 mt-0.5">
+   645→                  <BarChart3 className="h-4 w-4" />
+   646→                </div>
+   647→                <div>
+   648→                  <h4 className="text-sm font-semibold">{t('Pinduoduo Model', 'Mô hình Pinduoduo')}</h4>
+   649→                  <p className="text-xs text-muted-foreground mt-0.5">
+   650→                    {t(
+   651→                      'Group buying consolidates demand from multiple shops to negotiate better wholesale prices with distributors. Deals auto-expire if target quantity is not met. Shops in the same ward get priority for zone-scoped deals.',
+   652→                      'Mua chung gom nhu cầu từ nhiều cửa hàng để đàm phán giá sỉ tốt hơn với nhà phân phối. Deal tự hết hạn nếu không đạt số lượng mục tiêu. Các cửa hàng cùng phường được ưu tiên cho deal theo khu vực.'
+   653→                    )}
+   654→                  </p>
+   655→                </div>
+   656→              </div>
+   657→            </CardContent>
+   658→          </Card>
+   659→        </main>
+   660→
+   661→        {/* Form Dialog */}
+   662→        <DealFormDialog
+   663→          open={formDialogOpen}
+   664→          onOpenChange={setFormDialogOpen}
+   665→          deal={selectedDeal}
+   666→          locale={locale}
+   667→          onSaved={handleSaved}
+   668→          wards={wards}
+   669→        />
+   670→
+   671→        {/* Detail Drawer */}
+   672→        <DealDetailDrawer
+   673→          open={detailDrawerOpen}
+   674→          onOpenChange={setDetailDrawerOpen}
+   675→          dealId={detailDealId}
+   676→          locale={locale}
+   677→        />
+   678→
+   679→        {/* Status Change Confirmation */}
+   680→        <AlertDialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
+   681→          <AlertDialogContent>
+   682→            <AlertDialogHeader>
+   683→              <AlertDialogTitle className={`flex items-center gap-2 ${statusAction === 'COMPLETED' ? 'text-blue-600' : 'text-red-600'}`}>
+   684→                {statusAction === 'COMPLETED' ? (
+   685→                  <><CheckCircle className="h-5 w-5" />{t('Complete Deal', 'Hoàn thành Deal')}</>
+   686→                ) : (
+   687→                  <><XCircle className="h-5 w-5" />{t('Cancel Deal', 'Hủy Deal')}</>
+   688→                )}
+   689→              </AlertDialogTitle>
+   690→              <AlertDialogDescription>
+   691→                {statusAction === 'COMPLETED' ? (
+   692→                  t(
+   693→                    `Mark "${selectedDeal?.title || ''}" as completed? This will set the group buy price on the product.`,
+   694→                    `Đánh dấu "${selectedDeal?.title || ''}" hoàn thành? Giá mua chung sẽ được áp dụng cho sản phẩm.`
+   695→                  )
+   696→                ) : (
+   697→                  t(
+   698→                    `Cancel "${selectedDeal?.title || ''}"? This action cannot be undone.`,
+   699→                    `Hủy "${selectedDeal?.title || ''}"? Hành động này không thể hoàn tác.`
+   700→                  )
+   701→                )}
+   702→              </AlertDialogDescription>
+   703→            </AlertDialogHeader>
+   704→            {selectedDeal && selectedDeal.participantCount > 0 && (
+   705→              <p className="text-sm text-amber-600 bg-amber-50 dark:bg-amber-950/20 rounded p-3">
+   706→                {t(
+   707→                  `This deal has ${selectedDeal.participantCount} participant(s). They will be notified.`,
+   708→                  `Deal này có ${selectedDeal.participantCount} cửa hàng tham gia. Họ sẽ được thông báo.`
+   709→                )}
+   710→              </p>
+   711→            )}
+   712→            <AlertDialogFooter>
+   713→              <AlertDialogCancel disabled={updating}>{t('Cancel', 'Hủy')}</AlertDialogCancel>
+   714→              <AlertDialogAction
+   715→                onClick={confirmStatusChange}
+   716→                disabled={updating}
+   717→                className={statusAction === 'COMPLETED'
+   718→                  ? 'bg-blue-600 hover:bg-blue-700 text-white'
+   719→                  : 'bg-red-600 hover:bg-red-700 text-white'
+   720→                }
+   721→              >
+   722→                {updating && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+   723→                {statusAction === 'COMPLETED' ? t('Complete', 'Hoàn thành') : t('Cancel Deal', 'Hủy Deal')}
+   724→              </AlertDialogAction>
+   725→            </AlertDialogFooter>
+   726→          </AlertDialogContent>
+   727→        </AlertDialog>
+   728→      </SidebarInset>
+   729→    </div>
+   730→  );
+   731→}
+   732→

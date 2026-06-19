@@ -1,0 +1,854 @@
+     1→'use client';
+     2→import { adminFetch } from '@/lib/admin-fetch';
+     3→import { useLocale } from '@/providers/app-provider';
+     4→
+     5→import { useState, useEffect, useCallback, useRef } from 'react';
+     6→import {
+     7→  Package,
+     8→  Plus,
+     9→  Search,
+    10→  Filter,
+    11→  Pencil,
+    12→  Trash2,
+    13→  ChevronLeft,
+    14→  ChevronRight,
+    15→  AlertTriangle,
+    16→  PackageX,
+    17→  BarChart3,
+    18→  RefreshCw,
+    19→  Loader2,
+    20→  ShieldCheck,
+    21→  Check,
+    22→  X,
+    23→} from 'lucide-react';
+    24→import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+    25→import { Badge } from '@/components/ui/badge';
+    26→import { Button } from '@/components/ui/button';
+    27→import { Skeleton } from '@/components/ui/skeleton';
+    28→import { Input } from '@/components/ui/input';
+    29→import { Switch } from '@/components/ui/switch';
+    30→import {
+    31→  Select,
+    32→  SelectContent,
+    33→  SelectItem,
+    34→  SelectTrigger,
+    35→  SelectValue,
+    36→} from '@/components/ui/select';
+    37→import {
+    38→  Table,
+    39→  TableBody,
+    40→  TableCell,
+    41→  TableHead,
+    42→  TableHeader,
+    43→  TableRow,
+    44→} from '@/components/ui/table';
+    45→import {
+    46→  AlertDialog,
+    47→  AlertDialogAction,
+    48→  AlertDialogCancel,
+    49→  AlertDialogContent,
+    50→  AlertDialogDescription,
+    51→  AlertDialogFooter,
+    52→  AlertDialogHeader,
+    53→  AlertDialogTitle,
+    54→} from '@/components/ui/alert-dialog';
+    55→import { AdminSidebar } from '@/components/layout/admin-sidebar';
+    56→import { AdminHeader } from '@/components/layout/admin-header';
+    57→import { SidebarInset } from '@/components/ui/sidebar';
+    58→import { Separator } from '@/components/ui/separator';
+    59→import { formatVND } from '@/lib/security';
+    60→import { ProductFormDialog, type ProductEditData } from '@/components/products/product-form-dialog';
+    61→
+    62→// ============================================
+    63→// Types
+    64→// ============================================
+    65→
+    66→interface Category {
+    67→  id: string;
+    68→  name: string;
+    69→  nameEn: string | null;
+    70→  slug: string;
+    71→  icon: string | null;
+    72→  productCount?: number;
+    73→}
+    74→
+    75→interface Product {
+    76→  id: string;
+    77→  sku: string;
+    78→  name: string;
+    79→  nameEn: string | null;
+    80→  categoryId: string;
+    81→  category: { id: string; name: string; nameEn: string | null; slug: string; icon: string | null };
+    82→  brand: string | null;
+    83→  unit: string;
+    84→  unitEn: string | null;
+    85→  basePrice: number;
+    86→  groupBuyPrice: number | null;
+    87→  stockQuantity: number;
+    88→  minOrderQty: number;
+    89→  maxOrderQty: number | null;
+    90→  weightKg: number | null;
+    91→  imageUrl: string | null;
+    92→  isActive: boolean;
+    93→  isPrivateLabel: boolean;
+    94→  barcode: string | null;
+    95→  manufacturer: { id: string; name: string } | null;
+    96→  distributor: { id: string; name: string } | null;
+    97→  createdAt: string;
+    98→  updatedAt: string;
+    99→}
+   100→
+   101→interface ProductsResponse {
+   102→  items: Product[];
+   103→  pagination: {
+   104→    page: number;
+   105→    limit: number;
+   106→    total: number;
+   107→    totalPages: number;
+   108→  };
+   109→  filters: {
+   110→    categories: { categoryId: string; count: number }[];
+   111→    brands: string[];
+   112→  };
+   113→}
+   114→
+   115→interface ProductStats {
+   116→  total: number;
+   117→  active: number;
+   118→  lowStock: number;
+   119→  outOfStock: number;
+   120→}
+   121→
+   122→type StatusFilter = 'all' | 'active' | 'inactive' | 'lowStock' | 'outOfStock';
+   123→
+   124→// ============================================
+   125→// Stock Badge Component
+   126→// ============================================
+   127→
+   128→function StockBadge({ quantity }: { quantity: number }) {
+   129→  if (quantity === 0) {
+   130→    return (
+   131→      <Badge variant="secondary" className="bg-red-100 text-red-700 hover:bg-red-100 text-[11px] font-medium px-2 py-0.5">
+   132→        0
+   133→      </Badge>
+   134→    );
+   135→  }
+   136→  if (quantity <= 50) {
+   137→    return (
+   138→      <Badge variant="secondary" className="bg-amber-100 text-amber-700 hover:bg-amber-100 text-[11px] font-medium px-2 py-0.5">
+   139→        {quantity}
+   140→      </Badge>
+   141→    );
+   142→  }
+   143→  return (
+   144→    <Badge variant="secondary" className="bg-yellow-50 text-red-700 hover:bg-yellow-50 text-[11px] font-medium px-2 py-0.5">
+   145→      {quantity}
+   146→    </Badge>
+   147→  );
+   148→}
+   149→
+   150→// ============================================
+   151→// Stat Card
+   152→// ============================================
+   153→
+   154→function StatCardMini({
+   155→  title,
+   156→  titleVi,
+   157→  value,
+   158→  icon,
+   159→  variant = 'default',
+   160→  locale,
+   161→}: {
+   162→  title: string;
+   163→  titleVi: string;
+   164→  value: number;
+   165→  icon: React.ReactNode;
+   166→  variant?: 'default' | 'warning' | 'danger' | 'success';
+   167→  locale: string;
+   168→}) {
+   169→  const label = locale === 'vi' ? titleVi : title;
+   170→
+   171→  return (
+   172→    <Card className={
+   173→      variant === 'danger' ? 'border-red-200 bg-red-50/50 dark:border-red-900 dark:bg-red-950/30' :
+   174→      variant === 'warning' ? 'border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/30' :
+   175→      variant === 'success' ? 'border-yellow-100 bg-yellow-50/50 dark:border-red-900 dark:bg-emerald-950/30' :
+   176→      ''
+   177→    }>
+   178→      <CardContent className="p-4">
+   179→        <div className="flex items-center justify-between">
+   180→          <div>
+   181→            <p className="text-xs text-muted-foreground font-medium">{label}</p>
+   182→            <p className="text-xl font-bold mt-1">{value.toLocaleString()}</p>
+   183→          </div>
+   184→          <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${
+   185→            variant === 'danger' ? 'bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-400' :
+   186→            variant === 'warning' ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400' :
+   187→            variant === 'success' ? 'bg-yellow-50 text-red-600 dark:bg-red-900/50 dark:text-yellow-500' :
+   188→            'bg-muted text-muted-foreground'
+   189→          }`}>
+   190→            {icon}
+   191→          </div>
+   192→        </div>
+   193→      </CardContent>
+   194→    </Card>
+   195→  );
+   196→}
+   197→
+   198→// ============================================
+   199→// Main Products Page
+   200→// ============================================
+   201→
+   202→export default function ProductsPage() {
+   203→  const { locale } = useLocale();
+   204→  const t = (en: string, vi: string) => locale === 'vi' ? vi : en;
+   205→
+   206→  // Data state
+   207→  const [products, setProducts] = useState<Product[]>([]);
+   208→  const [categories, setCategories] = useState<Category[]>([]);
+   209→  const [loading, setLoading] = useState(true);
+   210→  const [stats, setStats] = useState<ProductStats>({ total: 0, active: 0, lowStock: 0, outOfStock: 0 });
+   211→
+   212→  // Filter state
+   213→  const [searchQuery, setSearchQuery] = useState('');
+   214→  const [debouncedSearch, setDebouncedSearch] = useState('');
+   215→  const [categoryFilter, setCategoryFilter] = useState('all');
+   216→  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+   217→  const [page, setPage] = useState(1);
+   218→  const [totalPages, setTotalPages] = useState(1);
+   219→  const [totalProducts, setTotalProducts] = useState(0);
+   220→  const limit = 20;
+   221→
+   222→  // Dialog state
+   223→  const [formDialogOpen, setFormDialogOpen] = useState(false);
+   224→  const [editingProduct, setEditingProduct] = useState<ProductEditData | null>(null);
+   225→  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+   226→  const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
+   227→  const [togglingId, setTogglingId] = useState<string | null>(null);
+   228→
+   229→  // Refs
+   230→  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+   231→
+   232→  // Debounced search
+   233→  useEffect(() => {
+   234→    if (searchTimeoutRef.current) {
+   235→      clearTimeout(searchTimeoutRef.current);
+   236→    }
+   237→    searchTimeoutRef.current = setTimeout(() => {
+   238→      setDebouncedSearch(searchQuery);
+   239→      setPage(1);
+   240→    }, 300);
+   241→    return () => {
+   242→      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+   243→    };
+   244→  }, [searchQuery]);
+   245→
+   246→  // Fetch categories
+   247→  const fetchCategories = useCallback(async () => {
+   248→    try {
+   249→      const res = await adminFetch('/api/categories');
+   250→      const json = await res.json();
+   251→      if (json.success) {
+   252→        setCategories(json.data.items || []);
+   253→      }
+   254→    } catch (err) {
+   255→      console.error('Failed to fetch categories:', err);
+   256→    }
+   257→  }, []);
+   258→
+   259→  // Fetch products
+   260→  const fetchProducts = useCallback(async () => {
+   261→    try {
+   262→      setLoading(true);
+   263→      const params = new URLSearchParams({
+   264→        page: String(page),
+   265→        limit: String(limit),
+   266→        search: debouncedSearch,
+   267→      });
+   268→
+   269→      if (categoryFilter !== 'all') {
+   270→        params.set('categoryId', categoryFilter);
+   271→      }
+   272→
+   273→      if (statusFilter === 'active') params.set('isActive', 'true');
+   274→      else if (statusFilter === 'inactive') params.set('isActive', 'false');
+   275→      else if (statusFilter === 'lowStock') params.set('lowStock', 'true');
+   276→      else if (statusFilter === 'outOfStock') params.set('outOfStock', 'true');
+   277→
+   278→      const res = await adminFetch(`/api/products?${params.toString()}`);
+   279→      const json = await res.json();
+   280→
+   281→      if (json.success) {
+   282→        const data: ProductsResponse = json.data;
+   283→        setProducts(data.items || []);
+   284→        setTotalPages(data.pagination.totalPages);
+   285→        setTotalProducts(data.pagination.total);
+   286→      }
+   287→    } catch (err) {
+   288→      console.error('Failed to fetch products:', err);
+   289→    } finally {
+   290→      setLoading(false);
+   291→    }
+   292→  }, [page, debouncedSearch, categoryFilter, statusFilter, limit]);
+   293→
+   294→  // Fetch stats
+   295→  const fetchStats = useCallback(async () => {
+   296→    try {
+   297→      const [allRes, activeRes, lowRes, outRes] = await Promise.all([
+   298→        adminFetch('/api/products?limit=1'),
+   299→        adminFetch('/api/products?isActive=true&limit=1'),
+   300→        adminFetch('/api/products?lowStock=true&limit=1'),
+   301→        adminFetch('/api/products?outOfStock=true&limit=1'),
+   302→      ]);
+   303→      const [allJson, activeJson, lowJson, outJson] = await Promise.all([
+   304→        allRes.json(),
+   305→        activeRes.json(),
+   306→        lowRes.json(),
+   307→        outRes.json(),
+   308→      ]);
+   309→      setStats({
+   310→        total: allJson.success ? allJson.data.pagination.total : 0,
+   311→        active: activeJson.success ? activeJson.data.pagination.total : 0,
+   312→        lowStock: lowJson.success ? lowJson.data.pagination.total : 0,
+   313→        outOfStock: outJson.success ? outJson.data.pagination.total : 0,
+   314→      });
+   315→    } catch (err) {
+   316→      console.error('Failed to fetch stats:', err);
+   317→    }
+   318→  }, []);
+   319→
+   320→  // Initial load
+   321→  useEffect(() => {
+   322→    fetchCategories();
+   323→    fetchStats();
+   324→  }, [fetchCategories, fetchStats]);
+   325→
+   326→  // Re-fetch on filter/page change
+   327→  useEffect(() => {
+   328→    fetchProducts();
+   329→  }, [fetchProducts]);
+   330→
+   331→  // Handlers
+   332→  const handleCreate = () => {
+   333→    setEditingProduct(null);
+   334→    setFormDialogOpen(true);
+   335→  };
+   336→
+   337→  const handleEdit = (product: Product) => {
+   338→    setEditingProduct({
+   339→      id: product.id,
+   340→      sku: product.sku,
+   341→      name: product.name,
+   342→      nameEn: product.nameEn,
+   343→      description: (product as Record<string, unknown>).description as string | null || null,
+   344→      descriptionEn: (product as Record<string, unknown>).descriptionEn as string | null || null,
+   345→      categoryId: product.categoryId,
+   346→      brand: product.brand,
+   347→      unit: product.unit,
+   348→      unitEn: product.unitEn,
+   349→      basePrice: product.basePrice,
+   350→      groupBuyPrice: product.groupBuyPrice,
+   351→      stockQuantity: product.stockQuantity,
+   352→      minOrderQty: product.minOrderQty,
+   353→      maxOrderQty: product.maxOrderQty,
+   354→      weightKg: product.weightKg,
+   355→      barcode: product.barcode,
+   356→      manufacturerId: product.manufacturer?.id || null,
+   357→      distributorId: product.distributor?.id || null,
+   358→      isPrivateLabel: product.isPrivateLabel,
+   359→      isActive: product.isActive,
+   360→    });
+   361→    setFormDialogOpen(true);
+   362→  };
+   363→
+   364→  const handleDelete = (product: Product) => {
+   365→    setDeletingProduct(product);
+   366→    setDeleteDialogOpen(true);
+   367→  };
+   368→
+   369→  const confirmDelete = async () => {
+   370→    if (!deletingProduct) return;
+   371→    try {
+   372→      const res = await adminFetch(`/api/products/${deletingProduct.id}`, { method: 'DELETE' });
+   373→      const json = await res.json();
+   374→      if (json.success) {
+   375→        setDeleteDialogOpen(false);
+   376→        setDeletingProduct(null);
+   377→        fetchProducts();
+   378→        fetchStats();
+   379→      }
+   380→    } catch (err) {
+   381→      console.error('Delete error:', err);
+   382→    }
+   383→  };
+   384→
+   385→  const handleToggleActive = async (product: Product) => {
+   386→    try {
+   387→      setTogglingId(product.id);
+   388→      const res = await adminFetch(`/api/products/${product.id}`, {
+   389→        method: 'PATCH',
+   390→        headers: { 'Content-Type': 'application/json' },
+   391→        body: JSON.stringify({ action: 'toggle_active' }),
+   392→      });
+   393→      const json = await res.json();
+   394→      if (json.success) {
+   395→        // Optimistic update
+   396→        setProducts((prev) =>
+   397→          prev.map((p) =>
+   398→            p.id === product.id ? { ...p, isActive: !p.isActive } : p
+   399→          )
+   400→        );
+   401→        fetchStats();
+   402→      }
+   403→    } catch (err) {
+   404→      console.error('Toggle error:', err);
+   405→    } finally {
+   406→      setTogglingId(null);
+   407→    }
+   408→  };
+   409→
+   410→  const handleSaved = () => {
+   411→    fetchProducts();
+   412→    fetchStats();
+   413→  };
+   414→
+   415→  // Page range for pagination
+   416→  const getPageNumbers = () => {
+   417→    const pages: number[] = [];
+   418→    const maxVisible = 5;
+   419→    let start = Math.max(1, page - Math.floor(maxVisible / 2));
+   420→    const end = Math.min(totalPages, start + maxVisible - 1);
+   421→    if (end - start + 1 < maxVisible) {
+   422→      start = Math.max(1, end - maxVisible + 1);
+   423→    }
+   424→    for (let i = start; i <= end; i++) {
+   425→      pages.push(i);
+   426→    }
+   427→    return pages;
+   428→  };
+   429→
+   430→  return (
+   431→    <div className="flex min-h-screen">
+   432→      <AdminSidebar />
+   433→      <SidebarInset>
+   434→        <AdminHeader />
+   435→
+   436→        <main className="flex-1 p-4 md:p-6 lg:p-8 space-y-6">
+   437→          {/* Page Header */}
+   438→          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+   439→            <div>
+   440→              <h1 className="text-2xl font-bold tracking-tight">
+   441→                {t('Products', 'Sản phẩm')}
+   442→              </h1>
+   443→              <p className="text-sm text-muted-foreground mt-1">
+   444→                {t('Manage product catalog and inventory', 'Quản lý danh mục sản phẩm và tồn kho')}
+   445→              </p>
+   446→            </div>
+   447→            <div className="flex items-center gap-2">
+   448→              <Button variant="outline" size="sm" onClick={() => { fetchProducts(); fetchStats(); }}>
+   449→                <RefreshCw className="h-4 w-4 mr-1" />
+   450→                {t('Refresh', 'Làm mới')}
+   451→              </Button>
+   452→              <Button
+   453→                size="sm"
+   454→                onClick={handleCreate}
+   455→                className="bg-red-600 hover:bg-red-700 text-white"
+   456→              >
+   457→                <Plus className="h-4 w-4 mr-1" />
+   458→                {t('Add Product', 'Thêm SP')}
+   459→              </Button>
+   460→            </div>
+   461→          </div>
+   462→
+   463→          <Separator />
+   464→
+   465→          {/* Stats Bar */}
+   466→          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+   467→            <StatCardMini
+   468→              title="Total Products"
+   469→              titleVi="Tổng sản phẩm"
+   470→              value={stats.total}
+   471→              icon={<Package className="h-4 w-4" />}
+   472→              variant="default"
+   473→              locale={locale}
+   474→            />
+   475→            <StatCardMini
+   476→              title="Active"
+   477→              titleVi="Đang bán"
+   478→              value={stats.active}
+   479→              icon={<Check className="h-4 w-4" />}
+   480→              variant="success"
+   481→              locale={locale}
+   482→            />
+   483→            <StatCardMini
+   484→              title="Low Stock"
+   485→              titleVi="Sắp hết hàng"
+   486→              value={stats.lowStock}
+   487→              icon={<AlertTriangle className="h-4 w-4" />}
+   488→              variant="warning"
+   489→              locale={locale}
+   490→            />
+   491→            <StatCardMini
+   492→              title="Out of Stock"
+   493→              titleVi="Hết hàng"
+   494→              value={stats.outOfStock}
+   495→              icon={<PackageX className="h-4 w-4" />}
+   496→              variant="danger"
+   497→              locale={locale}
+   498→            />
+   499→          </div>
+   500→
+   501→          {/* Filters Bar */}
+   502→          <Card>
+   503→            <CardContent className="p-4">
+   504→              <div className="flex flex-col sm:flex-row gap-3">
+   505→                {/* Search */}
+   506→                <div className="relative flex-1 max-w-sm">
+   507→                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+   508→                  <Input
+   509→                    type="search"
+   510→                    placeholder={t('Search by name, SKU, brand, barcode...', 'Tìm theo tên, SKU, thương hiệu, mã vạch...')}
+   511→                    className="pl-8 h-9"
+   512→                    value={searchQuery}
+   513→                    onChange={(e) => setSearchQuery(e.target.value)}
+   514→                  />
+   515→                </div>
+   516→
+   517→                {/* Category Filter */}
+   518→                <Select value={categoryFilter} onValueChange={(val) => { setCategoryFilter(val); setPage(1); }}>
+   519→                  <SelectTrigger className="w-full sm:w-[200px] h-9">
+   520→                    <SelectValue placeholder={t('All Categories', 'Tất cả danh mục')} />
+   521→                  </SelectTrigger>
+   522→                  <SelectContent>
+   523→                    <SelectItem value="all">
+   524→                      {t('All Categories', 'Tất cả danh mục')}
+   525→                    </SelectItem>
+   526→                    {categories.map((cat) => (
+   527→                      <SelectItem key={cat.id} value={cat.id}>
+   528→                        <span className="flex items-center gap-2">
+   529→                          {cat.icon && <span>{cat.icon}</span>}
+   530→                          {locale === 'vi' ? cat.name : (cat.nameEn || cat.name)}
+   531→                          {cat.productCount !== undefined && (
+   532→                            <Badge variant="outline" className="text-[10px] ml-1 px-1 py-0">
+   533→                              {cat.productCount}
+   534→                            </Badge>
+   535→                          )}
+   536→                        </span>
+   537→                      </SelectItem>
+   538→                    ))}
+   539→                  </SelectContent>
+   540→                </Select>
+   541→
+   542→                {/* Status Filter */}
+   543→                <Select
+   544→                  value={statusFilter}
+   545→                  onValueChange={(val) => { setStatusFilter(val as StatusFilter); setPage(1); }}
+   546→                >
+   547→                  <SelectTrigger className="w-full sm:w-[170px] h-9">
+   548→                    <SelectValue placeholder={t('All Status', 'Tất cả trạng thái')} />
+   549→                  </SelectTrigger>
+   550→                  <SelectContent>
+   551→                    <SelectItem value="all">
+   552→                      {t('All Status', 'Tất cả trạng thái')}
+   553→                    </SelectItem>
+   554→                    <SelectItem value="active">
+   555→                      {t('Active', 'Đang bán')}
+   556→                    </SelectItem>
+   557→                    <SelectItem value="inactive">
+   558→                      {t('Inactive', 'Ngừng bán')}
+   559→                    </SelectItem>
+   560→                    <SelectItem value="lowStock">
+   561→                      <span className="flex items-center gap-1">
+   562→                        <AlertTriangle className="h-3 w-3 text-amber-500" />
+   563→                        {t('Low Stock', 'Sắp hết hàng')}
+   564→                      </span>
+   565→                    </SelectItem>
+   566→                    <SelectItem value="outOfStock">
+   567→                      <span className="flex items-center gap-1">
+   568→                        <PackageX className="h-3 w-3 text-red-500" />
+   569→                        {t('Out of Stock', 'Hết hàng')}
+   570→                      </span>
+   571→                    </SelectItem>
+   572→                  </SelectContent>
+   573→                </Select>
+   574→              </div>
+   575→            </CardContent>
+   576→          </Card>
+   577→
+   578→          {/* Products Table */}
+   579→          <Card>
+   580→            <CardContent className="p-0">
+   581→              {loading ? (
+   582→                <div className="p-4 space-y-3">
+   583→                  <Skeleton className="h-10 w-full" />
+   584→                  {Array.from({ length: 8 }).map((_, i) => (
+   585→                    <Skeleton key={i} className="h-12 w-full" />
+   586→                  ))}
+   587→                </div>
+   588→              ) : products.length === 0 ? (
+   589→                /* Empty State */
+   590→                <div className="text-center py-16 px-4">
+   591→                  <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+   592→                    <Package className="h-8 w-8 text-muted-foreground" />
+   593→                  </div>
+   594→                  <h3 className="text-lg font-semibold">
+   595→                    {t('No products found', 'Không tìm thấy sản phẩm')}
+   596→                  </h3>
+   597→                  <p className="text-sm text-muted-foreground mt-1 max-w-md mx-auto">
+   598→                    {debouncedSearch || categoryFilter !== 'all' || statusFilter !== 'all'
+   599→                      ? t(
+   600→                          'Try adjusting your search or filters to find what you are looking for.',
+   601→                          'Thử thay đổi tìm kiếm hoặc bộ lọc để tìm sản phẩm.'
+   602→                        )
+   603→                      : t(
+   604→                          'Get started by adding your first product to the catalog.',
+   605→                          'Bắt đầu bằng cách thêm sản phẩm đầu tiên vào danh mục.'
+   606→                        )}
+   607→                  </p>
+   608→                  {!debouncedSearch && categoryFilter === 'all' && statusFilter === 'all' && (
+   609→                    <Button
+   610→                      className="mt-4 bg-red-600 hover:bg-red-700 text-white"
+   611→                      onClick={handleCreate}
+   612→                    >
+   613→                      <Plus className="h-4 w-4 mr-2" />
+   614→                      {t('Add Your First Product', 'Thêm sản phẩm đầu tiên')}
+   615→                    </Button>
+   616→                  )}
+   617→                </div>
+   618→              ) : (
+   619→                <div>
+   620→                  <Table>
+   621→                    <TableHeader>
+   622→                      <TableRow className="bg-muted/30">
+   623→                        <TableHead className="w-[100px]">{t('SKU', 'Mã SP')}</TableHead>
+   624→                        <TableHead>{t('Product Name', 'Tên sản phẩm')}</TableHead>
+   625→                        <TableHead className="hidden md:table-cell">{t('Category', 'Danh mục')}</TableHead>
+   626→                        <TableHead className="hidden lg:table-cell">{t('Brand', 'TH')}</TableHead>
+   627→                        <TableHead className="text-right">{t('Price', 'Giá')}</TableHead>
+   628→                        <TableHead className="text-right hidden sm:table-cell">{t('Group Buy', 'Mua chung')}</TableHead>
+   629→                        <TableHead className="text-center">{t('Stock', 'Tồn kho')}</TableHead>
+   630→                        <TableHead className="hidden lg:table-cell text-center">{t('Label', 'Nhãn')}</TableHead>
+   631→                        <TableHead className="text-center">{t('Status', 'TT')}</TableHead>
+   632→                        <TableHead className="text-right">{t('Actions', 'TH')}</TableHead>
+   633→                      </TableRow>
+   634→                    </TableHeader>
+   635→                    <TableBody>
+   636→                      {products.map((product) => (
+   637→                        <TableRow key={product.id} className={!product.isActive ? 'opacity-60' : ''}>
+   638→                          {/* SKU */}
+   639→                          <TableCell className="font-mono text-xs font-medium">
+   640→                            {product.sku}
+   641→                          </TableCell>
+   642→
+   643→                          {/* Name */}
+   644→                          <TableCell>
+   645→                            <div className="min-w-0">
+   646→                              <p className="text-sm font-medium truncate max-w-[200px]">
+   647→                                {locale === 'vi' ? product.name : (product.nameEn || product.name)}
+   648→                              </p>
+   649→                              {locale === 'en' && product.nameEn && (
+   650→                                <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+   651→                                  {product.name}
+   652→                                </p>
+   653→                              )}
+   654→                              {product.barcode && (
+   655→                                <p className="text-[10px] text-muted-foreground font-mono">
+   656→                                  {product.barcode}
+   657→                                </p>
+   658→                              )}
+   659→                            </div>
+   660→                          </TableCell>
+   661→
+   662→                          {/* Category */}
+   663→                          <TableCell className="hidden md:table-cell">
+   664→                            <div className="flex items-center gap-1.5">
+   665→                              {product.category.icon && (
+   666→                                <span className="text-sm">{product.category.icon}</span>
+   667→                              )}
+   668→                              <span className="text-xs">
+   669→                                {locale === 'vi' ? product.category.name : (product.category.nameEn || product.category.name)}
+   670→                              </span>
+   671→                            </div>
+   672→                          </TableCell>
+   673→
+   674→                          {/* Brand */}
+   675→                          <TableCell className="hidden lg:table-cell">
+   676→                            {product.brand ? (
+   677→                              <span className="text-xs text-muted-foreground">{product.brand}</span>
+   678→                            ) : (
+   679→                              <span className="text-xs text-muted-foreground/50">—</span>
+   680→                            )}
+   681→                          </TableCell>
+   682→
+   683→                          {/* Price */}
+   684→                          <TableCell className="text-right">
+   685→                            <span className="text-sm font-semibold">
+   686→                              {formatVND(product.basePrice)}
+   687→                            </span>
+   688→                          </TableCell>
+   689→
+   690→                          {/* Group Buy Price */}
+   691→                          <TableCell className="text-right hidden sm:table-cell">
+   692→                            {product.groupBuyPrice ? (
+   693→                              <span className="text-sm text-red-600 font-medium">
+   694→                                {formatVND(product.groupBuyPrice)}
+   695→                              </span>
+   696→                            ) : (
+   697→                              <span className="text-xs text-muted-foreground/50">—</span>
+   698→                            )}
+   699→                          </TableCell>
+   700→
+   701→                          {/* Stock */}
+   702→                          <TableCell className="text-center">
+   703→                            <StockBadge quantity={product.stockQuantity} />
+   704→                          </TableCell>
+   705→
+   706→                          {/* Private Label */}
+   707→                          <TableCell className="hidden lg:table-cell text-center">
+   708→                            {product.isPrivateLabel ? (
+   709→                              <Badge variant="secondary" className="bg-purple-100 text-purple-700 hover:bg-purple-100 text-[10px] font-medium px-1.5 py-0.5">
+   710→                                <ShieldCheck className="h-3 w-3 mr-1" />
+   711→                                PL
+   712→                              </Badge>
+   713→                            ) : (
+   714→                              <span className="text-muted-foreground/30">—</span>
+   715→                            )}
+   716→                          </TableCell>
+   717→
+   718→                          {/* Status Toggle */}
+   719→                          <TableCell className="text-center">
+   720→                            <Switch
+   721→                              checked={product.isActive}
+   722→                              onCheckedChange={() => handleToggleActive(product)}
+   723→                              disabled={togglingId === product.id}
+   724→                              className="data-[state=checked]:bg-red-600"
+   725→                            />
+   726→                          </TableCell>
+   727→
+   728→                          {/* Actions */}
+   729→                          <TableCell className="text-right">
+   730→                            <div className="flex items-center justify-end gap-1">
+   731→                              <Button
+   732→                                variant="ghost"
+   733→                                size="icon"
+   734→                                className="h-8 w-8 hover:bg-muted"
+   735→                                onClick={() => handleEdit(product)}
+   736→                              >
+   737→                                <Pencil className="h-3.5 w-3.5" />
+   738→                              </Button>
+   739→                              <Button
+   740→                                variant="ghost"
+   741→                                size="icon"
+   742→                                className="h-8 w-8 hover:bg-red-50 hover:text-red-600"
+   743→                                onClick={() => handleDelete(product)}
+   744→                              >
+   745→                                <Trash2 className="h-3.5 w-3.5" />
+   746→                              </Button>
+   747→                            </div>
+   748→                          </TableCell>
+   749→                        </TableRow>
+   750→                      ))}
+   751→                    </TableBody>
+   752→                  </Table>
+   753→
+   754→                  {/* Pagination */}
+   755→                  {totalPages > 1 && (
+   756→                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t">
+   757→                      <p className="text-xs text-muted-foreground">
+   758→                        {t(
+   759→                          `Showing ${(page - 1) * limit + 1}–${Math.min(page * limit, totalProducts)} of ${totalProducts} products`,
+   760→                          `Hiển thị ${(page - 1) * limit + 1}–${Math.min(page * limit, totalProducts)} / ${totalProducts} sản phẩm`
+   761→                        )}
+   762→                      </p>
+   763→                      <div className="flex items-center gap-1">
+   764→                        <Button
+   765→                          variant="outline"
+   766→                          size="icon"
+   767→                          className="h-8 w-8"
+   768→                          disabled={page <= 1}
+   769→                          onClick={() => setPage((p) => Math.max(1, p - 1))}
+   770→                        >
+   771→                          <ChevronLeft className="h-4 w-4" />
+   772→                        </Button>
+   773→                        {getPageNumbers().map((p) => (
+   774→                          <Button
+   775→                            key={p}
+   776→                            variant={p === page ? 'default' : 'outline'}
+   777→                            size="icon"
+   778→                            className={`h-8 w-8 text-xs ${p === page ? 'bg-red-600 hover:bg-red-700 text-white' : ''}`}
+   779→                            onClick={() => setPage(p)}
+   780→                          >
+   781→                            {p}
+   782→                          </Button>
+   783→                        ))}
+   784→                        <Button
+   785→                          variant="outline"
+   786→                          size="icon"
+   787→                          className="h-8 w-8"
+   788→                          disabled={page >= totalPages}
+   789→                          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+   790→                        >
+   791→                          <ChevronRight className="h-4 w-4" />
+   792→                        </Button>
+   793→                      </div>
+   794→                    </div>
+   795→                  )}
+   796→                </div>
+   797→              )}
+   798→            </CardContent>
+   799→          </Card>
+   800→        </main>
+   801→
+   802→        {/* Product Form Dialog */}
+   803→        <ProductFormDialog
+   804→          open={formDialogOpen}
+   805→          onOpenChange={setFormDialogOpen}
+   806→          editProduct={editingProduct}
+   807→          locale={locale}
+   808→          onSaved={handleSaved}
+   809→        />
+   810→
+   811→        {/* Delete Confirmation */}
+   812→        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+   813→          <AlertDialogContent>
+   814→            <AlertDialogHeader>
+   815→              <AlertDialogTitle>
+   816→                {t('Delete Product', 'Xóa sản phẩm')}
+   817→              </AlertDialogTitle>
+   818→              <AlertDialogDescription>
+   819→                {deletingProduct && (
+   820→                  <>
+   821→                    {t(
+   822→                      `Are you sure you want to delete "${deletingProduct.name}" (${deletingProduct.sku})?`,
+   823→                      `Bạn có chắc muốn xóa "${deletingProduct.name}" (${deletingProduct.sku})?`
+   824→                    )}
+   825→                    <br />
+   826→                    <br />
+   827→                    <span className="text-amber-600 font-medium">
+   828→                      {t(
+   829→                        'This action cannot be undone. If the product has active orders, deletion will be blocked.',
+   830→                        'Hành động này không thể hoàn tác. Nếu sản phẩm có đơn hàng đang xử lý, việc xóa sẽ bị từ chối.'
+   831→                      )}
+   832→                    </span>
+   833→                  </>
+   834→                )}
+   835→              </AlertDialogDescription>
+   836→            </AlertDialogHeader>
+   837→            <AlertDialogFooter>
+   838→              <AlertDialogCancel>
+   839→                {t('Cancel', 'Hủy')}
+   840→              </AlertDialogCancel>
+   841→              <AlertDialogAction
+   842→                onClick={confirmDelete}
+   843→                className="bg-red-600 hover:bg-red-700 text-white"
+   844→              >
+   845→                {t('Delete', 'Xóa')}
+   846→              </AlertDialogAction>
+   847→            </AlertDialogFooter>
+   848→          </AlertDialogContent>
+   849→        </AlertDialog>
+   850→      </SidebarInset>
+   851→    </div>
+   852→  );
+   853→}
+   854→

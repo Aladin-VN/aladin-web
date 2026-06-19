@@ -1,0 +1,743 @@
+     1→'use client';
+     2→import { adminFetch } from '@/lib/admin-fetch';
+     3→import { useLocale } from '@/providers/app-provider';
+     4→
+     5→import { useState, useEffect, useCallback, useRef } from 'react';
+     6→import {
+     7→  Truck,
+     8→  Plus,
+     9→  Search,
+    10→  ChevronLeft,
+    11→  ChevronRight,
+    12→  RefreshCw,
+    13→  Loader2,
+    14→  Package,
+    15→  Clock,
+    16→  MapPin,
+    17→  CheckCircle2,
+    18→  AlertTriangle,
+    19→  Users,
+    20→  TrendingUp,
+    21→  CalendarDays,
+    22→  RotateCcw,
+    23→  XCircle,
+    24→  Navigation,
+    25→} from 'lucide-react';
+    26→import { Card, CardContent } from '@/components/ui/card';
+    27→import { Button } from '@/components/ui/button';
+    28→import { Skeleton } from '@/components/ui/skeleton';
+    29→import { Input } from '@/components/ui/input';
+    30→import {
+    31→  Select,
+    32→  SelectContent,
+    33→  SelectItem,
+    34→  SelectTrigger,
+    35→  SelectValue,
+    36→} from '@/components/ui/select';
+    37→import {
+    38→  Table,
+    39→  TableBody,
+    40→  TableCell,
+    41→  TableHead,
+    42→  TableHeader,
+    43→  TableRow,
+    44→} from '@/components/ui/table';
+    45→import { AdminSidebar } from '@/components/layout/admin-sidebar';
+    46→import { AdminHeader } from '@/components/layout/admin-header';
+    47→import { SidebarInset } from '@/components/ui/sidebar';
+    48→import { Separator } from '@/components/ui/separator';
+    49→import { SensitiveValue } from '@/components/shared/sensitive-value';
+    50→import { ShipmentStatusBadge, ShipmentTypeBadge } from '@/components/shipments/shipment-status-badge';
+    51→import { ShipmentDetailDrawer } from '@/components/shipments/shipment-detail-drawer';
+    52→import { ShipmentCreateDialog } from '@/components/shipments/shipment-create-dialog';
+    53→
+    54→// ============================================
+    55→// Types
+    56→// ============================================
+    57→
+    58→interface ShipmentListItem {
+    59→  id: string;
+    60→  orderId: string;
+    61→  orderNumber: string;
+    62→  orderTotal: number;
+    63→  orderTotalFormatted: string;
+    64→  shopName: string;
+    65→  shopProvince: string;
+    66→  type: string;
+    67→  status: string;
+    68→  driverName: string | null;
+    69→  driverPhone: string | null;
+    70→  driverId: string | null;
+    71→  dropoffAddress: string;
+    72→  pickupAddress: string | null;
+    73→  deliveredAt: string | null;
+    74→  thirdPartyTrackingId: string | null;
+    75→  createdAt: string;
+    76→  updatedAt: string;
+    77→}
+    78→
+    79→interface ShipmentsResponse {
+    80→  items: ShipmentListItem[];
+    81→  pagination: {
+    82→    page: number;
+    83→    limit: number;
+    84→    total: number;
+    85→    totalPages: number;
+    86→  };
+    87→}
+    88→
+    89→interface ShipmentStats {
+    90→  totalShipments: number;
+    91→  pendingShipments: number;
+    92→  inTransitShipments: number;
+    93→  deliveredToday: number;
+    94→  failedShipments: number;
+    95→  activeDrivers: number;
+    96→  unassignedShipments: number;
+    97→  avgDeliveryHours: number;
+    98→  deliveryRate: number;
+    99→  failureRate: number;
+   100→}
+   101→
+   102→// ============================================
+   103→// Stat Card Mini
+   104→// ============================================
+   105→
+   106→function StatCardMini({
+   107→  title,
+   108→  titleVi,
+   109→  value,
+   110→  icon,
+   111→  variant = 'default',
+   112→  locale,
+   113→  subtitle,
+   114→  subtitleVi,
+   115→}: {
+   116→  title: string;
+   117→  titleVi: string;
+   118→  value: string | number;
+   119→  icon: React.ReactNode;
+   120→  variant?: 'default' | 'warning' | 'danger' | 'success' | 'info';
+   121→  locale: string;
+   122→  subtitle?: string;
+   123→  subtitleVi?: string;
+   124→}) {
+   125→  const label = locale === 'vi' ? titleVi : title;
+   126→  const sub = locale === 'vi' ? subtitleVi : subtitle;
+   127→
+   128→  return (
+   129→    <Card className={
+   130→      variant === 'danger' ? 'border-red-200 bg-red-50/50 dark:border-red-900 dark:bg-red-950/30' :
+   131→      variant === 'warning' ? 'border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/30' :
+   132→      variant === 'success' ? 'border-yellow-100 bg-yellow-50/50 dark:border-red-900 dark:bg-emerald-950/30' :
+   133→      variant === 'info' ? 'border-blue-200 bg-blue-50/50 dark:border-blue-900 dark:bg-blue-950/30' :
+   134→      ''
+   135→    }>
+   136→      <CardContent className="p-4">
+   137→        <div className="flex items-center justify-between">
+   138→          <div>
+   139→            <p className="text-xs text-muted-foreground font-medium">{label}</p>
+   140→            <p className="text-xl font-bold mt-1">
+   141→              {typeof value === 'number' ? value.toLocaleString() : value}
+   142→            </p>
+   143→            {sub && (
+   144→              <p className="text-[10px] text-muted-foreground mt-0.5">{sub}</p>
+   145→            )}
+   146→          </div>
+   147→          <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${
+   148→            variant === 'danger' ? 'bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-400' :
+   149→            variant === 'warning' ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400' :
+   150→            variant === 'success' ? 'bg-yellow-50 text-red-600 dark:bg-red-900/50 dark:text-yellow-500' :
+   151→            variant === 'info' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400' :
+   152→            'bg-muted text-muted-foreground'
+   153→          }`}>
+   154→            {icon}
+   155→          </div>
+   156→        </div>
+   157→      </CardContent>
+   158→    </Card>
+   159→  );
+   160→}
+   161→
+   162→// ============================================
+   163→// Main Shipments Page
+   164→// ============================================
+   165→
+   166→export default function ShipmentsPage() {
+   167→  const { locale } = useLocale();
+   168→  const t = (en: string, vi: string) => locale === 'vi' ? vi : en;
+   169→
+   170→  // Data state
+   171→  const [shipments, setShipments] = useState<ShipmentListItem[]>([]);
+   172→  const [loading, setLoading] = useState(true);
+   173→  const [stats, setStats] = useState<ShipmentStats | null>(null);
+   174→
+   175→  // Filter state
+   176→  const [searchQuery, setSearchQuery] = useState('');
+   177→  const [debouncedSearch, setDebouncedSearch] = useState('');
+   178→  const [statusFilter, setStatusFilter] = useState('all');
+   179→  const [typeFilter, setTypeFilter] = useState('all');
+   180→  const [dateFrom, setDateFrom] = useState('');
+   181→  const [dateTo, setDateTo] = useState('');
+   182→  const [page, setPage] = useState(1);
+   183→  const [totalPages, setTotalPages] = useState(1);
+   184→  const [totalCount, setTotalCount] = useState(0);
+   185→  const limit = 20;
+   186→
+   187→  // Dialog / Drawer state
+   188→  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+   189→  const [selectedShipmentId, setSelectedShipmentId] = useState<string | null>(null);
+   190→  const [drawerOpen, setDrawerOpen] = useState(false);
+   191→
+   192→  // Refs
+   193→  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+   194→
+   195→  // Debounced search
+   196→  useEffect(() => {
+   197→    if (searchTimeoutRef.current) {
+   198→      clearTimeout(searchTimeoutRef.current);
+   199→    }
+   200→    searchTimeoutRef.current = setTimeout(() => {
+   201→      setDebouncedSearch(searchQuery);
+   202→      setPage(1);
+   203→    }, 300);
+   204→    return () => {
+   205→      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+   206→    };
+   207→  }, [searchQuery]);
+   208→
+   209→  // Fetch shipments
+   210→  const fetchShipments = useCallback(async () => {
+   211→    try {
+   212→      setLoading(true);
+   213→      const params = new URLSearchParams({
+   214→        page: String(page),
+   215→        limit: String(limit),
+   216→        search: debouncedSearch,
+   217→      });
+   218→
+   219→      if (statusFilter !== 'all') params.set('status', statusFilter);
+   220→      if (typeFilter !== 'all') params.set('type', typeFilter);
+   221→      if (dateFrom) params.set('dateFrom', dateFrom);
+   222→      if (dateTo) params.set('dateTo', dateTo);
+   223→
+   224→      const res = await adminFetch(`/api/shipments?${params.toString()}`);
+   225→      const json = await res.json();
+   226→
+   227→      if (json.success) {
+   228→        const data: ShipmentsResponse = json.data;
+   229→        setShipments(data.items || []);
+   230→        setTotalPages(data.pagination.totalPages);
+   231→        setTotalCount(data.pagination.total);
+   232→      }
+   233→    } catch (err) {
+   234→      console.error('Failed to fetch shipments:', err);
+   235→    } finally {
+   236→      setLoading(false);
+   237→    }
+   238→  }, [page, debouncedSearch, statusFilter, typeFilter, dateFrom, dateTo, limit]);
+   239→
+   240→  // Fetch stats
+   241→  const fetchStats = useCallback(async () => {
+   242→    try {
+   243→      const res = await adminFetch('/api/shipments/stats');
+   244→      const json = await res.json();
+   245→      if (json.success) {
+   246→        setStats(json.data);
+   247→      }
+   248→    } catch (err) {
+   249→      console.error('Failed to fetch stats:', err);
+   250→    }
+   251→  }, []);
+   252→
+   253→  // Initial load
+   254→  useEffect(() => {
+   255→    fetchStats();
+   256→  }, [fetchStats]);
+   257→
+   258→  // Re-fetch on filter/page change
+   259→  useEffect(() => {
+   260→    fetchShipments();
+   261→  }, [fetchShipments]);
+   262→
+   263→  // Row click handler
+   264→  const handleRowClick = (shipmentId: string) => {
+   265→    setSelectedShipmentId(shipmentId);
+   266→    setDrawerOpen(true);
+   267→  };
+   268→
+   269→  // Reset filters
+   270→  const handleResetFilters = () => {
+   271→    setSearchQuery('');
+   272→    setStatusFilter('all');
+   273→    setTypeFilter('all');
+   274→    setDateFrom('');
+   275→    setDateTo('');
+   276→    setPage(1);
+   277→  };
+   278→
+   279→  // Refresh
+   280→  const handleRefresh = () => {
+   281→    fetchShipments();
+   282→    fetchStats();
+   283→  };
+   284→
+   285→  // After create / status change
+   286→  const handleDataChanged = () => {
+   287→    fetchShipments();
+   288→    fetchStats();
+   289→  };
+   290→
+   291→  // Page range for pagination
+   292→  const getPageNumbers = () => {
+   293→    const pages: number[] = [];
+   294→    const maxVisible = 5;
+   295→    let start = Math.max(1, page - Math.floor(maxVisible / 2));
+   296→    const end = Math.min(totalPages, start + maxVisible - 1);
+   297→    if (end - start + 1 < maxVisible) {
+   298→      start = Math.max(1, end - maxVisible + 1);
+   299→    }
+   300→    for (let i = start; i <= end; i++) {
+   301→      pages.push(i);
+   302→    }
+   303→    return pages;
+   304→  };
+   305→
+   306→  const hasActiveFilters = debouncedSearch || statusFilter !== 'all' || typeFilter !== 'all' || dateFrom || dateTo;
+   307→
+   308→  // Get driver initial for avatar
+   309→  const getDriverInitial = (name: string | null) => {
+   310→    if (!name) return '?';
+   311→    return name.charAt(0).toUpperCase();
+   312→  };
+   313→
+   314→  return (
+   315→    <div className="flex min-h-screen">
+   316→      <AdminSidebar />
+   317→      <SidebarInset>
+   318→        <AdminHeader />
+   319→
+   320→        <main className="flex-1 p-4 md:p-6 lg:p-8 space-y-6">
+   321→          {/* Page Header */}
+   322→          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+   323→            <div>
+   324→              <h1 className="text-2xl font-bold tracking-tight">
+   325→                {t('Shipments & Delivery', 'Vận chuyển & Giao hàng')}
+   326→              </h1>
+   327→              <p className="text-sm text-muted-foreground mt-1">
+   328→                {t('Track shipments, assign drivers, and manage delivery logistics', 'Theo dõi chuyến giao, phân công tài xế, quản lý vận chuyển')}
+   329→              </p>
+   330→            </div>
+   331→            <div className="flex items-center gap-2">
+   332→              <Button variant="outline" size="sm" onClick={handleRefresh}>
+   333→                <RefreshCw className="h-4 w-4 mr-1" />
+   334→                {t('Refresh', 'Làm mới')}
+   335→              </Button>
+   336→              <Button
+   337→                size="sm"
+   338→                onClick={() => setCreateDialogOpen(true)}
+   339→                className="bg-red-600 hover:bg-red-700 text-white"
+   340→              >
+   341→                <Plus className="h-4 w-4 mr-1" />
+   342→                {t('New Shipment', 'Tạo chuyến giao')}
+   343→              </Button>
+   344→            </div>
+   345→          </div>
+   346→
+   347→          <Separator />
+   348→
+   349→          {/* Stats Bar */}
+   350→          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+   351→            <StatCardMini
+   352→              title="Total"
+   353→              titleVi="Tổng chuyến"
+   354→              value={stats?.totalShipments || 0}
+   355→              icon={<Truck className="h-4 w-4" />}
+   356→              variant="default"
+   357→              locale={locale}
+   358→            />
+   359→            <StatCardMini
+   360→              title="Pending"
+   361→              titleVi="Chờ lấy hàng"
+   362→              value={stats?.pendingShipments || 0}
+   363→              icon={<Clock className="h-4 w-4" />}
+   364→              variant="warning"
+   365→              locale={locale}
+   366→              subtitle={stats?.unassignedShipments ? `${stats.unassignedShipments} unassigned` : undefined}
+   367→              subtitleVi={stats?.unassignedShipments ? `${stats.unassignedShipments} chưa phân công` : undefined}
+   368→            />
+   369→            <StatCardMini
+   370→              title="In Transit"
+   371→              titleVi="Đang vận chuyển"
+   372→              value={stats?.inTransitShipments || 0}
+   373→              icon={<Navigation className="h-4 w-4" />}
+   374→              variant="info"
+   375→              locale={locale}
+   376→              subtitle={`${stats?.activeDrivers || 0} drivers`}
+   377→              subtitleVi={`${stats?.activeDrivers || 0} tài xế`}
+   378→            />
+   379→            <StatCardMini
+   380→              title="Delivered Today"
+   381→              titleVi="Giao hôm nay"
+   382→              value={stats?.deliveredToday || 0}
+   383→              icon={<CheckCircle2 className="h-4 w-4" />}
+   384→              variant="success"
+   385→              locale={locale}
+   386→            />
+   387→            <StatCardMini
+   388→              title="Failed"
+   389→              titleVi="Thất bại"
+   390→              value={stats?.failedShipments || 0}
+   391→              icon={<XCircle className="h-4 w-4" />}
+   392→              variant="danger"
+   393→              locale={locale}
+   394→              subtitle={stats?.failureRate ? `${stats.failureRate}% rate` : undefined}
+   395→              subtitleVi={stats?.failureRate ? `Tỷ lệ ${stats.failureRate}%` : undefined}
+   396→            />
+   397→            <StatCardMini
+   398→              title="Success Rate"
+   399→              titleVi="Tỷ lệ thành công"
+   400→              value={`${stats?.deliveryRate || 0}%`}
+   401→              icon={<TrendingUp className="h-4 w-4" />}
+   402→              variant={stats?.deliveryRate && stats.deliveryRate >= 80 ? 'success' : stats?.deliveryRate && stats.deliveryRate >= 50 ? 'warning' : 'danger'}
+   403→              locale={locale}
+   404→              subtitle={stats?.avgDeliveryHours ? `Avg ${stats.avgDeliveryHours}h` : undefined}
+   405→              subtitleVi={stats?.avgDeliveryHours ? `TB ${stats.avgDeliveryHours}h` : undefined}
+   406→            />
+   407→          </div>
+   408→
+   409→          {/* Filters Bar */}
+   410→          <Card>
+   411→            <CardContent className="p-4">
+   412→              <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+   413→                {/* Search */}
+   414→                <div className="relative flex-1 min-w-[200px] max-w-sm">
+   415→                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+   416→                  <Input
+   417→                    type="search"
+   418→                    placeholder={t('Search by order #, shop, address...', 'Tìm theo mã đơn, cửa hàng, địa chỉ...')}
+   419→                    className="pl-8 h-9"
+   420→                    value={searchQuery}
+   421→                    onChange={(e) => setSearchQuery(e.target.value)}
+   422→                  />
+   423→                </div>
+   424→
+   425→                {/* Status Filter */}
+   426→                <Select value={statusFilter} onValueChange={(val) => { setStatusFilter(val); setPage(1); }}>
+   427→                  <SelectTrigger className="w-full sm:w-[170px] h-9">
+   428→                    <SelectValue placeholder={t('All Status', 'Tất cả trạng thái')} />
+   429→                  </SelectTrigger>
+   430→                  <SelectContent>
+   431→                    <SelectItem value="all">{t('All Status', 'Tất cả trạng thái')}</SelectItem>
+   432→                    <SelectItem value="PENDING">
+   433→                      <span className="flex items-center gap-1.5">
+   434→                        <span className="h-2 w-2 rounded-full bg-yellow-500" />
+   435→                        {t('Pending', 'Chờ lấy hàng')}
+   436→                      </span>
+   437→                    </SelectItem>
+   438→                    <SelectItem value="PICKED_UP">
+   439→                      <span className="flex items-center gap-1.5">
+   440→                        <span className="h-2 w-2 rounded-full bg-blue-500" />
+   441→                        {t('Picked Up', 'Đã lấy hàng')}
+   442→                      </span>
+   443→                    </SelectItem>
+   444→                    <SelectItem value="IN_TRANSIT">
+   445→                      <span className="flex items-center gap-1.5">
+   446→                        <span className="h-2 w-2 rounded-full bg-indigo-500" />
+   447→                        {t('In Transit', 'Đang vận chuyển')}
+   448→                      </span>
+   449→                    </SelectItem>
+   450→                    <SelectItem value="DELIVERED">
+   451→                      <span className="flex items-center gap-1.5">
+   452→                        <span className="h-2 w-2 rounded-full bg-red-500" />
+   453→                        {t('Delivered', 'Đã giao')}
+   454→                      </span>
+   455→                    </SelectItem>
+   456→                    <SelectItem value="FAILED">
+   457→                      <span className="flex items-center gap-1.5">
+   458→                        <span className="h-2 w-2 rounded-full bg-red-500" />
+   459→                        {t('Failed', 'Thất bại')}
+   460→                      </span>
+   461→                    </SelectItem>
+   462→                  </SelectContent>
+   463→                </Select>
+   464→
+   465→                {/* Type Filter */}
+   466→                <Select value={typeFilter} onValueChange={(val) => { setTypeFilter(val); setPage(1); }}>
+   467→                  <SelectTrigger className="w-full sm:w-[160px] h-9">
+   468→                    <SelectValue placeholder={t('All Types', 'Tất cả loại')} />
+   469→                  </SelectTrigger>
+   470→                  <SelectContent>
+   471→                    <SelectItem value="all">{t('All Types', 'Tất cả loại')}</SelectItem>
+   472→                    <SelectItem value="INTERNAL">{t('Internal Fleet', 'Xe nội bộ')}</SelectItem>
+   473→                    <SelectItem value="THIRD_PARTY">{t('3rd Party', 'Bên thứ 3')}</SelectItem>
+   474→                  </SelectContent>
+   475→                </Select>
+   476→
+   477→                {/* Date From */}
+   478→                <div className="relative">
+   479→                  <CalendarDays className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+   480→                  <Input
+   481→                    type="date"
+   482→                    className="pl-8 h-9 w-[145px]"
+   483→                    value={dateFrom}
+   484→                    onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+   485→                    max={dateTo || undefined}
+   486→                  />
+   487→                </div>
+   488→
+   489→                {/* Date To */}
+   490→                <div className="relative">
+   491→                  <CalendarDays className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+   492→                  <Input
+   493→                    type="date"
+   494→                    className="pl-8 h-9 w-[145px]"
+   495→                    value={dateTo}
+   496→                    onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+   497→                    min={dateFrom || undefined}
+   498→                  />
+   499→                </div>
+   500→
+   501→                {/* Reset */}
+   502→                {hasActiveFilters && (
+   503→                  <Button
+   504→                    variant="ghost"
+   505→                    size="sm"
+   506→                    className="h-9"
+   507→                    onClick={handleResetFilters}
+   508→                  >
+   509→                    <RotateCcw className="h-3.5 w-3.5 mr-1" />
+   510→                    {t('Reset', 'Đặt lại')}
+   511→                  </Button>
+   512→                )}
+   513→              </div>
+   514→            </CardContent>
+   515→          </Card>
+   516→
+   517→          {/* Shipments Table */}
+   518→          <Card>
+   519→            <CardContent className="p-0">
+   520→              {loading ? (
+   521→                <div className="p-4 space-y-3">
+   522→                  <Skeleton className="h-10 w-full" />
+   523→                  {Array.from({ length: 8 }).map((_, i) => (
+   524→                    <Skeleton key={i} className="h-12 w-full" />
+   525→                  ))}
+   526→                </div>
+   527→              ) : shipments.length === 0 ? (
+   528→                /* Empty State */
+   529→                <div className="text-center py-16 px-4">
+   530→                  <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+   531→                    <Truck className="h-8 w-8 text-muted-foreground" />
+   532→                  </div>
+   533→                  <h3 className="text-lg font-semibold">
+   534→                    {t('No shipments found', 'Không tìm thấy chuyến giao hàng')}
+   535→                  </h3>
+   536→                  <p className="text-sm text-muted-foreground mt-1 max-w-md mx-auto">
+   537→                    {hasActiveFilters
+   538→                      ? t(
+   539→                          'Try adjusting your search or filters to find what you are looking for.',
+   540→                          'Thử thay đổi tìm kiếm hoặc bộ lọc để tìm chuyến giao hàng.'
+   541→                        )
+   542→                      : t(
+   543→                          'Get started by creating a shipment for an existing order.',
+   544→                          'Bắt đầu bằng cách tạo chuyến giao hàng cho đơn hàng đã có.'
+   545→                        )}
+   546→                  </p>
+   547→                  {!hasActiveFilters && (
+   548→                    <Button
+   549→                      className="mt-4 bg-red-600 hover:bg-red-700 text-white"
+   550→                      onClick={() => setCreateDialogOpen(true)}
+   551→                    >
+   552→                      <Plus className="h-4 w-4 mr-2" />
+   553→                      {t('Create First Shipment', 'Tạo chuyến giao đầu tiên')}
+   554→                    </Button>
+   555→                  )}
+   556→                </div>
+   557→              ) : (
+   558→                <div>
+   559→                  <Table>
+   560→                    <TableHeader>
+   561→                      <TableRow className="bg-muted/30">
+   562→                        <TableHead className="w-[110px]">{t('Order #', 'Mã ĐH')}</TableHead>
+   563→                        <TableHead>{t('Shop', 'Cửa hàng')}</TableHead>
+   564→                        <TableHead>{t('Status', 'TT')}</TableHead>
+   565→                        <TableHead className="hidden sm:table-cell">{t('Type', 'Loại')}</TableHead>
+   566→                        <TableHead className="hidden md:table-cell">{t('Driver', 'Tài xế')}</TableHead>
+   567→                        <TableHead className="hidden lg:table-cell">{t('Route', 'Lộ trình')}</TableHead>
+   568→                        <TableHead className="text-right">{t('Value', 'Giá trị')}</TableHead>
+   569→                        <TableHead className="hidden lg:table-cell">{t('Date', 'Ngày')}</TableHead>
+   570→                        <TableHead className="text-right">{t('Actions', 'TH')}</TableHead>
+   571→                      </TableRow>
+   572→                    </TableHeader>
+   573→                    <TableBody>
+   574→                      {shipments.map((s) => (
+   575→                        <TableRow
+   576→                          key={s.id}
+   577→                          className="cursor-pointer hover:bg-muted/50 transition-colors"
+   578→                          onClick={() => handleRowClick(s.id)}
+   579→                        >
+   580→                          {/* Order Number */}
+   581→                          <TableCell className="font-mono text-xs font-medium">
+   582→                            {s.orderNumber}
+   583→                          </TableCell>
+   584→
+   585→                          {/* Shop Name */}
+   586→                          <TableCell>
+   587→                            <div className="flex items-center gap-1.5">
+   588→                              <span className="text-sm font-medium truncate block max-w-[150px]">
+   589→                                {s.shopName}
+   590→                              </span>
+   591→                            </div>
+   592→                          </TableCell>
+   593→
+   594→                          {/* Status */}
+   595→                          <TableCell>
+   596→                            <ShipmentStatusBadge status={s.status} locale={locale} size="sm" showIcon />
+   597→                          </TableCell>
+   598→
+   599→                          {/* Type */}
+   600→                          <TableCell className="hidden sm:table-cell">
+   601→                            <ShipmentTypeBadge type={s.type} locale={locale} />
+   602→                          </TableCell>
+   603→
+   604→                          {/* Driver */}
+   605→                          <TableCell className="hidden md:table-cell">
+   606→                            {s.driverName ? (
+   607→                              <div className="flex items-center gap-1.5">
+   608→                                <div className="h-5 w-5 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+   609→                                  <span className="text-[9px] font-bold text-blue-700">
+   610→                                    {getDriverInitial(s.driverName)}
+   611→                                  </span>
+   612→                                </div>
+   613→                                <span className="text-xs truncate max-w-[100px]">{s.driverName}</span>
+   614→                              </div>
+   615→                            ) : (
+   616→                              <div className="flex items-center gap-1">
+   617→                                <AlertTriangle className="h-3 w-3 text-amber-500" />
+   618→                                <span className="text-[10px] text-muted-foreground">
+   619→                                  {t('Unassigned', 'Chưa phân công')}
+   620→                                </span>
+   621→                              </div>
+   622→                            )}
+   623→                          </TableCell>
+   624→
+   625→                          {/* Route */}
+   626→                          <TableCell className="hidden lg:table-cell">
+   627→                            <div className="flex items-start gap-1">
+   628→                              <MapPin className="h-3 w-3 text-muted-foreground shrink-0 mt-0.5" />
+   629→                              <span className="text-[10px] text-muted-foreground truncate max-w-[150px]">
+   630→                                {s.dropoffAddress}
+   631→                              </span>
+   632→                            </div>
+   633→                          </TableCell>
+   634→
+   635→                          {/* Order Value */}
+   636→                          <TableCell className="text-right">
+   637→                            <span className="text-sm font-semibold">
+   638→                              <SensitiveValue
+   639→                                value={s.orderTotal}
+   640→                                maskType="amount"
+   641→                                formatOptions={{ formatCurrency: true }}
+   642→                              />
+   643→                            </span>
+   644→                          </TableCell>
+   645→
+   646→                          {/* Created Date */}
+   647→                          <TableCell className="hidden lg:table-cell">
+   648→                            <span className="text-xs text-muted-foreground">
+   649→                              {new Date(s.createdAt).toLocaleDateString('vi-VN', {
+   650→                                day: '2-digit',
+   651→                                month: '2-digit',
+   652→                                year: 'numeric',
+   653→                                hour: '2-digit',
+   654→                                minute: '2-digit',
+   655→                              })}
+   656→                            </span>
+   657→                          </TableCell>
+   658→
+   659→                          {/* Actions */}
+   660→                          <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+   661→                            <Button
+   662→                              variant="ghost"
+   663→                              size="sm"
+   664→                              className="h-8 text-xs"
+   665→                              onClick={() => handleRowClick(s.id)}
+   666→                            >
+   667→                              {t('View', 'Xem')}
+   668→                            </Button>
+   669→                          </TableCell>
+   670→                        </TableRow>
+   671→                      ))}
+   672→                    </TableBody>
+   673→                  </Table>
+   674→
+   675→                  {/* Pagination */}
+   676→                  {totalPages > 1 && (
+   677→                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t">
+   678→                      <p className="text-xs text-muted-foreground">
+   679→                        {t(
+   680→                          `Showing ${(page - 1) * limit + 1}–${Math.min(page * limit, totalCount)} of ${totalCount} shipments`,
+   681→                          `Hiển thị ${(page - 1) * limit + 1}–${Math.min(page * limit, totalCount)} / ${totalCount} chuyến giao`
+   682→                        )}
+   683→                      </p>
+   684→                      <div className="flex items-center gap-1">
+   685→                        <Button
+   686→                          variant="outline"
+   687→                          size="icon"
+   688→                          className="h-8 w-8"
+   689→                          disabled={page <= 1}
+   690→                          onClick={() => setPage((p) => Math.max(1, p - 1))}
+   691→                        >
+   692→                          <ChevronLeft className="h-4 w-4" />
+   693→                        </Button>
+   694→                        {getPageNumbers().map((p) => (
+   695→                          <Button
+   696→                            key={p}
+   697→                            variant={p === page ? 'default' : 'outline'}
+   698→                            size="icon"
+   699→                            className={`h-8 w-8 text-xs ${p === page ? 'bg-red-600 hover:bg-red-700 text-white' : ''}`}
+   700→                            onClick={() => setPage(p)}
+   701→                          >
+   702→                            {p}
+   703→                          </Button>
+   704→                        ))}
+   705→                        <Button
+   706→                          variant="outline"
+   707→                          size="icon"
+   708→                          className="h-8 w-8"
+   709→                          disabled={page >= totalPages}
+   710→                          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+   711→                        >
+   712→                          <ChevronRight className="h-4 w-4" />
+   713→                        </Button>
+   714→                      </div>
+   715→                    </div>
+   716→                  )}
+   717→                </div>
+   718→              )}
+   719→            </CardContent>
+   720→          </Card>
+   721→        </main>
+   722→
+   723→        {/* Shipment Detail Drawer */}
+   724→        <ShipmentDetailDrawer
+   725→          open={drawerOpen}
+   726→          onOpenChange={setDrawerOpen}
+   727→          shipmentId={selectedShipmentId}
+   728→          locale={locale}
+   729→          onStatusChanged={handleDataChanged}
+   730→        />
+   731→
+   732→        {/* Create Shipment Dialog */}
+   733→        <ShipmentCreateDialog
+   734→          open={createDialogOpen}
+   735→          onOpenChange={setCreateDialogOpen}
+   736→          locale={locale}
+   737→          onCreated={handleDataChanged}
+   738→        />
+   739→      </SidebarInset>
+   740→    </div>
+   741→  );
+   742→}
+   743→

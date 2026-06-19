@@ -1,0 +1,633 @@
+     1→'use client';
+     2→import { adminFetch } from '@/lib/admin-fetch';
+     3→import { useLocale } from '@/providers/app-provider';
+     4→
+     5→import { useState, useEffect, useCallback, useRef } from 'react';
+     6→import {
+     7→  Users,
+     8→  Plus,
+     9→  Search,
+    10→  ChevronLeft,
+    11→  ChevronRight,
+    12→  RefreshCw,
+    13→  Loader2,
+    14→  ShoppingBag,
+    15→  DollarSign,
+    16→  TrendingUp,
+    17→  RotateCcw,
+    18→  Eye,
+    19→  Edit,
+    20→  MapPin,
+    21→} from 'lucide-react';
+    22→import { Card, CardContent } from '@/components/ui/card';
+    23→import { Button } from '@/components/ui/button';
+    24→import { Skeleton } from '@/components/ui/skeleton';
+    25→import { Input } from '@/components/ui/input';
+    26→import {
+    27→  Select,
+    28→  SelectContent,
+    29→  SelectItem,
+    30→  SelectTrigger,
+    31→  SelectValue,
+    32→} from '@/components/ui/select';
+    33→import {
+    34→  Table,
+    35→  TableBody,
+    36→  TableCell,
+    37→  TableHead,
+    38→  TableHeader,
+    39→  TableRow,
+    40→} from '@/components/ui/table';
+    41→import { AdminSidebar } from '@/components/layout/admin-sidebar';
+    42→import { AdminHeader } from '@/components/layout/admin-header';
+    43→import { SidebarInset } from '@/components/ui/sidebar';
+    44→import { Separator } from '@/components/ui/separator';
+    45→import { SensitiveValue } from '@/components/shared/sensitive-value';
+    46→import { BrokerTierBadge, UserStatusBadge } from '@/components/brokers/broker-tier-badge';
+    47→import { BrokerDetailDrawer } from '@/components/brokers/broker-detail-drawer';
+    48→import { BrokerFormDialog } from '@/components/brokers/broker-form-dialog';
+    49→import { formatVND } from '@/lib/security';
+    50→
+    51→// ============================================
+    52→// Types
+    53→// ============================================
+    54→
+    55→interface BrokerListItem {
+    56→  id: string;
+    57→  userId: string;
+    58→  tier: string;
+    59→  wardId: string | null;
+    60→  commissionRate: number;
+    61→  totalShopsReferred: number;
+    62→  totalCommissionEarned: number;
+    63→  totalGmvGenerated: number;
+    64→  createdAt: string;
+    65→  updatedAt: string;
+    66→  user: {
+    67→    id: string;
+    68→    phone: string;
+    69→    name: string;
+    70→    nameEn: string | null;
+    71→    email: string | null;
+    72→    status: string;
+    73→    avatarUrl: string | null;
+    74→    createdAt: string;
+    75→  };
+    76→  ward: {
+    77→    id: string;
+    78→    name: string;
+    79→    nameEn: string | null;
+    80→    district: string;
+    81→    province: string;
+    82→  } | null;
+    83→}
+    84→
+    85→interface BrokersResponse {
+    86→  items: BrokerListItem[];
+    87→  pagination: { page: number; limit: number; total: number; totalPages: number };
+    88→  filters: {
+    89→    wards: { id: string; name: string; district: string }[];
+    90→    tiers: { tier: string; count: number }[];
+    91→  };
+    92→}
+    93→
+    94→interface BrokerStats {
+    95→  totalBrokers: number;
+    96→  activeBrokers: number;
+    97→  newBrokersThisMonth: number;
+    98→  totalCommissionEarned: number;
+    99→  totalCommissionEarnedFormatted: string;
+   100→  totalGmvGenerated: number;
+   101→  totalGmvGeneratedFormatted: string;
+   102→  avgCommissionPerBroker: number;
+   103→  avgGmvPerBroker: number;
+   104→  tierDistribution: Record<string, number>;
+   105→  topPerformers: {
+   106→    id: string;
+   107→    name: string;
+   108→    phone: string;
+   109→    tier: string;
+   110→    gmvGenerated: number;
+   111→    gmvGeneratedFormatted: string;
+   112→    commissionEarned: number;
+   113→    commissionEarnedFormatted: string;
+   114→    shopsReferred: number;
+   115→  }[];
+   116→  territoryCoverage: {
+   117→    totalWards: number;
+   118→    coveredWards: number;
+   119→    uncoveredWards: number;
+   120→    coveragePercent: number;
+   121→  };
+   122→  monthlyTrends: {
+   123→    month: string;
+   124→    brokers: number;
+   125→    gmv: number;
+   126→    gmvFormatted: string;
+   127→    commission: number;
+   128→    commissionFormatted: string;
+   129→  }[];
+   130→}
+   131→
+   132→// ============================================
+   133→// Main Brokers Page (Enhanced)
+   134→// ============================================
+   135→
+   136→export default function BrokersPage() {
+   137→  const { locale } = useLocale();
+   138→  const t = (en: string, vi: string) => locale === 'vi' ? vi : en;
+   139→
+   140→  // Data state
+   141→  const [brokers, setBrokers] = useState<BrokerListItem[]>([]);
+   142→  const [loading, setLoading] = useState(true);
+   143→  const [stats, setStats] = useState<BrokerStats | null>(null);
+   144→  const [wards, setWards] = useState<{ id: string; name: string; district: string }[]>([]);
+   145→
+   146→  // Filter state
+   147→  const [searchQuery, setSearchQuery] = useState('');
+   148→  const [debouncedSearch, setDebouncedSearch] = useState('');
+   149→  const [tierFilter, setTierFilter] = useState('all');
+   150→  const [wardFilter, setWardFilter] = useState('all');
+   151→  const [page, setPage] = useState(1);
+   152→  const [totalPages, setTotalPages] = useState(1);
+   153→  const [totalCount, setTotalCount] = useState(0);
+   154→  const limit = 20;
+   155→
+   156→  // Dialog / Drawer state
+   157→  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+   158→  const [editDialogOpen, setEditDialogOpen] = useState(false);
+   159→  const [selectedBroker, setSelectedBroker] = useState<BrokerListItem | null>(null);
+   160→  const [drawerOpen, setDrawerOpen] = useState(false);
+   161→
+   162→  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+   163→
+   164→  // Debounced search
+   165→  useEffect(() => {
+   166→    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+   167→    searchTimeoutRef.current = setTimeout(() => {
+   168→      setDebouncedSearch(searchQuery);
+   169→      setPage(1);
+   170→    }, 300);
+   171→    return () => { if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current); };
+   172→  }, [searchQuery]);
+   173→
+   174→  // Fetch brokers
+   175→  const fetchBrokers = useCallback(async () => {
+   176→    try {
+   177→      setLoading(true);
+   178→      const params = new URLSearchParams({
+   179→        page: String(page),
+   180→        limit: String(limit),
+   181→        search: debouncedSearch,
+   182→      });
+   183→      if (tierFilter !== 'all') params.set('tier', tierFilter);
+   184→      if (wardFilter !== 'all') params.set('wardId', wardFilter);
+   185→
+   186→      const res = await adminFetch(`/api/brokers?${params.toString()}`);
+   187→      const json = await res.json();
+   188→      if (json.success) {
+   189→        const data: BrokersResponse = json.data;
+   190→        setBrokers(data.items || []);
+   191→        setTotalPages(data.pagination.totalPages);
+   192→        setTotalCount(data.pagination.total);
+   193→        if (data.filters?.wards) setWards(data.filters.wards);
+   194→      }
+   195→    } catch (err) {
+   196→      console.error('Failed to fetch brokers:', err);
+   197→    } finally {
+   198→      setLoading(false);
+   199→    }
+   200→  }, [page, debouncedSearch, tierFilter, wardFilter, limit]);
+   201→
+   202→  // Fetch stats
+   203→  const fetchStats = useCallback(async () => {
+   204→    try {
+   205→      const res = await adminFetch('/api/brokers/stats?period=month');
+   206→      const json = await res.json();
+   207→      if (json.success) setStats(json.data);
+   208→    } catch (err) {
+   209→      console.error('Failed to fetch stats:', err);
+   210→    }
+   211→  }, []);
+   212→
+   213→  useEffect(() => { fetchStats(); }, [fetchStats]);
+   214→  useEffect(() => { fetchBrokers(); }, [fetchBrokers]);
+   215→
+   216→  const handleRowClick = (broker: BrokerListItem) => {
+   217→    setSelectedBroker(broker);
+   218→    setDrawerOpen(true);
+   219→  };
+   220→
+   221→  const handleEdit = (broker: BrokerListItem) => {
+   222→    setSelectedBroker(broker);
+   223→    setEditDialogOpen(true);
+   224→  };
+   225→
+   226→  const handleResetFilters = () => {
+   227→    setSearchQuery('');
+   228→    setTierFilter('all');
+   229→    setWardFilter('all');
+   230→    setPage(1);
+   231→  };
+   232→
+   233→  const handleDataChanged = () => {
+   234→    fetchBrokers();
+   235→    fetchStats();
+   236→  };
+   237→
+   238→  const getPageNumbers = () => {
+   239→    const pages: number[] = [];
+   240→    const maxVisible = 5;
+   241→    let start = Math.max(1, page - Math.floor(maxVisible / 2));
+   242→    const end = Math.min(totalPages, start + maxVisible - 1);
+   243→    if (end - start + 1 < maxVisible) start = Math.max(1, end - maxVisible + 1);
+   244→    for (let i = start; i <= end; i++) pages.push(i);
+   245→    return pages;
+   246→  };
+   247→
+   248→  const hasActiveFilters = debouncedSearch || tierFilter !== 'all' || wardFilter !== 'all';
+   249→
+   250→  return (
+   251→    <div className="flex min-h-screen">
+   252→      <AdminSidebar />
+   253→      <SidebarInset>
+   254→        <AdminHeader />
+   255→
+   256→        <main className="flex-1 p-4 md:p-6 lg:p-8 space-y-6">
+   257→          {/* Page Header */}
+   258→          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+   259→            <div>
+   260→              <h1 className="text-2xl font-bold tracking-tight">
+   261→                {t('Broker Network', 'Mạng Đại lý')}
+   262→              </h1>
+   263→              <p className="text-sm text-muted-foreground mt-1">
+   264→                {t('Manage brokers, track performance, and territory coverage', 'Quản lý đại lý, theo dõi hiệu suất và phạm vi khu vực')}
+   265→              </p>
+   266→            </div>
+   267→            <div className="flex items-center gap-2">
+   268→              <Button variant="outline" size="sm" onClick={handleDataChanged}>
+   269→                <RefreshCw className="h-4 w-4 mr-1" />
+   270→                {t('Refresh', 'Làm mới')}
+   271→              </Button>
+   272→              <Button size="sm" onClick={() => setCreateDialogOpen(true)} className="bg-red-600 hover:bg-red-700 text-white">
+   273→                <Plus className="h-4 w-4 mr-1" />
+   274→                {t('Add Broker', 'Thêm đại lý')}
+   275→              </Button>
+   276→            </div>
+   277→          </div>
+   278→
+   279→          <Separator />
+   280→
+   281→          {/* Stats Bar */}
+   282→          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+   283→            <Card>
+   284→              <CardContent className="p-4">
+   285→                <div className="flex items-center justify-between">
+   286→                  <div>
+   287→                    <p className="text-xs text-muted-foreground font-medium">{t('Total Brokers', 'Tổng đại lý')}</p>
+   288→                    <p className="text-xl font-bold mt-1">{stats?.totalBrokers || 0}</p>
+   289→                    {stats?.newBrokersThisMonth ? (
+   290→                      <p className="text-[10px] text-red-600">+{stats.newBrokersThisMonth} {t('this month', 'tháng này')}</p>
+   291→                    ) : null}
+   292→                  </div>
+   293→                  <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center">
+   294→                    <Users className="h-4 w-4 text-muted-foreground" />
+   295→                  </div>
+   296→                </div>
+   297→              </CardContent>
+   298→            </Card>
+   299→
+   300→            <Card className="border-yellow-100 bg-yellow-50/50">
+   301→              <CardContent className="p-4">
+   302→                <div className="flex items-center justify-between">
+   303→                  <div>
+   304→                    <p className="text-xs text-muted-foreground font-medium">{t('Active', 'Hoạt động')}</p>
+   305→                    <p className="text-xl font-bold mt-1">{stats?.activeBrokers || 0}</p>
+   306→                  </div>
+   307→                  <div className="h-9 w-9 rounded-lg bg-yellow-50 flex items-center justify-center">
+   308→                    <Users className="h-4 w-4 text-red-600" />
+   309→                  </div>
+   310→                </div>
+   311→              </CardContent>
+   312→            </Card>
+   313→
+   314→            <Card>
+   315→              <CardContent className="p-4">
+   316→                <div className="flex items-center justify-between">
+   317→                  <div>
+   318→                    <p className="text-xs text-muted-foreground font-medium">{t('Total GMV', 'Tổng GMV')}</p>
+   319→                    <p className="text-lg font-bold mt-1 text-blue-700">
+   320→                      <SensitiveValue value={stats?.totalGmvGenerated || 0} maskType="amount" formatOptions={{ formatCurrency: true, compact: true }} />
+   321→                    </p>
+   322→                  </div>
+   323→                  <div className="h-9 w-9 rounded-lg bg-blue-100 flex items-center justify-center">
+   324→                    <TrendingUp className="h-4 w-4 text-blue-600" />
+   325→                  </div>
+   326→                </div>
+   327→              </CardContent>
+   328→            </Card>
+   329→
+   330→            <Card>
+   331→              <CardContent className="p-4">
+   332→                <div className="flex items-center justify-between">
+   333→                  <div>
+   334→                    <p className="text-xs text-muted-foreground font-medium">{t('Commission', 'Hoa hồng')}</p>
+   335→                    <p className="text-lg font-bold mt-1 text-red-700">
+   336→                      <SensitiveValue value={stats?.totalCommissionEarned || 0} maskType="amount" formatOptions={{ formatCurrency: true, compact: true }} />
+   337→                    </p>
+   338→                  </div>
+   339→                  <div className="h-9 w-9 rounded-lg bg-yellow-50 flex items-center justify-center">
+   340→                    <DollarSign className="h-4 w-4 text-red-600" />
+   341→                  </div>
+   342→                </div>
+   343→              </CardContent>
+   344→            </Card>
+   345→
+   346→            <Card className={stats?.territoryCoverage?.coveragePercent && stats.territoryCoverage.coveragePercent >= 80 ? 'border-yellow-100 bg-yellow-50/50' : stats?.territoryCoverage?.coveragePercent && stats.territoryCoverage.coveragePercent >= 50 ? 'border-amber-200 bg-amber-50/50' : 'border-red-200 bg-red-50/50'}>
+   347→              <CardContent className="p-4">
+   348→                <div className="flex items-center justify-between">
+   349→                  <div>
+   350→                    <p className="text-xs text-muted-foreground font-medium">{t('Coverage', 'Phủ sóng')}</p>
+   351→                    <p className="text-xl font-bold mt-1">{stats?.territoryCoverage?.coveragePercent || 0}%</p>
+   352→                    <p className="text-[10px] text-muted-foreground">{stats?.territoryCoverage?.coveredWards || 0}/{stats?.territoryCoverage?.totalWards || 0} {t('wards', 'phường')}</p>
+   353→                  </div>
+   354→                  <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center">
+   355→                    <MapPin className="h-4 w-4 text-muted-foreground" />
+   356→                  </div>
+   357→                </div>
+   358→              </CardContent>
+   359→            </Card>
+   360→
+   361→            <Card>
+   362→              <CardContent className="p-4">
+   363→                <div className="flex items-center justify-between">
+   364→                  <div>
+   365→                    <p className="text-xs text-muted-foreground font-medium">{t('Avg GMV/Broker', 'TB GMV/ĐL')}</p>
+   366→                    <p className="text-lg font-bold mt-1">
+   367→                      <SensitiveValue value={stats?.avgGmvPerBroker || 0} maskType="amount" formatOptions={{ formatCurrency: true, compact: true }} />
+   368→                    </p>
+   369→                  </div>
+   370→                  <div className="h-9 w-9 rounded-lg bg-purple-100 flex items-center justify-center">
+   371→                    <TrendingUp className="h-4 w-4 text-purple-600" />
+   372→                  </div>
+   373→                </div>
+   374→              </CardContent>
+   375→            </Card>
+   376→          </div>
+   377→
+   378→          {/* Top Performers */}
+   379→          {stats?.topPerformers && stats.topPerformers.length > 0 && (
+   380→            <Card>
+   381→              <CardContent className="p-4">
+   382→                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+   383→                  {t('Top Performers (This Month)', 'Đại lý Xuất sắc (Tháng này)')}
+   384→                </h3>
+   385→                <div className="flex gap-3 overflow-x-auto pb-1">
+   386→                  {stats.topPerformers.slice(0, 5).map((p, i) => (
+   387→                    <div key={p.id} className="flex-shrink-0 rounded-lg border p-3 min-w-[160px]">
+   388→                      <div className="flex items-center gap-2 mb-2">
+   389→                        <div className={`h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
+   390→                          i === 0 ? 'bg-yellow-100 text-yellow-700' : i === 1 ? 'bg-gray-100 text-gray-600' : i === 2 ? 'bg-orange-100 text-orange-700' : 'bg-muted text-muted-foreground'
+   391→                        }`}>
+   392→                          {i + 1}
+   393→                        </div>
+   394→                        <div className="min-w-0">
+   395→                          <p className="text-xs font-medium truncate max-w-[100px]">{p.name}</p>
+   396→                          <BrokerTierBadge tier={p.tier} locale={locale} />
+   397→                        </div>
+   398→                      </div>
+   399→                      <div className="space-y-1">
+   400→                        <div className="flex justify-between text-[10px]">
+   401→                          <span className="text-muted-foreground">{t('GMV', 'GMV')}</span>
+   402→                          <span className="font-medium">{p.gmvGeneratedFormatted}</span>
+   403→                        </div>
+   404→                        <div className="flex justify-between text-[10px]">
+   405→                          <span className="text-muted-foreground">{t('Commission', 'Hoa hồng')}</span>
+   406→                          <span className="font-medium text-red-600">{p.commissionEarnedFormatted}</span>
+   407→                        </div>
+   408→                        <div className="flex justify-between text-[10px]">
+   409→                          <span className="text-muted-foreground">{t('Shops', 'Cửa hàng')}</span>
+   410→                          <span className="font-medium">{p.shopsReferred}</span>
+   411→                        </div>
+   412→                      </div>
+   413→                    </div>
+   414→                  ))}
+   415→                </div>
+   416→              </CardContent>
+   417→            </Card>
+   418→          )}
+   419→
+   420→          {/* Filters Bar */}
+   421→          <Card>
+   422→            <CardContent className="p-4">
+   423→              <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+   424→                <div className="relative flex-1 min-w-[200px] max-w-sm">
+   425→                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+   426→                  <Input
+   427→                    type="search"
+   428→                    placeholder={t('Search by name, phone, ward...', 'Tìm theo tên, SĐT, phường...')}
+   429→                    className="pl-8 h-9"
+   430→                    value={searchQuery}
+   431→                    onChange={(e) => setSearchQuery(e.target.value)}
+   432→                  />
+   433→                </div>
+   434→
+   435→                <Select value={tierFilter} onValueChange={(val) => { setTierFilter(val); setPage(1); }}>
+   436→                  <SelectTrigger className="w-full sm:w-[170px] h-9">
+   437→                    <SelectValue placeholder={t('All Tiers', 'Tất cả cấp')} />
+   438→                  </SelectTrigger>
+   439→                  <SelectContent>
+   440→                    <SelectItem value="all">{t('All Tiers', 'Tất cả cấp')}</SelectItem>
+   441→                    <SelectItem value="WARD_LEVEL">{t('Ward Level', 'Cấp Phường')}</SelectItem>
+   442→                    <SelectItem value="CATEGORY_SPECIALIST">{t('Category Specialist', 'Chuyên gia DM')}</SelectItem>
+   443→                    <SelectItem value="FACTORY_GATE">{t('Factory Gate', 'Cổng Nhập')}</SelectItem>
+   444→                  </SelectContent>
+   445→                </Select>
+   446→
+   447→                <Select value={wardFilter} onValueChange={(val) => { setWardFilter(val); setPage(1); }}>
+   448→                  <SelectTrigger className="w-full sm:w-[170px] h-9">
+   449→                    <SelectValue placeholder={t('All Wards', 'Tất cả phường')} />
+   450→                  </SelectTrigger>
+   451→                  <SelectContent>
+   452→                    <SelectItem value="all">{t('All Wards', 'Tất cả phường')}</SelectItem>
+   453→                    {wards.map((w) => (
+   454→                      <SelectItem key={w.id} value={w.id}>
+   455→                        {w.name} ({w.district})
+   456→                      </SelectItem>
+   457→                    ))}
+   458→                  </SelectContent>
+   459→                </Select>
+   460→
+   461→                {hasActiveFilters && (
+   462→                  <Button variant="ghost" size="sm" className="h-9" onClick={handleResetFilters}>
+   463→                    <RotateCcw className="h-3.5 w-3.5 mr-1" />
+   464→                    {t('Reset', 'Đặt lại')}
+   465→                  </Button>
+   466→                )}
+   467→              </div>
+   468→            </CardContent>
+   469→          </Card>
+   470→
+   471→          {/* Brokers Table */}
+   472→          <Card>
+   473→            <CardContent className="p-0">
+   474→              {loading ? (
+   475→                <div className="p-4 space-y-3">
+   476→                  <Skeleton className="h-10 w-full" />
+   477→                  {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+   478→                </div>
+   479→              ) : brokers.length === 0 ? (
+   480→                <div className="text-center py-16 px-4">
+   481→                  <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+   482→                    <Users className="h-8 w-8 text-muted-foreground" />
+   483→                  </div>
+   484→                  <h3 className="text-lg font-semibold">{t('No brokers found', 'Không tìm thấy đại lý')}</h3>
+   485→                  <p className="text-sm text-muted-foreground mt-1">
+   486→                    {hasActiveFilters
+   487→                      ? t('Try adjusting your search or filters.', 'Thử thay đổi tìm kiếm hoặc bộ lọc.')
+   488→                      : t('Add your first broker to get started.', 'Thêm đại lý đầu tiên để bắt đầu.')}
+   489→                  </p>
+   490→                  {!hasActiveFilters && (
+   491→                    <Button className="mt-4 bg-red-600 hover:bg-red-700 text-white" onClick={() => setCreateDialogOpen(true)}>
+   492→                      <Plus className="h-4 w-4 mr-2" />{t('Add First Broker', 'Thêm đại lý đầu tiên')}
+   493→                    </Button>
+   494→                  )}
+   495→                </div>
+   496→              ) : (
+   497→                <div>
+   498→                  <Table>
+   499→                    <TableHeader>
+   500→                      <TableRow className="bg-muted/30">
+   501→                        <TableHead>{t('Broker', 'Đại lý')}</TableHead>
+   502→                        <TableHead>{t('Tier', 'Cấp')}</TableHead>
+   503→                        <TableHead className="hidden sm:table-cell">{t('Territory', 'Khu vực')}</TableHead>
+   504→                        <TableHead>{t('Commission', 'Hoa hồng')}</TableHead>
+   505→                        <TableHead className="hidden md:table-cell">{t('Shops', 'Cửa hàng')}</TableHead>
+   506→                        <TableHead className="hidden md:table-cell">{t('GMV', 'GMV')}</TableHead>
+   507→                        <TableHead className="hidden lg:table-cell">{t('Earned', 'Đã kiếm')}</TableHead>
+   508→                        <TableHead className="text-right">{t('Actions', 'TH')}</TableHead>
+   509→                      </TableRow>
+   510→                    </TableHeader>
+   511→                    <TableBody>
+   512→                      {brokers.map((b) => (
+   513→                        <TableRow key={b.id} className="cursor-pointer hover:bg-muted/50" onClick={() => handleRowClick(b)}>
+   514→                          <TableCell>
+   515→                            <div className="flex items-center gap-2">
+   516→                              <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+   517→                                <span className="text-[10px] font-bold text-blue-700">{b.user.name.charAt(0)}</span>
+   518→                              </div>
+   519→                              <div className="min-w-0">
+   520→                                <p className="text-sm font-medium truncate max-w-[150px]">{b.user.name}</p>
+   521→                                <p className="text-[10px] text-muted-foreground font-mono">
+   522→                                  <SensitiveValue value={b.user.phone} maskType="phone" />
+   523→                                </p>
+   524→                              </div>
+   525→                            </div>
+   526→                          </TableCell>
+   527→                          <TableCell>
+   528→                            <BrokerTierBadge tier={b.tier} locale={locale} />
+   529→                          </TableCell>
+   530→                          <TableCell className="hidden sm:table-cell">
+   531→                            {b.ward ? (
+   532→                              <span className="text-xs text-muted-foreground">{b.ward.name}, {b.ward.district}</span>
+   533→                            ) : (
+   534→                              <span className="text-xs text-muted-foreground italic">{t('None', 'Chưa phân')}</span>
+   535→                            )}
+   536→                          </TableCell>
+   537→                          <TableCell>
+   538→                            <span className="text-xs font-semibold">{(b.commissionRate * 100).toFixed(1)}%</span>
+   539→                          </TableCell>
+   540→                          <TableCell className="hidden md:table-cell">
+   541→                            <span className="text-xs">{b.totalShopsReferred}</span>
+   542→                          </TableCell>
+   543→                          <TableCell className="hidden md:table-cell">
+   544→                            <span className="text-xs font-medium">
+   545→                              <SensitiveValue value={b.totalGmvGenerated} maskType="amount" formatOptions={{ formatCurrency: true, compact: true }} />
+   546→                            </span>
+   547→                          </TableCell>
+   548→                          <TableCell className="hidden lg:table-cell">
+   549→                            <span className="text-xs font-medium text-red-600">
+   550→                              <SensitiveValue value={b.totalCommissionEarned} maskType="amount" formatOptions={{ formatCurrency: true, compact: true }} />
+   551→                            </span>
+   552→                          </TableCell>
+   553→                          <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+   554→                            <div className="flex items-center justify-end gap-1">
+   555→                              <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => handleRowClick(b)}>
+   556→                                <Eye className="h-3.5 w-3.5" />
+   557→                              </Button>
+   558→                              <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => handleEdit(b)}>
+   559→                                <Edit className="h-3.5 w-3.5" />
+   560→                              </Button>
+   561→                            </div>
+   562→                          </TableCell>
+   563→                        </TableRow>
+   564→                      ))}
+   565→                    </TableBody>
+   566→                  </Table>
+   567→
+   568→                  {totalPages > 1 && (
+   569→                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t">
+   570→                      <p className="text-xs text-muted-foreground">
+   571→                        {t(`Showing ${(page - 1) * limit + 1}–${Math.min(page * limit, totalCount)} of ${totalCount}`, `Hiển thị ${(page - 1) * limit + 1}–${Math.min(page * limit, totalCount)} / ${totalCount}`)}
+   572→                      </p>
+   573→                      <div className="flex items-center gap-1">
+   574→                        <Button variant="outline" size="icon" className="h-8 w-8" disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>
+   575→                          <ChevronLeft className="h-4 w-4" />
+   576→                        </Button>
+   577→                        {getPageNumbers().map(p => (
+   578→                          <Button key={p} variant={p === page ? 'default' : 'outline'} size="icon" className={`h-8 w-8 text-xs ${p === page ? 'bg-red-600 hover:bg-red-700 text-white' : ''}`} onClick={() => setPage(p)}>
+   579→                            {p}
+   580→                          </Button>
+   581→                        ))}
+   582→                        <Button variant="outline" size="icon" className="h-8 w-8" disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>
+   583→                          <ChevronRight className="h-4 w-4" />
+   584→                        </Button>
+   585→                      </div>
+   586→                    </div>
+   587→                  )}
+   588→                </div>
+   589→              )}
+   590→            </CardContent>
+   591→          </Card>
+   592→        </main>
+   593→
+   594→        <BrokerDetailDrawer
+   595→          open={drawerOpen}
+   596→          onOpenChange={setDrawerOpen}
+   597→          brokerId={selectedBroker?.id || null}
+   598→          locale={locale}
+   599→          onBrokerUpdated={handleDataChanged}
+   600→          onEdit={(broker) => {
+   601→            setSelectedBroker(broker);
+   602→            setEditDialogOpen(true);
+   603→          }}
+   604→        />
+   605→
+   606→        <BrokerFormDialog
+   607→          open={createDialogOpen}
+   608→          onOpenChange={setCreateDialogOpen}
+   609→          locale={locale}
+   610→          wards={wards}
+   611→          onSaved={handleDataChanged}
+   612→        />
+   613→
+   614→        <BrokerFormDialog
+   615→          open={editDialogOpen}
+   616→          onOpenChange={setEditDialogOpen}
+   617→          broker={selectedBroker ? {
+   618→            id: selectedBroker.id,
+   619→            userId: selectedBroker.userId,
+   620→            tier: selectedBroker.tier,
+   621→            wardId: selectedBroker.wardId,
+   622→            commissionRate: selectedBroker.commissionRate,
+   623→            user: { id: selectedBroker.user.id, phone: selectedBroker.user.phone, name: selectedBroker.user.name },
+   624→          } : null}
+   625→          locale={locale}
+   626→          wards={wards}
+   627→          onSaved={handleDataChanged}
+   628→        />
+   629→      </SidebarInset>
+   630→    </div>
+   631→  );
+   632→}
+   633→

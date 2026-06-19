@@ -1,0 +1,522 @@
+   370→
+   371→  useEffect(() => {
+   372→    fetchStats();
+   373→  }, [fetchStats]);
+   374→
+   375→  const t = (en: string, vi: string) => locale === 'vi' ? vi : en;
+   376→
+   377→  // Role-specific dashboard title
+   378→  const getGreeting = () => {
+   379→    switch (userRole) {
+   380→      case ROLES.ADMIN: return t('Dashboard Overview', 'Tong quan');
+   381→      case ROLES.SHOP_OWNER: return t('My Shop Dashboard', 'Tong quan cua hang');
+   382→      case ROLES.SALES_REP: return t('Sales Dashboard', 'Tong quan ban hang');
+   383→      case ROLES.DRIVER: return t('Delivery Dashboard', 'Tong quan giao hang');
+   384→      case ROLES.BROKER: return t('Broker Dashboard', 'Tong quan dai ly');
+   385→      default: return t('Dashboard', 'Tong quan');
+   386→    }
+   387→  };
+   388→
+   389→  // ---- Derived data for charts ----
+   390→
+   391→  // Monthly trend chart data (GMV bars)
+   392→  const trendChartData = stats?.monthlyTrend?.map((m) => ({
+   393→    label: m.month,
+   394→    value: m.gmv,
+   395→    color: 'bg-yellow-400 dark:bg-yellow-500',
+   396→  })) || [];
+   397→
+   398→  // Monthly trend orders overlay
+   399→  const trendOrdersData = stats?.monthlyTrend?.map((m) => ({
+   400→    label: m.month,
+   401→    value: m.orders,
+   402→    color: 'bg-red-400 dark:bg-red-500',
+   403→  })) || [];
+   404→
+   405→  // Payment breakdown distribution chart
+   406→  const paymentChartData = stats?.paymentBreakdown
+   407→    ? [
+   408→        ...(stats.paymentBreakdown.CREDIT ? [{ label: 'Credit', labelVi: 'Cong no', value: stats.paymentBreakdown.CREDIT.revenue, color: 'bg-red-500' }] : []),
+   409→        ...(stats.paymentBreakdown.DIGITAL ? [{ label: 'Digital', labelVi: 'Chuyen khoan', value: stats.paymentBreakdown.DIGITAL.revenue, color: 'bg-yellow-400' }] : []),
+   410→        ...(stats.paymentBreakdown.COD ? [{ label: 'COD', labelVi: 'COD', value: stats.paymentBreakdown.COD.revenue, color: 'bg-green-500' }] : []),
+   411→      ]
+   412→    : [];
+   413→
+   414→  // Top categories for horizontal bar chart
+   415→  const categoryChartData = stats?.topCategories?.map((c) => ({
+   416→    label: c.name,
+   417→    value: c.revenue,
+   418→    subtitle: `${c.qty.toLocaleString()} ${t('units', 'SP')} · ${c.revenueFormatted}`,
+   419→  })) || [];
+   420→
+   421→  return (
+   422→    <AuthGuard>
+   423→      <div className="flex min-h-screen">
+   424→        <AdminSidebar />
+   425→        <SidebarInset>
+   426→          <AdminHeader />
+   427→
+   428→          <main className="flex-1 p-4 md:p-6 lg:p-6 space-y-5 max-w-full overflow-hidden">
+   429→
+   430→            {/* ===== Page Header ===== */}
+   431→            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+   432→              <div className="flex items-center gap-3">
+   433→                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-red-600 to-red-700 flex items-center justify-center shadow-lg shadow-red-600/20">
+   434→                  <BarChart3 className="h-5 w-5 text-white" />
+   435→                </div>
+   436→                <div>
+   437→                  <h1 className="text-2xl font-extrabold tracking-tight text-foreground">
+   438→                    {getGreeting()}
+   439→                  </h1>
+   440→                  <p className="text-sm text-muted-foreground mt-0.5">
+   441→                    {t('Real-time business metrics and KPIs', 'Chi so kinh doanh va KPI theo thoi gian thuc')}
+   442→                  </p>
+   443→                </div>
+   444→              </div>
+   445→              <Button variant="outline" size="sm" onClick={fetchStats} className="w-fit gap-1.5 border-red-200 text-red-700 hover:bg-red-50 hover:border-red-300 hover:text-red-700 font-semibold">
+   446→                <RefreshCw className="h-3.5 w-3.5" />
+   447→                {t('Refresh', 'Lam moi')}
+   448→              </Button>
+   449→            </div>
+   450→
+   451→            {/* ===== KPI Grid: 2 rows × 4 ===== */}
+   452→            {loading ? (
+   453→              <KpiGridSkeleton />
+   454→            ) : stats ? (
+   455→              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+   456→                {/* Row 1 */}
+   457→                <KpiCard
+   458→                  title="Total Shops"
+   459→                  titleVi="Tong cua hang"
+   460→                  value={stats.totalShops}
+   461→                  subtitle={`${stats.activeShops.toLocaleString()} ${t('active', 'hoat dong')}`}
+   462→                  icon={<Store className="h-4 w-4" />}
+   463→                  accent="yellow"
+   464→                  locale={locale}
+   465→                />
+   466→                <KpiCard
+   467→                  title="Total GMV"
+   468→                  titleVi="Tong doanh thu"
+   469→                  value={stats.monthlyGmvFormatted}
+   470→                  subtitle={`${t('Delivered', 'Da giao')}: ${stats.deliveredGmvFormatted || '0 ₫'}`}
+   471→                  icon={<DollarSign className="h-4 w-4" />}
+   472→                  isSensitive
+   473→                  accent="red"
+   474→                  locale={locale}
+   475→                />
+   476→                <KpiCard
+   477→                  title="Total Orders"
+   478→                  titleVi="Tong don hang"
+   479→                  value={stats.monthlyOrderCount.toLocaleString()}
+   480→                  subtitle={`${stats.deliveredOrders?.toLocaleString() || 0} ${t('delivered', 'da giao')}`}
+   481→                  icon={<ShoppingCart className="h-4 w-4" />}
+   482→                  accent="yellow"
+   483→                  locale={locale}
+   484→                />
+   485→                <KpiCard
+   486→                  title="Retention Rate"
+   487→                  titleVi="Ty giu chan"
+   488→                  value={`${stats.retentionRate ?? 0}%`}
+   489→                  icon={<Users className="h-4 w-4" />}
+   490→                  accent={stats.retentionRate >= 80 ? 'green' : 'red'}
+   491→                  locale={locale}
+   492→                />
+   493→
+   494→                {/* Row 2 */}
+   495→                <KpiCard
+   496→                  title="Avg. Order Value"
+   497→                  titleVi="TB gia tri don"
+   498→                  value={stats.avgOrderValueFormatted}
+   499→                  icon={<BarChart3 className="h-4 w-4" />}
+   500→                  isSensitive
+   501→                  accent="neutral"
+   502→                  locale={locale}
+   503→                />
+   504→                <KpiCard
+   505→                  title="Credit Exposure"
+   506→                  titleVi="No cong no"
+   507→                  value={stats.creditExposureFormatted}
+   508→                  subtitle={stats.overdueAccounts > 0 ? `${stats.overdueAccounts} ${t('overdue', 'qua han')}` : undefined}
+   509→                  icon={<CreditCard className="h-4 w-4" />}
+   510→                  isSensitive
+   511→                  accent={stats.overdueAccounts > 0 ? 'red' : 'neutral'}
+   512→                  locale={locale}
+   513→                />
+   514→                <KpiCard
+   515→                  title="Pending Shipments"
+   516→                  titleVi="Cho giao hang"
+   517→                  value={stats.pendingShipments}
+   518→                  subtitle={`${stats.activeGroupDeals} ${t('group deals', 'deal mua chung')}`}
+   519→                  icon={<Truck className="h-4 w-4" />}
+   520→                  accent={stats.pendingShipments > 0 ? 'yellow' : 'green'}
+   521→                  locale={locale}
+   522→                />
+   523→                <KpiCard
+   524→                  title="Total Products"
+   525→                  titleVi="Tong san pham"
+   526→                  value={stats.totalProducts || 0}
+   527→                  icon={<Boxes className="h-4 w-4" />}
+   528→                  accent="neutral"
+   529→                  locale={locale}
+   530→                />
+   531→              </div>
+   532→            ) : null}
+   533→
+   534→            {/* ===== Order Pipeline ===== */}
+   535→            {!loading && stats && (
+   536→              <PipelineBar stats={stats} locale={locale} />
+   537→            )}
+   538→
+   539→            {/* ===== Charts Row: Revenue Trend + Payment Breakdown ===== */}
+   540→            {loading ? (
+   541→              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+   542→                <ChartSkeleton />
+   543→                <ChartSkeleton />
+   544→                <ChartSkeleton />
+   545→              </div>
+   546→            ) : stats ? (
+   547→              <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+   548→                {/* Revenue Trend — takes 3/5 width */}
+   549→                <div className="lg:col-span-3">
+   550→                  <BarChart
+   551→                    title="Revenue Trend"
+   552→                    titleVi="Xu huong Doanh thu"
+   553→                    data={trendChartData}
+   554→                    formatValue={(v) => v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}M` : v >= 1_000 ? `${(v / 1_000).toFixed(0)}K` : v.toLocaleString()}
+   555→                    locale={locale}
+   556→                    height={200}
+   557→                    showValues
+   558→                  />
+   559→                </div>
+   560→
+   561→                {/* Payment Breakdown — takes 2/5 width */}
+   562→                <div className="lg:col-span-2">
+   563→                  <DistributionChart
+   564→                    title="Payment Methods"
+   565→                    titleVi="Phuong thuc Thanh toan"
+   566→                    data={paymentChartData}
+   567→                    locale={locale}
+   568→                    totalLabel="Total Revenue"
+   569→                    totalLabelVi="Tong doanh thu"
+   570→                  />
+   571→
+   572→                  {/* Payment method counts underneath */}
+   573→                  {stats.paymentBreakdown && (
+   574→                    <div className="mt-3 grid grid-cols-3 gap-2">
+   575→                      {stats.paymentBreakdown.CREDIT && (
+   576→                        <div className="text-center p-2 rounded-lg bg-red-50 dark:bg-red-950/30">
+   577→                          <p className="text-[10px] text-muted-foreground">{t('Credit', 'Cong no')}</p>
+   578→                          <p className="text-sm font-bold text-red-600">{stats.paymentBreakdown.CREDIT.count}</p>
+   579→                          <p className="text-[10px] text-muted-foreground">{t('orders', 'don')}</p>
+   580→                        </div>
+   581→                      )}
+   582→                      {stats.paymentBreakdown.DIGITAL && (
+   583→                        <div className="text-center p-2 rounded-lg bg-yellow-50 dark:bg-yellow-950/30">
+   584→                          <p className="text-[10px] text-muted-foreground">{t('Digital', 'Chuyen khoan')}</p>
+   585→                          <p className="text-sm font-bold text-yellow-600">{stats.paymentBreakdown.DIGITAL.count}</p>
+   586→                          <p className="text-[10px] text-muted-foreground">{t('orders', 'don')}</p>
+   587→                        </div>
+   588→                      )}
+   589→                      {stats.paymentBreakdown.COD && (
+   590→                        <div className="text-center p-2 rounded-lg bg-green-50 dark:bg-green-950/30">
+   591→                          <p className="text-[10px] text-muted-foreground">COD</p>
+   592→                          <p className="text-sm font-bold text-green-600">{stats.paymentBreakdown.COD.count}</p>
+   593→                          <p className="text-[10px] text-muted-foreground">{t('orders', 'don')}</p>
+   594→                        </div>
+   595→                      )}
+   596→                    </div>
+   597→                  )}
+   598→                </div>
+   599→              </div>
+   600→            ) : null}
+   601→
+   602→            {/* ===== Orders Trend (compact) + Top Categories ===== */}
+   603→            {loading ? (
+   604→              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+   605→                <ChartSkeleton />
+   606→                <ChartSkeleton />
+   607→              </div>
+   608→            ) : stats ? (
+   609→              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+   610→                {/* Monthly Orders Trend */}
+   611→                <BarChart
+   612→                  title="Monthly Orders"
+   613→                  titleVi="Don hang theo thang"
+   614→                  data={trendOrdersData}
+   615→                  formatValue={(v) => v.toLocaleString()}
+   616→                  locale={locale}
+   617→                  height={180}
+   618→                  showValues
+   619→                />
+   620→
+   621→                {/* Top Categories */}
+   622→                <HBarChart
+   623→                  title="Top Categories"
+   624→                  titleVi="Danh muc ban chay"
+   625→                  data={categoryChartData}
+   626→                  formatValue={(v) => v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}M ₫` : formatVND(v)}
+   627→                  locale={locale}
+   628→                  maxItems={6}
+   629→                />
+   630→              </div>
+   631→            ) : null}
+   632→
+   633→            {/* ===== Top Shops Table ===== */}
+   634→            {!loading && stats && (
+   635→              <Card>
+   636→                <CardHeader className="pb-3">
+   637→                  <div className="flex items-center justify-between">
+   638→                    <div className="flex items-center gap-2.5">
+   639→                      <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-yellow-400 to-yellow-500 text-yellow-800 flex items-center justify-center shadow-md shadow-yellow-500/20">
+   640→                        <Store className="h-4 w-4" />
+   641→                      </div>
+   642→                      <div>
+   643→                        <CardTitle className="text-sm font-semibold">
+   644→                          {t('Top Shops', 'Cua hang hang dau')}
+   645→                        </CardTitle>
+   646→                        <CardDescription className="text-xs">
+   647→                          {t('Ranked by total revenue', 'Xep theo tong doanh thu')}
+   648→                        </CardDescription>
+   649→                      </div>
+   650→                    </div>
+   651→                    <Badge variant="outline" className="font-mono text-xs border-yellow-300 text-yellow-700">
+   652→                      {stats.topShops?.length || 0} {t('shops', 'cua hang')}
+   653→                    </Badge>
+   654→                  </div>
+   655→                </CardHeader>
+   656→                <CardContent>
+   657→                  {stats.topShops && stats.topShops.length > 0 ? (
+   658→                    <div className="max-h-72 overflow-y-auto">
+   659→                      <Table>
+   660→                        <TableHeader>
+   661→                          <TableRow>
+   662→                            <TableHead className="text-xs w-10">#</TableHead>
+   663→                            <TableHead className="text-xs">{t('Shop Name', 'Ten cua hang')}</TableHead>
+   664→                            <TableHead className="text-xs text-right">{t('Orders', 'Don hang')}</TableHead>
+   665→                            <TableHead className="text-xs text-right">{t('Revenue', 'Doanh thu')}</TableHead>
+   666→                          </TableRow>
+   667→                        </TableHeader>
+   668→                        <TableBody>
+   669→                          {stats.topShops.map((shop, index) => (
+   670→                            <TableRow key={shop.shopId}>
+   671→                              <TableCell className="text-xs">
+   672→                                <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold ${
+   673→                                  index === 0 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-400' :
+   674→                                  index === 1 ? 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300' :
+   675→                                  index === 2 ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-400' :
+   676→                                  'bg-muted text-muted-foreground'
+   677→                                }`}>
+   678→                                  {index + 1}
+   679→                                </span>
+   680→                              </TableCell>
+   681→                              <TableCell className="text-xs font-medium">{shop.shopName}</TableCell>
+   682→                              <TableCell className="text-xs text-right font-mono">{shop.orderCount.toLocaleString()}</TableCell>
+   683→                              <TableCell className="text-xs text-right font-semibold">
+   684→                                <SensitiveValue value={shop.totalRevenueFormatted} maskType="amount" formatOptions={{ formatCurrency: true }} />
+   685→                              </TableCell>
+   686→                            </TableRow>
+   687→                          ))}
+   688→                        </TableBody>
+   689→                      </Table>
+   690→                    </div>
+   691→                  ) : (
+   692→                    <div className="text-center py-8 text-muted-foreground">
+   693→                      <Store className="h-8 w-8 mx-auto mb-2 opacity-50" />
+   694→                      <p className="text-sm">{t('No shop data yet', 'Chua co du lieu cua hang')}</p>
+   695→                    </div>
+   696→                  )}
+   697→                </CardContent>
+   698→              </Card>
+   699→            )}
+   700→
+   701→            {/* ===== Bottom Section: Recent Orders + Top Products ===== */}
+   702→            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+   703→              {/* Recent Orders */}
+   704→              <Card>
+   705→                <CardHeader className="pb-3">
+   706→                  <div className="flex items-center justify-between">
+   707→                    <div className="flex items-center gap-2.5">
+   708→                      <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-red-500 to-red-600 text-white flex items-center justify-center shadow-md shadow-red-500/20">
+   709→                        <ShoppingCart className="h-4 w-4" />
+   710→                      </div>
+   711→                      <div>
+   712→                        <CardTitle className="text-sm font-bold">
+   713→                          {t('Recent Orders', 'Don hang gan day')}
+   714→                        </CardTitle>
+   715→                        <CardDescription className="text-xs">
+   716→                          {t('Last 10 orders across all shops', '10 don hang gan nhat')}
+   717→                        </CardDescription>
+   718→                      </div>
+   719→                    </div>
+   720→                    <Badge variant="outline" className="font-mono text-xs border-red-200 text-red-600">
+   721→                      {stats?.recentOrders?.length || 0}
+   722→                    </Badge>
+   723→                  </div>
+   724→                </CardHeader>
+   725→                <CardContent>
+   726→                  {loading ? (
+   727→                    <div className="space-y-2.5">
+   728→                      {Array.from({ length: 5 }).map((_, i) => (
+   729→                        <Skeleton key={i} className="h-14 w-full rounded-lg" />
+   730→                      ))}
+   731→                    </div>
+   732→                  ) : stats && stats.recentOrders && stats.recentOrders.length > 0 ? (
+   733→                    <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+   734→                      {stats.recentOrders.map((order) => (
+   735→                        <div
+   736→                          key={order.id}
+   737→                          className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+   738→                        >
+   739→                          <div className="flex-1 min-w-0">
+   740→                            <div className="flex items-center gap-2">
+   741→                              <span className="text-xs font-mono font-medium">{order.orderNumber}</span>
+   742→                              <OrderStatusBadge status={order.status} />
+   743→                            </div>
+   744→                            <div className="flex items-center gap-2 mt-1">
+   745→                              <span className="text-[11px] text-muted-foreground truncate max-w-[140px]">{order.shopName}</span>
+   746→                              <span className="text-muted-foreground/50">·</span>
+   747→                              <PaymentMethodBadge method={order.paymentMethod} />
+   748→                              <span className="text-muted-foreground/50">·</span>
+   749→                              <span className="text-[11px] text-muted-foreground">{order.itemCount} {t('items', 'SP')}</span>
+   750→                            </div>
+   751→                          </div>
+   752→                          <div className="text-right ml-3 shrink-0">
+   753→                            <SensitiveValue value={order.totalAmountFormatted} maskType="amount" formatOptions={{ formatCurrency: true }} />
+   754→                            <div className="text-[10px] text-muted-foreground mt-0.5">
+   755→                              {new Date(order.createdAt).toLocaleDateString('vi-VN')}
+   756→                            </div>
+   757→                          </div>
+   758→                        </div>
+   759→                      ))}
+   760→                    </div>
+   761→                  ) : (
+   762→                    <div className="text-center py-8 text-muted-foreground">
+   763→                      <ShoppingCart className="h-8 w-8 mx-auto mb-2 opacity-50" />
+   764→                      <p className="text-sm">{t('No orders yet', 'Chua co don hang')}</p>
+   765→                    </div>
+   766→                  )}
+   767→                </CardContent>
+   768→              </Card>
+   769→
+   770→              {/* Top Products */}
+   771→              <Card>
+   772→                <CardHeader className="pb-3">
+   773→                  <div className="flex items-center justify-between">
+   774→                    <div className="flex items-center gap-2.5">
+   775→                      <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-yellow-400 to-yellow-500 text-yellow-800 flex items-center justify-center shadow-md shadow-yellow-500/20">
+   776→                        <TrendingUp className="h-4 w-4" />
+   777→                      </div>
+   778→                      <div>
+   779→                        <CardTitle className="text-sm font-bold">
+   780→                          {t('Top Products', 'San pham ban chay')}
+   781→                        </CardTitle>
+   782→                        <CardDescription className="text-xs">
+   783→                          {t('Best sellers by revenue', 'San pham ban chay theo doanh thu')}
+   784→                        </CardDescription>
+   785→                      </div>
+   786→                    </div>
+   787→                    <Badge variant="outline" className="font-mono text-xs border-yellow-300 text-yellow-700">
+   788→                      {stats?.topProducts?.length || 0}
+   789→                    </Badge>
+   790→                  </div>
+   791→                </CardHeader>
+   792→                <CardContent>
+   793→                  {loading ? (
+   794→                    <div className="space-y-2.5">
+   795→                      {Array.from({ length: 5 }).map((_, i) => (
+   796→                        <Skeleton key={i} className="h-14 w-full rounded-lg" />
+   797→                      ))}
+   798→                    </div>
+   799→                  ) : stats && stats.topProducts && stats.topProducts.length > 0 ? (
+   800→                    <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+   801→                      {stats.topProducts.map((product, index) => (
+   802→                        <div
+   803→                          key={product.productId}
+   804→                          className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+   805→                        >
+   806→                          <div className={`flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold shrink-0 ${
+   807→                            index === 0 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-400' :
+   808→                            index === 1 ? 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300' :
+   809→                            index === 2 ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-400' :
+   810→                            'bg-muted text-muted-foreground'
+   811→                          }`}>
+   812→                            {index + 1}
+   813→                          </div>
+   814→                          <div className="flex-1 min-w-0">
+   815→                            <p className="text-xs font-medium truncate">{product.productName}</p>
+   816→                            <p className="text-[10px] text-muted-foreground">
+   817→                              SKU: {product.productSku} · {product.totalQty.toLocaleString()} {t('units', 'don vi')}
+   818→                            </p>
+   819→                          </div>
+   820→                          <div className="text-right shrink-0">
+   821→                            <SensitiveValue value={product.totalRevenueFormatted} maskType="amount" formatOptions={{ formatCurrency: true }} />
+   822→                          </div>
+   823→                        </div>
+   824→                      ))}
+   825→                    </div>
+   826→                  ) : (
+   827→                    <div className="text-center py-8 text-muted-foreground">
+   828→                      <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
+   829→                      <p className="text-sm">{t('No product data yet', 'Chua co du lieu san pham')}</p>
+   830→                    </div>
+   831→                  )}
+   832→                </CardContent>
+   833→              </Card>
+   834→            </div>
+   835→
+   836→            {/* ===== Platform Rules Footer ===== */}
+   837→            <Card className="border-dashed">
+   838→              <CardHeader className="pb-3">
+   839→                <CardTitle className="text-sm flex items-center gap-2">
+   840→                  <div className="h-6 w-6 rounded-md bg-gradient-to-br from-red-500 to-red-600 text-white flex items-center justify-center">
+   841→                    <ShieldCheck className="h-3.5 w-3.5" />
+   842→                  </div>
+   843→                  {t('Active Automation Rules', 'Quy tac Tu dong hoa Dang hoat dong')}
+   844→                </CardTitle>
+   845→              </CardHeader>
+   846→              <CardContent>
+   847→                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+   848→                  <div className="flex items-start gap-3">
+   849→                    <div className="h-8 w-8 rounded-lg bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-400 flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
+   850→                      <Lock className="h-4 w-4" />
+   851→                    </div>
+   852→                    <div>
+   853→                      <p className="text-sm font-semibold">{t('Credit Auto-Lock', 'Tu khoa Cong no')}</p>
+   854→                      <p className="text-xs text-muted-foreground mt-0.5">
+   855→                        {t(
+   856→                          'Shops with unpaid credit after Day 7 are auto-locked from placing new orders.',
+   857→                          'Cua hang chua tra no sau ngay 7 se bi tu dong khoa khong dat duoc don hang moi.'
+   858→                        )}
+   859→                      </p>
+   860→                    </div>
+   861→                  </div>
+   862→                  <div className="flex items-start gap-3">
+   863→                    <div className="h-8 w-8 rounded-lg bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-400 flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
+   864→                      <Clock className="h-4 w-4" />
+   865→                    </div>
+   866→                    <div>
+   867→                      <p className="text-sm font-semibold">{t('Group Buy Threshold', 'Nguong Mua chung')}</p>
+   868→                      <p className="text-xs text-muted-foreground mt-0.5">
+   869→                        {t(
+   870→                          'No PO sent to distributor until MOQ is met. Auto-cancel if timer expires.',
+   871→                          'Khong gui don cho NPP cho den khi dat SL muc tieu. Tu dong huy neu het han.'
+   872→                        )}
+   873→                      </p>
+   874→                    </div>
+   875→                  </div>
+   876→                  <div className="flex items-start gap-3">
+   877→                    <div className="h-8 w-8 rounded-lg bg-green-100 text-green-600 dark:bg-green-900/50 dark:text-green-400 flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
+   878→                      <Truck className="h-4 w-4" />
+   879→                    </div>
+   880→                    <div>
+   881→                      <p className="text-sm font-semibold">{t('Cash Reconciliation', 'Doi chieu Tien mat')}</p>
+   882→                      <p className="text-xs text-muted-foreground mt-0.5">
+   883→                        {t(
+   884→                          'Drivers must confirm cash collection in app before shop can open new credit.',
+   885→                          'Tai xe phai xac nhan thu tien trong app truoc khi cua hang co the mo tin dung moi.'
+   886→                        )}
+   887→                      </p>
+   888→                    </div>
+   889→                  </div>
+
+[showing lines 370-889 of 899; use offset=890 with limit to continue reading]

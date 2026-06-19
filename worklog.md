@@ -57,3 +57,90 @@ Stage Summary:
 - Dashboard shows different KPIs and quick actions per role
 - Brand colors (red/yellow) consistently applied to login, dashboard charts, badges, nav indicators
 - No regressions — all existing pages build successfully
+
+---
+Task ID: 4
+Agent: Main Agent
+Task: Rewrite dashboard with proper recharts (replace CSS-only charts)
+
+Work Log:
+- Rewrote `/src/components/reports/charts.tsx` with 4 new recharts-based components:
+  1. `RevenueTrendChart` — BarChart + LineChart combo showing GMV (yellow bars) + orders (red line) with dual Y-axes
+  2. `OrderPipelineDonut` — PieChart donut with center label showing total orders, PIPELINE_COLORS palette
+  3. `TopCategoriesBar` — Horizontal BarChart with yellow/red alternating bars, VND tooltips
+  4. `PaymentBreakdownChart` — PieChart donut with method-specific colors (red=Credit, yellow=Digital, green=COD)
+- Added `VNDTooltip` custom tooltip component with brand-consistent styling
+- Added `formatVNDShort` helper (B/M/K notation)
+- Exported `CHART_COLORS` and `PIPELINE_COLORS` constants
+- Kept legacy CSS `BarChart`, `HBarChart`, `DistributionChart` exports for backward compat with /reports page
+- Aliased recharts imports (`BarChart as RechartsBarChart`, `PieChart as RechartsPieChart`) to avoid naming conflicts
+- Updated `/src/app/page.tsx`:
+  - Replaced old chart imports with new recharts component imports
+  - Removed `max-w-full overflow-hidden` constraint on `<main>`
+  - Changed main class to `flex-1 p-4 md:p-6 space-y-6`
+  - Updated KPI grid to `grid grid-cols-2 md:grid-cols-4 xl:grid-cols-4 gap-4`
+  - Revenue Trend chart now spans full width (`lg:col-span-2`)
+  - Charts grid: `grid grid-cols-1 lg:grid-cols-2 gap-4`
+  - Removed all derived chart data variables (trendChartData, trendOrdersData, paymentChartData, categoryChartData)
+  - Removed unused imports (`Separator`, `formatVND`)
+  - Kept ALL existing helper components (KpiCard, PipelineBar, OrderStatusBadge, PaymentMethodBadge, Skeleton loaders)
+  - Kept ALL data fetching logic, AuthGuard, SensitiveValue, locale/i18n, RBAC
+- Build passes cleanly with zero errors
+
+Stage Summary:
+- Dashboard now uses proper recharts (v2.15.4) with ResponsiveContainer for responsive charts
+- 4 chart types: combo bar+line, donut, horizontal bar, payment pie
+- Backward compatible — /reports page still works with legacy CSS charts
+- Professional e-commerce admin dashboard look with proper tooltips, legends, grid lines
+- Aladin brand color palette consistently applied (yellow #EAB308, red #DC2626)
+
+---
+Task ID: 3
+Agent: Main Agent
+Task: Fix filter issues on reports & list pages + make all pages full-width
+
+Work Log:
+- **REPORTS PAGE FILTER BUG FIX** (`/src/app/reports/page.tsx`):
+  - Replaced fragile nested ternary chain in `fetchTabData` URL construction with a static `REPORT_TAB_ENDPOINTS` map object, eliminating the edge case where an unmatched tab would produce `/api/reports/?period=all` (404)
+  - Added guard clause `if (!endpoint) return;` to prevent requests to invalid endpoints
+  - Fixed `handlePeriodChange` — previously it reset `activeTab` to 'overview' and cleared all tab data, causing users to see empty state after changing the period filter. Now it only updates the `period` state, letting the existing `useEffect` dependencies (`fetchTabData` re-created on period change) naturally trigger re-fetches for the current tab
+  - Moved `REPORT_TAB_ENDPOINTS` constant outside the component to avoid unnecessary recreation on each render
+
+- **FULL-WIDTH FIX — Table Wrappers** (added `className="w-full"` to table wrapper `<div>`s):
+  - `/src/app/orders/page.tsx`
+  - `/src/app/products/page.tsx`
+  - `/src/app/shops/page.tsx`
+  - `/src/app/shipments/page.tsx`
+  - `/src/app/brokers/page.tsx`
+  - `/src/app/group-buy/page.tsx`
+  - `/src/app/credit/page.tsx` (also added `overflow-x-auto`)
+  - `/src/app/settings/users/page.tsx`
+  - `/src/app/settings/audit-log/page.tsx`
+  - `/src/app/brokers/commissions/page.tsx`
+  - `/src/app/supply-chain/distributors/page.tsx`
+  - `/src/app/supply-chain/manufacturers/page.tsx`
+  - `/src/app/trade-marketing/promotions/page.tsx`
+  - `/src/app/trade-marketing/merchandising/page.tsx`
+
+- **FULL-WIDTH FIX — Main Content Area** (updated `<main>` className from `flex-1 p-4 md:p-6 lg:p-8 space-y-6` to `flex-1 p-4 md:p-6 space-y-6`):
+  - `/src/app/orders/page.tsx`
+  - `/src/app/products/page.tsx`
+  - `/src/app/shops/page.tsx`
+  - `/src/app/credit/page.tsx`
+  - `/src/app/shipments/page.tsx`
+  - `/src/app/group-buy/page.tsx`
+  - `/src/app/reports/page.tsx`
+  - `/src/app/settings/page.tsx`
+  - `/src/app/brokers/page.tsx`
+  - `/src/app/supply-chain/page.tsx`
+  - `/src/app/trade-marketing/page.tsx`
+
+- No `max-w-full overflow-hidden` was found on any page (already clean)
+- No API routes or backend files were modified
+- Build passes cleanly with zero errors
+
+Stage Summary:
+- Reports page now properly re-fetches data when period filter changes without resetting the active tab
+- URL construction is safer with map lookup + guard clause
+- All admin list/report pages have proper full-width table rendering
+- Consistent main content padding across all admin pages
