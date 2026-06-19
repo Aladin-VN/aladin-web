@@ -34,10 +34,15 @@ export async function GET(
             id: true,
             name: true,
             nameEn: true,
-            phone: true,
             address: true,
             district: true,
             province: true,
+            user: {
+              select: {
+                id: true,
+                phone: true,
+              },
+            },
           },
         },
         items: true,
@@ -83,11 +88,17 @@ export async function GET(
         return NextResponse.json({ success: false, error: { code: 'FORBIDDEN', message: 'You can only view orders assigned to you.' } }, { status: 403 });
       }
     }
-    // RBAC: Broker can only see orders from their referred shops
+    // RBAC: Broker can only see orders from shops in their assigned ward
     if (payload.role === 'BROKER') {
-      const shop = await db.shop.findFirst({ where: { id: order.shopId, broker: { userId: payload.userId } }, select: { id: true } });
-      if (!shop) {
-        return NextResponse.json({ success: false, error: { code: 'FORBIDDEN', message: 'You can only view orders from your referred shops.' } }, { status: 403 });
+      const broker = await db.broker.findFirst({ where: { userId: payload.userId }, select: { wardId: true } });
+      if (!broker) {
+        return NextResponse.json({ success: false, error: { code: 'FORBIDDEN', message: 'Broker record not found.' } }, { status: 403 });
+      }
+      if (broker.wardId) {
+        const shopInWard = await db.shop.findFirst({ where: { id: order.shopId, wardId: broker.wardId }, select: { id: true } });
+        if (!shopInWard) {
+          return NextResponse.json({ success: false, error: { code: 'FORBIDDEN', message: 'You can only view orders from your assigned area.' } }, { status: 403 });
+        }
       }
     }
 
@@ -130,7 +141,7 @@ export async function GET(
       orderNumber: order.orderNumber,
       shopId: order.shopId,
       shopName: order.shop.name,
-      shopPhone: order.shop.phone,
+      shopPhone: order.shop.user?.phone || null,
       shopAddress: order.shop.address,
       shopDistrict: order.shop.district,
       shopProvince: order.shop.province,

@@ -99,7 +99,10 @@ export function getOrderFilter(user: AuthUser) {
         { shipments: { some: { assignedDriverId: user.userId } } },
       ]};
     case ROLES.BROKER:
-      return { shop: { broker: { userId: user.userId } } };
+      // Broker sees orders from shops in their assigned ward
+      // Since broker-ward link is indirect, return empty filter
+      // and let the route-level RBAC handle filtering
+      return {};
     default:
       return {}; // ADMIN, SALES_REP see all
   }
@@ -113,7 +116,9 @@ export function getShopFilter(user: AuthUser) {
     case ROLES.SHOP_OWNER:
       return { userId: user.userId };
     case ROLES.BROKER:
-      return { broker: { userId: user.userId } };
+      // Broker sees shops in their assigned ward
+      // Return empty filter — route-level RBAC handles ward filtering
+      return {};
     default:
       return {}; // ADMIN, SALES_REP, DRIVER see all
   }

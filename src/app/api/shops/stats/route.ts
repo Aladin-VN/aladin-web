@@ -22,11 +22,17 @@ export async function GET(request: NextRequest) {
     if (role === 'SHOP_OWNER' && payload.shopId) {
       shopWhereBase.id = payload.shopId;
     } else if (role === 'BROKER') {
-      const brokerShops = await db.shop.findMany({ where: { broker: { userId: payload.userId } }, select: { id: true } });
-      if (brokerShops.length > 0) {
-        shopWhereBase.id = { in: brokerShops.map(s => s.id) };
+      // Broker sees shops in their assigned ward
+      const brokerRecord = await db.broker.findFirst({ where: { userId: payload.userId }, select: { wardId: true } });
+      if (brokerRecord?.wardId) {
+        const wardShops = await db.shop.findMany({ where: { wardId: brokerRecord.wardId }, select: { id: true } });
+        if (wardShops.length > 0) {
+          shopWhereBase.id = { in: wardShops.map(s => s.id) };
+        } else {
+          shopWhereBase.id = 'NONE'; // No shops visible
+        }
       } else {
-        shopWhereBase.id = 'NONE'; // No shops visible
+        shopWhereBase.id = 'NONE'; // No ward assigned
       }
     }
 

@@ -161,6 +161,11 @@ export async function PATCH(
       return updated;
     });
 
+    // Send Zalo cancellation notification to shop owner (async, non-blocking)
+    notifyOrderCancellation(id, reason ? String(reason) : undefined).catch((err) => {
+      console.error('[ORDER CANCEL] Notification error (non-blocking):', err);
+    });
+
     return NextResponse.json(successResponse({
       order: {
         id: updatedOrder.id,
@@ -177,11 +182,6 @@ export async function PATCH(
         : null,
       stockRestored: order.items.length,
     }));
-
-    // Send Zalo cancellation notification to shop owner (async, non-blocking)
-    notifyOrderCancellation(id, reason ? String(reason) : undefined).catch((err) => {
-      console.error('[ORDER CANCEL] Notification error (non-blocking):', err);
-    });
   } catch (error) {
     console.error('[ORDER CANCEL ERROR]', error);
     return NextResponse.json(

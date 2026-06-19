@@ -41,14 +41,23 @@ export async function GET(request: NextRequest) {
         { shipments: { some: { assignedDriverId: userId } } },
       ];
     } else if (role === ROLES.BROKER) {
-      const brokerShops = await db.shop.findMany({
-        where: { broker: { userId } },
-        select: { id: true },
+      const brokerRecord = await db.broker.findFirst({
+        where: { userId },
+        select: { wardId: true },
       });
-      const brokerShopIds = brokerShops.map((s) => s.id);
-      shopWhere.id = { in: brokerShopIds };
-      if (brokerShopIds.length > 0) {
-        orderWhere.shopId = { in: brokerShopIds };
+      if (brokerRecord?.wardId) {
+        const wardShops = await db.shop.findMany({
+          where: { wardId: brokerRecord.wardId },
+          select: { id: true },
+        });
+        const brokerShopIds = wardShops.map((s) => s.id);
+        shopWhere.id = { in: brokerShopIds };
+        if (brokerShopIds.length > 0) {
+          orderWhere.shopId = { in: brokerShopIds };
+        }
+      } else {
+        shopWhere.id = 'NONE';
+        orderWhere.shopId = 'NONE';
       }
     }
 
