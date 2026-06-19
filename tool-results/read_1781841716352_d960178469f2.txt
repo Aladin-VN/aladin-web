@@ -1,0 +1,737 @@
+     1→     1→     1→'use client';
+     2→     2→     2→
+     3→     3→     3→import { useState, useEffect, useCallback, useRef } from 'react';
+     4→     4→     4→import { useRouter } from 'next/navigation';
+     5→     5→     5→import {
+     6→     6→     6→  Store,
+     7→     7→     7→  ShoppingCart,
+     8→     8→     8→  DollarSign,
+     9→     9→     9→  TrendingUp,
+    10→    10→    10→  CreditCard,
+    11→    11→    11→  AlertTriangle,
+    12→    12→    12→  Truck,
+    13→    13→    13→  Tag,
+    14→    14→    14→  ChevronRight,
+    15→    15→    15→  RefreshCw,
+    16→    16→    16→  Package,
+    17→    17→    17→  Users,
+    18→    18→    18→  BarChart3,
+    19→    19→    19→  Camera,
+    20→    20→    20→  Gift,
+    21→    21→    21→  MessageCircle,
+    22→    22→    22→  FileText,
+    23→    23→    23→} from 'lucide-react';
+    24→    24→    24→import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+    25→    25→    25→import { Badge } from '@/components/ui/badge';
+    26→    26→    26→import { Button } from '@/components/ui/button';
+    27→    27→    27→import { Skeleton } from '@/components/ui/skeleton';
+    28→    28→    28→import { Separator } from '@/components/ui/separator';
+    29→    29→    29→import { MobileHeader } from '@/components/mobile/mobile-header';
+    30→    30→    30→import { MobileKpiCard } from '@/components/mobile/kpi-card';
+    31→    31→    31→import { SparklineChart, DonutChart } from '@/components/mobile/charts';
+    32→    32→    32→import { AnnouncementBanner, type Announcement } from '@/components/mobile/announcement-banner';
+    33→    33→    33→import { PullToRefreshIndicator } from '@/components/mobile/pull-to-refresh-indicator';
+    34→    34→    34→import { useAuthStore } from '@/stores/auth.store';
+    35→    35→    35→import { useAppStore } from '@/stores/app.store';
+    36→    36→    36→import { api } from '@/lib/mobile/api';
+    37→    37→    37→
+    38→    38→    38→// ============================================
+    39→    39→    39→// Types
+    40→    40→    40→// ============================================
+    41→    41→    41→
+    42→    42→    42→interface DashboardStats {
+    43→    43→    43→  totalShops: number;
+    44→    44→    44→  activeShops: number;
+    45→    45→    45→  totalOrders: number;
+    46→    46→    46→  monthlyOrderCount: number;
+    47→    47→    47→  monthlyGmv: number;
+    48→    48→    48→  monthlyGmvFormatted: string;
+    49→    49→    49→  avgOrderValue: number;
+    50→    50→    50→  avgOrderValueFormatted: string;
+    51→    51→    51→  retentionRate: number;
+    52→    52→    52→  creditExposure: number;
+    53→    53→    53→  creditExposureFormatted: string;
+    54→    54→    54→  overdueAccounts: number;
+    55→    55→    55→  pendingShipments: number;
+    56→    56→    56→  activeGroupDeals: number;
+    57→    57→    57→  recentOrders: {
+    58→    58→    58→    id: string;
+    59→    59→    59→    orderNumber: string;
+    60→    60→    60→    shopName: string;
+    61→    61→    61→    status: string;
+    62→    62→    62→    paymentMethod: string;
+    63→    63→    63→    totalAmount: number;
+    64→    64→    64→    totalAmountFormatted: string;
+    65→    65→    65→    itemCount: number;
+    66→    66→    66→    createdAt: string;
+    67→    67→    67→  }[];
+    68→    68→    68→  topProducts: {
+    69→    69→    69→    productId: string;
+    70→    70→    70→    productName: string;
+    71→    71→    71→    productSku: string;
+    72→    72→    72→    totalQty: number;
+    73→    73→    73→    totalRevenue: number;
+    74→    74→    74→    totalRevenueFormatted: string;
+    75→    75→    75→  }[];
+    76→    76→    76→}
+    77→    77→    77→
+    78→    78→    78→// ============================================
+    79→    79→    79→// Order Status Badge
+    80→    80→    80→// ============================================
+    81→    81→    81→
+    82→    82→    82→const STATUS_COLORS: Record<string, string> = {
+    83→    83→    83→  PENDING: 'bg-yellow-100 text-yellow-700',
+    84→    84→    84→  CONFIRMED: 'bg-blue-100 text-blue-700',
+    85→    85→    85→  PROCESSING: 'bg-indigo-100 text-indigo-700',
+    86→    86→    86→  PACKED: 'bg-purple-100 text-purple-700',
+    87→    87→    87→  OUT_FOR_DELIVERY: 'bg-cyan-100 text-cyan-700',
+    88→    88→    88→  DELIVERED: 'bg-yellow-50 text-red-700',
+    89→    89→    89→  CANCELLED: 'bg-red-100 text-red-700',
+    90→    90→    90→};
+    91→    91→    91→
+    92→    92→    92→function StatusBadge({ status }: { status: string }) {
+    93→    93→    93→  return (
+    94→    94→    94→    <Badge
+    95→    95→    95→      variant="secondary"
+    96→    96→    96→      className={`text-[10px] font-medium px-1.5 py-0 ${STATUS_COLORS[status] || 'bg-gray-100 text-gray-700'}`}
+    97→    97→    97→    >
+    98→    98→    98→      {status.replace(/_/g, ' ')}
+    99→    99→    99→    </Badge>
+   100→   100→   100→  );
+   101→   101→   101→}
+   102→   102→   102→
+   103→   103→   103→// ============================================
+   104→   104→   104→// Quick Action Button
+   105→   105→   105→// ============================================
+   106→   106→   106→
+   107→   107→   107→function QuickAction({
+   108→   108→   108→  icon,
+   109→   109→   109→  label,
+   110→   110→   110→  labelVi,
+   111→   111→   111→  href,
+   112→   112→   112→  locale,
+   113→   113→   113→  badge,
+   114→   114→   114→}: {
+   115→   115→   115→  icon: React.ReactNode;
+   116→   116→   116→  label: string;
+   117→   117→   117→  labelVi: string;
+   118→   118→   118→  href: string;
+   119→   119→   119→  locale: string;
+   120→   120→   120→  badge?: number;
+   121→   121→   121→}) {
+   122→   122→   122→  const router = useRouter();
+   123→   123→   123→  return (
+   124→   124→   124→    <button
+   125→   125→   125→      onClick={() => router.push(href)}
+   126→   126→   126→      className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-muted/50 active:scale-95 transition-all relative"
+   127→   127→   127→    >
+   128→   128→   128→      <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+   129→   129→   129→        {icon}
+   130→   130→   130→      </div>
+   131→   131→   131→      <span className="text-[11px] font-medium text-center leading-tight">
+   132→   132→   132→        {locale === 'vi' ? labelVi : label}
+   133→   133→   133→      </span>
+   134→   134→   134→      {badge !== undefined && badge > 0 && (
+   135→   135→   135→        <Badge className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 text-[10px] flex items-center justify-center bg-destructive text-destructive-foreground rounded-full">
+   136→   136→   136→          {badge}
+   137→   137→   137→        </Badge>
+   138→   138→   138→      )}
+   139→   139→   139→    </button>
+   140→   140→   140→  );
+   141→   141→   141→}
+   142→   142→   142→
+   143→   143→   143→// ============================================
+   144→   144→   144→// Pull-to-Refresh State
+   145→   145→   145→// ============================================
+   146→   146→   146→
+   147→   147→   147→function useSimplePullToRefresh(onRefresh: () => Promise<void>) {
+   148→   148→   148→  const [pullDistance, setPullDistance] = useState(0);
+   149→   149→   149→  const [isRefreshing, setIsRefreshing] = useState(false);
+   150→   150→   150→  const startYRef = useRef(0);
+   151→   151→   151→  const scrollRef = useRef<HTMLDivElement>(null);
+   152→   152→   152→  const THRESHOLD = 70;
+   153→   153→   153→
+   154→   154→   154→  const handleTouchStart = (e: React.TouchEvent) => {
+   155→   155→   155→    startYRef.current = e.touches[0].clientY;
+   156→   156→   156→  };
+   157→   157→   157→
+   158→   158→   158→  const handleTouchMove = (e: React.TouchEvent) => {
+   159→   159→   159→    if (isRefreshing) return;
+   160→   160→   160→    const el = scrollRef.current;
+   161→   161→   161→    if (!el || el.scrollTop > 5) return;
+   162→   162→   162→
+   163→   163→   163→    const delta = e.touches[0].clientY - startYRef.current;
+   164→   164→   164→    if (delta > 0) {
+   165→   165→   165→      const distance = Math.min(delta * 0.4, THRESHOLD * 1.3);
+   166→   166→   166→      setPullDistance(distance);
+   167→   167→   167→    }
+   168→   168→   168→  };
+   169→   169→   169→
+   170→   170→   170→  const handleTouchEnd = async () => {
+   171→   171→   171→    if (pullDistance >= THRESHOLD && !isRefreshing) {
+   172→   172→   172→      setIsRefreshing(true);
+   173→   173→   173→      setPullDistance(0);
+   174→   174→   174→      try { await onRefresh(); } catch {}
+   175→   175→   175→      setIsRefreshing(false);
+   176→   176→   176→    } else {
+   177→   177→   177→      setPullDistance(0);
+   178→   178→   178→    }
+   179→   179→   179→  };
+   180→   180→   180→
+   181→   181→   181→  return {
+   182→   182→   182→    pullDistance,
+   183→   183→   183→    isRefreshing,
+   184→   184→   184→    THRESHOLD,
+   185→   185→   185→    scrollRef,
+   186→   186→   186→    pullHandlers: {
+   187→   187→   187→      onTouchStart: handleTouchStart,
+   188→   188→   188→      onTouchMove: handleTouchMove,
+   189→   189→   189→      onTouchEnd: handleTouchEnd,
+   190→   190→   190→    },
+   191→   191→   191→  };
+   192→   192→   192→}
+   193→   193→   193→
+   194→   194→   194→// ============================================
+   195→   195→   195→// Dashboard Home Page
+   196→   196→   196→// ============================================
+   197→   197→   197→
+   198→   198→   198→export default function MobileDashboardPage() {
+   199→   199→   199→  const router = useRouter();
+   200→   200→   200→  const user = useAuthStore((s) => s.user);
+   201→   201→   201→  const locale = useAppStore((s) => s.locale);
+   202→   202→   202→  const [stats, setStats] = useState<DashboardStats | null>(null);
+   203→   203→   203→  const [loading, setLoading] = useState(true);
+   204→   204→   204→  const [dismissedAnnouncements, setDismissedAnnouncements] = useState<Set<string>>(new Set());
+   205→   205→   205→  const lastRefreshRef = useRef<string>('');
+   206→   206→   206→
+   207→   207→   207→  const t = (en: string, vi: string) => locale === 'vi' ? vi : en;
+   208→   208→   208→
+   209→   209→   209→  const fetchStats = useCallback(async () => {
+   210→   210→   210→    try {
+   211→   211→   211→      setLoading(true);
+   212→   212→   212→      const json = await api.get<DashboardStats>('/dashboard/stats');
+   213→   213→   213→      if (json.success && json.data) {
+   214→   214→   214→        setStats(json.data);
+   215→   215→   215→        lastRefreshRef.current = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+   216→   216→   216→      }
+   217→   217→   217→    } catch (err) {
+   218→   218→   218→      console.error('Failed to fetch dashboard stats:', err);
+   219→   219→   219→    } finally {
+   220→   220→   220→      setLoading(false);
+   221→   221→   221→    }
+   222→   222→   222→  }, []);
+   223→   223→   223→
+   224→   224→   224→  const { pullDistance, isRefreshing, THRESHOLD, scrollRef, pullHandlers } = useSimplePullToRefresh(fetchStats);
+   225→   225→   225→
+   226→   226→   226→  useEffect(() => {
+   227→   227→   227→    fetchStats();
+   228→   228→   228→  }, [fetchStats]);
+   229→   229→   229→
+   230→   230→   230→  // Greeting based on time of day
+   231→   231→   231→  const getGreeting = () => {
+   232→   232→   232→    const hour = new Date().getHours();
+   233→   233→   233→    if (hour < 12) return t('Chào buổi sáng', 'Good morning');
+   234→   234→   234→    if (hour < 18) return t('Chào buổi chiều', 'Good afternoon');
+   235→   235→   235→    return t('Chào buổi tối', 'Good evening');
+   236→   236→   236→  };
+   237→   237→   237→
+   238→   238→   238→  // Sample announcements
+   239→   239→   239→  const announcements: Announcement[] = [
+   240→   240→   240→    {
+   241→   241→   241→      id: 'ann-1',
+   242→   242→   242→      title: 'Flash Sale: -15% all beverages',
+   243→   243→   243→      titleVi: 'Flash Sale: Giảm 15% tất cả đồ uống',
+   244→   244→   244→      body: 'Valid until end of month. Min order 500K VND.',
+   245→   245→   245→      bodyVi: 'Áp dụng đến cuối tháng. Đơn tối thiểu 500K.',
+   246→   246→   246→      type: 'promotion',
+   247→   247→   247→      actionLabel: 'Browse products',
+   248→   248→   248→      actionLabelVi: 'Xem sản phẩm',
+   249→   249→   249→      actionHref: '/m/products',
+   250→   250→   250→      dismissible: true,
+   251→   251→   251→      expiresAt: new Date(Date.now() + 7 * 86400000).toISOString(),
+   252→   252→   252→    },
+   253→   253→   253→  ];
+   254→   254→   254→
+   255→   255→   255→  const visibleAnnouncements = announcements.filter((a) => !dismissedAnnouncements.has(a.id));
+   256→   256→   256→
+   257→   257→   257→  // Simulated sparkline data (in real app, would come from API)
+   258→   258→   258→  const revenueSparkline = [12, 18, 15, 22, 19, 28, 25, 32, 29, 35, 38, 42];
+   259→   259→   259→  const orderSparkline = [5, 8, 6, 10, 9, 12, 11, 15, 14, 18, 16, 20];
+   260→   260→   260→
+   261→   261→   261→  return (
+   262→   262→   262→    <div className="min-h-screen bg-background">
+   263→   263→   263→      <MobileHeader title="ALADIN" showNotifications />
+   264→   264→   264→
+   265→   265→   265→      <main
+   266→   266→   266→        ref={scrollRef}
+   267→   267→   267→        className="px-4 pb-4 space-y-5 overflow-y-auto"
+   268→   268→   268→        style={{ minHeight: 'calc(100vh - 56px - 64px)' }}
+   269→   269→   269→        {...pullHandlers}
+   270→   270→   270→      >
+   271→   271→   271→        {/* Pull to refresh indicator */}
+   272→   272→   272→        <div style={{ height: pullDistance, overflow: 'hidden' }}>
+   273→   273→   273→          <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} threshold={THRESHOLD} />
+   274→   274→   274→        </div>
+   275→   275→   275→
+   276→   276→   276→        {/* Greeting banner */}
+   277→   277→   277→        <div className="flex items-center justify-between pt-2">
+   278→   278→   278→          <div>
+   279→   279→   279→            <p className="text-sm text-muted-foreground">{getGreeting()}</p>
+   280→   280→   280→            <h2 className="text-xl font-bold mt-0.5">
+   281→   281→   281→              {user?.name || t('Chào bạn', 'Hello')}
+   282→   282→   282→            </h2>
+   283→   283→   283→          </div>
+   284→   284→   284→          <div className="flex items-center gap-1">
+   285→   285→   285→            {lastRefreshRef.current && !loading && (
+   286→   286→   286→              <span className="text-[10px] text-muted-foreground">{lastRefreshRef.current}</span>
+   287→   287→   287→            )}
+   288→   288→   288→            <Button
+   289→   289→   289→              variant="ghost"
+   290→   290→   290→              size="icon"
+   291→   291→   291→              className="h-9 w-9"
+   292→   292→   292→              onClick={fetchStats}
+   293→   293→   293→              disabled={loading}
+   294→   294→   294→            >
+   295→   295→   295→              <RefreshCw className={`h-4 w-4 ${loading || isRefreshing ? 'animate-spin' : ''}`} />
+   296→   296→   296→            </Button>
+   297→   297→   297→          </div>
+   298→   298→   298→        </div>
+   299→   299→   299→
+   300→   300→   300→        {/* Announcements */}
+   301→   301→   301→        {visibleAnnouncements.length > 0 && (
+   302→   302→   302→          <AnnouncementBanner
+   303→   303→   303→            announcements={visibleAnnouncements}
+   304→   304→   304→            onDismiss={(id) => setDismissedAnnouncements((prev) => new Set(prev).add(id))}
+   305→   305→   305→          />
+   306→   306→   306→        )}
+   307→   307→   307→
+   308→   308→   308→        {/* KPI Grid */}
+   309→   309→   309→        {loading ? (
+   310→   310→   310→          <div className="grid grid-cols-2 gap-3">
+   311→   311→   311→            {Array.from({ length: 4 }).map((_, i) => (
+   312→   312→   312→              <Skeleton key={i} className="h-24 rounded-xl" />
+   313→   313→   313→            ))}
+   314→   314→   314→          </div>
+   315→   315→   315→        ) : stats ? (
+   316→   316→   316→          <div className="grid grid-cols-2 gap-3">
+   317→   317→   317→            <MobileKpiCard
+   318→   318→   318→              label="Monthly GMV"
+   319→   319→   319→              labelVi="GMV tháng này"
+   320→   320→   320→              value={stats.monthlyGmvFormatted}
+   321→   321→   321→              icon={<DollarSign className="h-4 w-4" />}
+   322→   322→   322→              trend={12.5}
+   323→   323→   323→              trendLabel={t('vs LM', 'vs LM')}
+   324→   324→   324→              variant="success"
+   325→   325→   325→              locale={locale}
+   326→   326→   326→            />
+   327→   327→   327→            <MobileKpiCard
+   328→   328→   328→              label="Total Orders"
+   329→   329→   329→              labelVi="Đơn hàng"
+   330→   330→   330→              value={stats.monthlyOrderCount.toLocaleString()}
+   331→   331→   331→              icon={<ShoppingCart className="h-4 w-4" />}
+   332→   332→   332→              trend={8.3}
+   333→   333→   333→              trendLabel={t('vs LM', 'vs LM')}
+   334→   334→   334→              locale={locale}
+   335→   335→   335→            />
+   336→   336→   336→            <MobileKpiCard
+   337→   337→   337→              label="Avg Order"
+   338→   338→   338→              labelVi="TB đơn hàng"
+   339→   339→   339→              value={stats.avgOrderValueFormatted}
+   340→   340→   340→              icon={<TrendingUp className="h-4 w-4" />}
+   341→   341→   341→              locale={locale}
+   342→   342→   342→            />
+   343→   343→   343→            <MobileKpiCard
+   344→   344→   344→              label="Overdue"
+   345→   345→   345→              labelVi="Quá hạn"
+   346→   346→   346→              value={stats.overdueAccounts}
+   347→   347→   347→              icon={<AlertTriangle className="h-4 w-4" />}
+   348→   348→   348→              variant={stats.overdueAccounts > 0 ? 'danger' : 'default'}
+   349→   349→   349→              locale={locale}
+   350→   350→   350→            />
+   351→   351→   351→          </div>
+   352→   352→   352→        ) : null}
+   353→   353→   353→
+   354→   354→   354→        {/* Revenue & Order Trends Chart */}
+   355→   355→   355→        <Card>
+   356→   356→   356→          <CardHeader className="pb-2 pt-4 px-4">
+   357→   357→   357→            <div className="flex items-center justify-between">
+   358→   358→   358→              <CardTitle className="text-sm font-semibold">
+   359→   359→   359→                {t('Xu hướng', 'Trends')}
+   360→   360→   360→              </CardTitle>
+   361→   361→   361→              <div className="flex gap-3">
+   362→   362→   362→                <div className="flex items-center gap-1">
+   363→   363→   363→                  <div className="h-2 w-2 rounded-full bg-red-500" />
+   364→   364→   364→                  <span className="text-[10px] text-muted-foreground">{t('Doanh thu', 'Revenue')}</span>
+   365→   365→   365→                </div>
+   366→   366→   366→                <div className="flex items-center gap-1">
+   367→   367→   367→                  <div className="h-2 w-2 rounded-full bg-blue-500" />
+   368→   368→   368→                  <span className="text-[10px] text-muted-foreground">{t('Đơn hàng', 'Orders')}</span>
+   369→   369→   369→                </div>
+   370→   370→   370→              </div>
+   371→   371→   371→            </div>
+   372→   372→   372→          </CardHeader>
+   373→   373→   373→          <CardContent className="px-4 pb-4">
+   374→   374→   374→            <div className="flex gap-4">
+   375→   375→   375→              <div className="flex-1">
+   376→   376→   376→                <SparklineChart
+   377→   377→   377→                  data={revenueSparkline}
+   378→   378→   378→                  color="#10b981"
+   379→   379→   379→                  fillColor="#10b981"
+   380→   380→   380→                  width={140}
+   381→   381→   381→                  height={48}
+   382→   382→   382→                  showDots
+   383→   383→   383→                />
+   384→   384→   384→                <p className="text-[10px] text-muted-foreground mt-1">{t('Doanh thu (tr triệu)', 'Revenue (M VND)')}</p>
+   385→   385→   385→              </div>
+   386→   386→   386→              <div className="flex-1">
+   387→   387→   387→                <SparklineChart
+   388→   388→   388→                  data={orderSparkline}
+   389→   389→   389→                  color="#3b82f6"
+   390→   390→   390→                  fillColor="#3b82f6"
+   391→   391→   391→                  width={140}
+   392→   392→   392→                  height={48}
+   393→   393→   393→                  showDots
+   394→   394→   394→                />
+   395→   395→   395→                <p className="text-[10px] text-muted-foreground mt-1">{t('Số đơn hàng', 'Order count')}</p>
+   396→   396→   396→              </div>
+   397→   397→   397→            </div>
+   398→   398→   398→          </CardContent>
+   399→   399→   399→        </Card>
+   400→   400→   400→
+   401→   401→   401→        {/* Quick Actions */}
+   402→   402→   402→        <div>
+   403→   403→   403→          <h3 className="text-sm font-semibold mb-3">{t('Lối tắt', 'Quick Actions')}</h3>
+   404→   404→   404→          <div className="grid grid-cols-4 gap-2">
+   405→   405→   405→            <QuickAction
+   406→   406→   406→              icon={<Package className="h-5 w-5" />}
+   407→   407→   407→              label="Products"
+   408→   408→   408→              labelVi="Sản phẩm"
+   409→   409→   409→              href="/m/products"
+   410→   410→   410→              locale={locale}
+   411→   411→   411→            />
+   412→   412→   412→            <QuickAction
+   413→   413→   413→              icon={<ShoppingCart className="h-5 w-5" />}
+   414→   414→   414→              label="Orders"
+   415→   415→   415→              labelVi="Đơn hàng"
+   416→   416→   416→              href="/m/orders"
+   417→   417→   417→              locale={locale}
+   418→   418→   418→              badge={stats?.pendingShipments}
+   419→   419→   419→            />
+   420→   420→   420→            <QuickAction
+   421→   421→   421→              icon={<CreditCard className="h-5 w-5" />}
+   422→   422→   422→              label="Credit"
+   423→   423→   423→              labelVi="Công nợ"
+   424→   424→   424→              href="/m/credit"
+   425→   425→   425→              locale={locale}
+   426→   426→   426→              badge={stats?.overdueAccounts}
+   427→   427→   427→            />
+   428→   428→   428→            <QuickAction
+   429→   429→   429→              icon={<Tag className="h-5 w-5" />}
+   430→   430→   430→              label="Group Buy"
+   431→   431→   431→              labelVi="Mua chung"
+   432→   432→   432→              href="/m/group-buy"
+   433→   433→   433→              locale={locale}
+   434→   434→   434→              badge={stats?.activeGroupDeals}
+   435→   435→   435→            />
+   436→   436→   436→            <QuickAction
+   437→   437→   437→              icon={<Gift className="h-5 w-5" />}
+   438→   438→   438→              label="Promos"
+   439→   439→   439→              labelVi="Khuyến mãi"
+   440→   440→   440→              href="/m/promotions"
+   441→   441→   441→              locale={locale}
+   442→   442→   442→            />
+   443→   443→   443→            <QuickAction
+   444→   444→   444→              icon={<Camera className="h-5 w-5" />}
+   445→   445→   445→              label="Shelf Audit"
+   446→   446→   446→              labelVi="Trung bay"
+   447→   447→   447→              href="/m/merchandising"
+   448→   448→   448→              locale={locale}
+   449→   449→   449→            />
+   450→   450→   450→            <QuickAction
+   451→   451→   451→              icon={<Truck className="h-5 w-5" />}
+   452→   452→   452→              label="Shipments"
+   453→   453→   453→              labelVi="Vận chuyển"
+   454→   454→   454→              href="/m/shipments"
+   455→   455→   455→              locale={locale}
+   456→   456→   456→              badge={stats?.pendingShipments}
+   457→   457→   457→            />
+   458→   458→   458→            <QuickAction
+   459→   459→   459→              icon={<Store className="h-5 w-5" />}
+   460→   460→   460→              label="My Shop"
+   461→   461→   461→              labelVi="Cửa hàng"
+   462→   462→   462→              href="/m/shop"
+   463→   463→   463→              locale={locale}
+   464→   464→   464→            />
+   465→   465→   465→            <QuickAction
+   466→   466→   466→              icon={<MessageCircle className="h-5 w-5" />}
+   467→   467→   467→              label="Support"
+   468→   468→   468→              labelVi="Hỗ trợ"
+   469→   469→   469→              href="/m/chat"
+   470→   470→   470→              locale={locale}
+   471→   471→   471→            />
+   472→   472→   472→            <QuickAction
+   473→   473→   473→              icon={<FileText className="h-5 w-5" />}
+   474→   474→   474→              label="Reports"
+   475→   475→   475→              labelVi="Báo cáo"
+   476→   476→   476→              href="/m/reports"
+   477→   477→   477→              locale={locale}
+   478→   478→   478→            />
+   479→   479→   479→          </div>
+   480→   480→   480→        </div>
+   481→   481→   481→
+   482→   482→   482→        <Separator />
+   483→   483→   483→
+   484→   484→   484→        {/* Shop Profile Quick Access */}
+   485→   485→   485→        {user?.shopId && (
+   486→   486→   486→          <Card
+   487→   487→   487→            className="cursor-pointer active:scale-[0.99] transition-transform"
+   488→   488→   488→            onClick={() => router.push('/m/shop')}
+   489→   489→   489→          >
+   490→   490→   490→            <CardContent className="p-3">
+   491→   491→   491→              <div className="flex items-center gap-3">
+   492→   492→   492→                <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+   493→   493→   493→                  <Store className="h-5 w-5" />
+   494→   494→   494→                </div>
+   495→   495→   495→                <div className="flex-1 min-w-0">
+   496→   496→   496→                  <p className="text-sm font-semibold">{user?.shop?.name || t('My Shop', 'Cửa hàng của tôi')}</p>
+   497→   497→   497→                  <p className="text-xs text-muted-foreground">
+   498→   498→   498→                    {user?.shop?.district ? `${user.shop.district}, ` : ''}{user?.shop?.province}
+   499→   499→   499→                  </p>
+   500→   500→   500→                </div>
+   501→   501→   501→                <Badge variant="outline" className="text-[10px]">
+   502→   502→   502→                  {user?.shop?.loyaltyTier}
+   503→   503→   503→                </Badge>
+   504→   504→   504→                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+   505→   505→   505→              </div>
+   506→   506→   506→            </CardContent>
+   507→   507→   507→          </Card>
+   508→   508→   508→        )}
+   509→   509→   509→
+   510→   510→   510→        {/* Credit Snapshot */}
+   511→   511→   511→        {user?.shop && (
+   512→   512→   512→          <Card>
+   513→   513→   513→            <CardHeader className="pb-2 pt-4 px-4">
+   514→   514→   514→              <div className="flex items-center justify-between">
+   515→   515→   515→                <CardTitle className="text-sm font-semibold">
+   516→   516→   516→                  {t('Tín dụng', 'Credit')}
+   517→   517→   517→                </CardTitle>
+   518→   518→   518→                <Button
+   519→   519→   519→                  variant="ghost"
+   520→   520→   520→                  size="sm"
+   521→   521→   521→                  className="h-7 text-xs"
+   522→   522→   522→                  onClick={() => router.push('/m/credit')}
+   523→   523→   523→                >
+   524→   524→   524→                  {t('Chi tiết', 'Details')}
+   525→   525→   525→                  <ChevronRight className="h-3.5 w-3.5 ml-0.5" />
+   526→   526→   526→                </Button>
+   527→   527→   527→              </div>
+   528→   528→   528→            </CardHeader>
+   529→   529→   529→            <CardContent className="px-4 pb-4">
+   530→   530→   530→              <div className="flex items-end justify-between">
+   531→   531→   531→                <div>
+   532→   532→   532→                  <p className="text-[11px] text-muted-foreground">{t('Hạn mức', 'Limit')}</p>
+   533→   533→   533→                  <p className="text-lg font-bold">
+   534→   534→   534→                    {user.shop.creditLimit ? Number(user.shop.creditLimit).toLocaleString() : '1.000.000'} ₫
+   535→   535→   535→                  </p>
+   536→   536→   536→                </div>
+   537→   537→   537→                <div className="text-right">
+   538→   538→   538→                  <p className="text-[11px] text-muted-foreground">{t('Đã sử dụng', 'Used')}</p>
+   539→   539→   539→                  <p className="text-lg font-bold text-amber-600">
+   540→   540→   540→                    {user.shop.creditBalance ? Number(user.shop.creditBalance).toLocaleString() : '0'} ₫
+   541→   541→   541→                  </p>
+   542→   542→   542→                </div>
+   543→   543→   543→              </div>
+   544→   544→   544→              <div className="mt-3 h-2 bg-muted rounded-full overflow-hidden">
+   545→   545→   545→                <div
+   546→   546→   546→                  className="h-full bg-primary rounded-full transition-all"
+   547→   547→   547→                  style={{
+   548→   548→   548→                    width: `${Math.min(
+   549→   549→   549→                      ((Number(user.shop?.creditBalance) || 0) / (Number(user.shop?.creditLimit) || 1000000)) * 100,
+   550→   550→   550→                      100
+   551→   551→   551→                    )}%`,
+   552→   552→   552→                  }}
+   553→   553→   553→                />
+   554→   554→   554→              </div>
+   555→   555→   555→            </CardContent>
+   556→   556→   556→          </Card>
+   557→   557→   557→        )}
+   558→   558→   558→
+   559→   559→   559→        {/* Active Group Deals */}
+   560→   560→   560→        {stats && stats.activeGroupDeals > 0 && (
+   561→   561→   561→          <Card>
+   562→   562→   562→            <CardHeader className="pb-2 pt-4 px-4">
+   563→   563→   563→              <div className="flex items-center justify-between">
+   564→   564→   564→                <CardTitle className="text-sm font-semibold">
+   565→   565→   565→                  {t('Deal mua chung', 'Group Deals')}
+   566→   566→   566→                </CardTitle>
+   567→   567→   567→                <Badge variant="secondary" className="font-mono text-xs">
+   568→   568→   568→                  {stats.activeGroupDeals}
+   569→   569→   569→                </Badge>
+   570→   570→   570→              </div>
+   571→   571→   571→            </CardHeader>
+   572→   572→   572→            <CardContent className="px-4 pb-4">
+   573→   573→   573→              <Button
+   574→   574→   574→                variant="outline"
+   575→   575→   575→                className="w-full h-10"
+   576→   576→   576→                onClick={() => router.push('/m/group-buy')}
+   577→   577→   577→              >
+   578→   578→   578→                <Tag className="mr-2 h-4 w-4" />
+   579→   579→   579→                {t('Xem deal đang mở', 'View active deals')}
+   580→   580→   580→                <ChevronRight className="ml-auto h-4 w-4" />
+   581→   581→   581→              </Button>
+   582→   582→   582→            </CardContent>
+   583→   583→   583→          </Card>
+   584→   584→   584→        )}
+   585→   585→   585→
+   586→   586→   586→        {/* Pending Shipments */}
+   587→   587→   587→        {stats && stats.pendingShipments > 0 && (
+   588→   588→   588→          <Card>
+   589→   589→   589→            <CardHeader className="pb-2 pt-4 px-4">
+   590→   590→   590→              <div className="flex items-center justify-between">
+   591→   591→   591→                <CardTitle className="text-sm font-semibold">
+   592→   592→   592→                  {t('Vận chuyển', 'Shipments')}
+   593→   593→   593→                </CardTitle>
+   594→   594→   594→                <Badge variant="secondary" className="font-mono text-xs">
+   595→   595→   595→                  {stats.pendingShipments}
+   596→   596→   596→                </Badge>
+   597→   597→   597→              </div>
+   598→   598→   598→            </CardHeader>
+   599→   599→   599→            <CardContent className="px-4 pb-4">
+   600→   600→   600→              <Button
+   601→   601→   601→                variant="outline"
+   602→   602→   602→                className="w-full h-10"
+   603→   603→   603→                onClick={() => router.push('/m/shipments')}
+   604→   604→   604→              >
+   605→   605→   605→                <Truck className="mr-2 h-4 w-4" />
+   606→   606→   606→                {t('Theo dõi vận chuyển', 'Track shipments')}
+   607→   607→   607→                <ChevronRight className="ml-auto h-4 w-4" />
+   608→   608→   608→              </Button>
+   609→   609→   609→            </CardContent>
+   610→   610→   610→          </Card>
+   611→   611→   611→        )}
+   612→   612→   612→
+   613→   613→   613→        {/* Top Products with Donut */}
+   614→   614→   614→        {stats && stats.topProducts && stats.topProducts.length > 0 && (
+   615→   615→   615→          <div>
+   616→   616→   616→            <div className="flex items-center justify-between mb-3">
+   617→   617→   617→              <h3 className="text-sm font-semibold">
+   618→   618→   618→                {t('Sản phẩm bán chạy', 'Top Products')}
+   619→   619→   619→              </h3>
+   620→   620→   620→              <Badge variant="outline" className="font-mono text-xs">
+   621→   621→   621→                {stats.topProducts.length}
+   622→   622→   622→              </Badge>
+   623→   623→   623→            </div>
+   624→   624→   624→            <Card>
+   625→   625→   625→              <CardContent className="p-4">
+   626→   626→   626→                <div className="flex items-start gap-4">
+   627→   627→   627→                  {/* Mini donut */}
+   628→   628→   628→                  <div className="shrink-0">
+   629→   629→   629→                    <DonutChart
+   630→   630→   630→                      segments={stats.topProducts.slice(0, 5).map((p, i) => ({
+   631→   631→   631→                        label: p.productName,
+   632→   632→   632→                        value: p.totalRevenue,
+   633→   633→   633→                        color: ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ef4444'][i],
+   634→   634→   634→                      }))}
+   635→   635→   635→                      size={70}
+   636→   636→   636→                      strokeWidth={10}
+   637→   637→   637→                    />
+   638→   638→   638→                  </div>
+   639→   639→   639→                  {/* Product list */}
+   640→   640→   640→                  <div className="flex-1 space-y-2.5 min-w-0">
+   641→   641→   641→                    {stats.topProducts.slice(0, 5).map((product, index) => (
+   642→   642→   642→                      <div key={product.productId} className="flex items-center gap-2">
+   643→   643→   643→                        <div className={`h-5 w-5 rounded flex items-center justify-center text-[9px] font-bold shrink-0 ${
+   644→   644→   644→                          index === 0 ? 'bg-amber-100 text-amber-700' :
+   645→   645→   645→                          index === 1 ? 'bg-gray-100 text-gray-600' :
+   646→   646→   646→                          index === 2 ? 'bg-orange-100 text-orange-700' :
+   647→   647→   647→                          'bg-muted text-muted-foreground'
+   648→   648→   648→                        }`}>
+   649→   649→   649→                          {index + 1}
+   650→   650→   650→                        </div>
+   651→   651→   651→                        <div className="flex-1 min-w-0">
+   652→   652→   652→                          <p className="text-xs font-medium truncate">{product.productName}</p>
+   653→   653→   653→                          <p className="text-[10px] text-muted-foreground">
+   654→   654→   654→                            {product.totalQty.toLocaleString()} {t('SP', 'units')}
+   655→   655→   655→                          </p>
+   656→   656→   656→                        </div>
+   657→   657→   657→                        <p className="text-xs font-semibold shrink-0">{product.totalRevenueFormatted}</p>
+   658→   658→   658→                      </div>
+   659→   659→   659→                    ))}
+   660→   660→   660→                  </div>
+   661→   661→   661→                </div>
+   662→   662→   662→              </CardContent>
+   663→   663→   663→            </Card>
+   664→   664→   664→          </div>
+   665→   665→   665→        )}
+   666→   666→   666→
+   667→   667→   667→        {/* Recent Orders */}
+   668→   668→   668→        <div>
+   669→   669→   669→          <div className="flex items-center justify-between mb-3">
+   670→   670→   670→            <h3 className="text-sm font-semibold">
+   671→   671→   671→              {t('Đơn hàng gần đây', 'Recent Orders')}
+   672→   672→   672→            </h3>
+   673→   673→   673→            <Button
+   674→   674→   674→              variant="ghost"
+   675→   675→   675→              size="sm"
+   676→   676→   676→              className="h-7 text-xs"
+   677→   677→   677→              onClick={() => router.push('/m/orders')}
+   678→   678→   678→            >
+   679→   679→   679→              {t('Tất cả', 'All')}
+   680→   680→   680→              <ChevronRight className="h-3.5 w-3.5 ml-0.5" />
+   681→   681→   681→            </Button>
+   682→   682→   682→          </div>
+   683→   683→   683→
+   684→   684→   684→          {loading ? (
+   685→   685→   685→            <div className="space-y-2">
+   686→   686→   686→              {Array.from({ length: 3 }).map((_, i) => (
+   687→   687→   687→                <Skeleton key={i} className="h-16 w-full rounded-xl" />
+   688→   688→   688→              ))}
+   689→   689→   689→            </div>
+   690→   690→   690→          ) : stats && stats.recentOrders.length > 0 ? (
+   691→   691→   691→            <div className="space-y-2">
+   692→   692→   692→              {stats.recentOrders.slice(0, 5).map((order) => (
+   693→   693→   693→                <Card
+   694→   694→   694→                  key={order.id}
+   695→   695→   695→                  className="cursor-pointer active:scale-[0.99] transition-transform"
+   696→   696→   696→                  onClick={() => router.push(`/m/orders?id=${order.id}`)}
+   697→   697→   697→                >
+   698→   698→   698→                  <CardContent className="p-3">
+   699→   699→   699→                    <div className="flex items-center justify-between">
+   700→   700→   700→                      <div className="flex-1 min-w-0">
+   701→   701→   701→                        <div className="flex items-center gap-2">
+   702→   702→   702→                          <span className="text-sm font-mono font-medium">
+   703→   703→   703→                            {order.orderNumber}
+   704→   704→   704→                          </span>
+   705→   705→   705→                          <StatusBadge status={order.status} />
+   706→   706→   706→                        </div>
+   707→   707→   707→                        <p className="text-xs text-muted-foreground mt-1">
+   708→   708→   708→                          {order.shopName} · {order.itemCount} {t('SP', 'items')}
+   709→   709→   709→                        </p>
+   710→   710→   710→                      </div>
+   711→   711→   711→                      <div className="text-right ml-3">
+   712→   712→   712→                        <p className="text-sm font-semibold">{order.totalAmountFormatted}</p>
+   713→   713→   713→                        <p className="text-[10px] text-muted-foreground">
+   714→   714→   714→                          {new Date(order.createdAt).toLocaleDateString('vi-VN')}
+   715→   715→   715→                        </p>
+   716→   716→   716→                      </div>
+   717→   717→   717→                    </div>
+   718→   718→   718→                  </CardContent>
+   719→   719→   719→                </Card>
+   720→   720→   720→              ))}
+   721→   721→   721→            </div>
+   722→   722→   722→          ) : (
+   723→   723→   723→            <Card className="border-dashed">
+   724→   724→   724→              <CardContent className="py-8 text-center">
+   725→   725→   725→                <ShoppingCart className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
+   726→   726→   726→                <p className="text-sm text-muted-foreground">
+   727→   727→   727→                  {t('Chưa có đơn hàng', 'No orders yet')}
+   728→   728→   728→                </p>
+   729→   729→   729→              </CardContent>
+   730→   730→   730→            </Card>
+   731→   731→   731→          )}
+   732→   732→   732→        </div>
+   733→   733→   733→      </main>
+   734→   734→   734→    </div>
+   735→   735→   735→  );
+   736→   736→   736→}
+   737→   737→   737→

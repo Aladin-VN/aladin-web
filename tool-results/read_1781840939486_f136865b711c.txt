@@ -1,0 +1,1217 @@
+     1→'use client';
+     2→import { adminFetch } from '@/lib/admin-fetch';
+     3→import { useLocale } from '@/providers/app-provider';
+     4→
+     5→import { useState, useEffect, useCallback } from 'react';
+     6→import {
+     7→  BarChart3,
+     8→  RefreshCw,
+     9→  TrendingUp,
+    10→  ShoppingCart,
+    11→  Store,
+    12→  Truck,
+    13→  Package,
+    14→  DollarSign,
+    15→  CreditCard,
+    16→  Users,
+    17→  Tag,
+    18→  Clock,
+    19→  AlertTriangle,
+    20→  Download,
+    21→  Loader2,
+    22→  CheckCircle2,
+    23→  XCircle,
+    24→  BoxIcon,
+    25→} from 'lucide-react';
+    26→import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+    27→import { Button } from '@/components/ui/button';
+    28→import { Skeleton } from '@/components/ui/skeleton';
+    29→import { Separator } from '@/components/ui/separator';
+    30→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+    31→import {
+    32→  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+    33→} from '@/components/ui/table';
+    34→import { AdminSidebar } from '@/components/layout/admin-sidebar';
+    35→import { AdminHeader } from '@/components/layout/admin-header';
+    36→import { SidebarInset } from '@/components/ui/sidebar';
+    37→import { SensitiveValue } from '@/components/shared/sensitive-value';
+    38→import { DateRangePicker } from '@/components/reports/date-range-picker';
+    39→import { KpiCard } from '@/components/reports/kpi-card';
+    40→import { BarChart, HBarChart, DistributionChart } from '@/components/reports/charts';
+    41→
+    42→// ============================================
+    43→// Types
+    44→// ============================================
+    45→
+    46→interface OverviewData {
+    47→  period: string;
+    48→  kpis: {
+    49→    totalRevenue: number; totalRevenueFormatted: string; revenueGrowth: number | null;
+    50→    totalOrders: number; orderGrowth: number | null;
+    51→    avgOrderValue: number; avgOrderValueFormatted: string;
+    52→    activeShops: number; newShops: number;
+    53→    totalCreditExposure: number; totalCreditExposureFormatted: string; overdueShops: number;
+    54→    totalShipments: number; deliveredShipments: number;
+    55→    successRate: number; successRateDelta: number;
+    56→    avgDeliveryHours: number;
+    57→    totalSavings: number; totalSavingsFormatted: string;
+    58→    brokerGmv: number; brokerGmvFormatted: string;
+    59→    brokerCommission: number; brokerCommissionFormatted: string;
+    60→    totalBrokers: number; totalShops: number;
+    61→  };
+    62→  distributions: {
+    63→    orderStatus: Record<string, number>;
+    64→    paymentMethod: Record<string, number>;
+    65→    loyaltyTier: Record<string, number>;
+    66→    shipmentType: Record<string, number>;
+    67→  };
+    68→  dailyRevenue: { date: string; revenue: number; orders: number }[];
+    69→  topCategories: { name: string; revenue: number; revenueFormatted: string }[];
+    70→}
+    71→
+    72→interface RevenueData {
+    73→  kpis: {
+    74→    totalRevenue: number; totalRevenueFormatted: string; revenueGrowth: number | null;
+    75→    totalDiscounts: number; totalDiscountsFormatted: string;
+    76→    totalDeliveryFees: number; totalDeliveryFeesFormatted: string;
+    77→    totalCreditUsed: number; totalCreditUsedFormatted: string;
+    78→    avgOrderValue: number; avgOrderValueFormatted: string;
+    79→    totalOrders: number;
+    80→    thisMonthRevenue: number; thisMonthRevenueFormatted: string;
+    81→    lastMonthRevenue: number; lastMonthRevenueFormatted: string;
+    82→    monthOverMonth: number | null;
+    83→  };
+    84→  breakdown: {
+    85→    byPaymentMethod: Record<string, { revenue: number; count: number; percentage: number }>;
+    86→    byTier: Record<string, { revenue: number; count: number; percentage: number }>;
+    87→    byDistrict: { district: string; revenue: number; revenueFormatted: string; percentage: number }[];
+    88→  };
+    89→  trends: {
+    90→    daily: { date: string; revenue: number; orders: number; avgOrderValue: number }[];
+    91→    weekly: { weekStart: string; revenue: number; orders: number }[];
+    92→  };
+    93→  topShops: { shopId: string; name: string; revenue: number; orders: number; revenueFormatted: string }[];
+    94→}
+    95→
+    96→interface OrdersData {
+    97→  kpis: {
+    98→    totalOrders: number; orderGrowth: number | null;
+    99→    completedOrders: number; pendingOrders: number; cancelledOrders: number;
+   100→    cancellationRate: number; completionRate: number;
+   101→    totalRevenue: number; totalRevenueFormatted: string;
+   102→    avgOrderValue: number; avgOrderValueFormatted: string;
+   103→    avgCompletedValue: number; avgCompletedValueFormatted: string;
+   104→    avgItemsPerOrder: number; avgFulfillmentHours: number;
+   105→    creditRevenue: number; creditRevenueFormatted: string;
+   106→    digitalRevenue: number; digitalRevenueFormatted: string;
+   107→    codRevenue: number; codRevenueFormatted: string;
+   108→  };
+   109→  distributions: {
+   110→    status: Record<string, number>;
+   111→    paymentMethod: Record<string, { count: number; revenue: number; percentage: number }>;
+   112→    paymentStatus: Record<string, number>;
+   113→  };
+   114→  trends: { daily: { date: string; orders: number; completed: number; cancelled: number; revenue: number }[] };
+   115→  rankings: {
+   116→    topShops: { shopId: string; name: string; orders: number; revenue: number; tier: string; revenueFormatted: string }[];
+   117→    largestOrders: { id: string; totalAmount: number; totalAmountFormatted: string; shopName: string; status: string; itemCount: number; createdAt: string }[];
+   118→  };
+   119→}
+   120→
+   121→interface ProductsData {
+   122→  kpis: {
+   123→    totalProducts: number; activeProducts: number; categories: number;
+   124→    uniqueProductsSold: number; totalItemsSold: number;
+   125→    totalRevenue: number; totalRevenueFormatted: string;
+   126→    avgUnitPrice: number; avgUnitPriceFormatted: string;
+   127→    lowStockCount: number; outOfStockCount: number;
+   128→    privateLabelCount: number;
+   129→    privateLabelRevenue: number; privateLabelRevenueFormatted: string; privateLabelPercentage: number;
+   130→    regularRevenue: number; regularRevenueFormatted: string;
+   131→    avgStock: number;
+   132→  };
+   133→  rankings: {
+   134→    topProducts: { productId: string; name: string; sku: string; revenue: number; qty: number; category: string; brand: string; revenueFormatted: string; inStock: boolean }[];
+   135→    topByQty: { name: string; sku: string; revenue: number; qty: number; category: string; brand: string; revenueFormatted: string }[];
+   136→    topCategories: { name: string; revenue: number; qty: number; orders: number; productCount: number; revenueFormatted: string; percentage: number }[];
+   137→    topBrands: { name: string; revenue: number; qty: number; revenueFormatted: string; percentage: number }[];
+   138→    topManufacturers: { name: string; revenue: number; qty: number; revenueFormatted: string; percentage: number }[];
+   139→  };
+   140→  stockAlerts: {
+   141→    lowStock: { id: string; name: string; sku: string; basePrice: number; stockQuantity: number; basePriceFormatted: string }[];
+   142→    outOfStock: { id: string; name: string; sku: string; basePrice: number; basePriceFormatted: string }[];
+   143→  };
+   144→}
+   145→
+   146→interface ShopsData {
+   147→  kpis: {
+   148→    totalShops: number; activeShops: number; newShops: number; newShopsGrowth: number | null;
+   149→    totalGmv: number; totalGmvFormatted: string; dormantShops: number;
+   150→    creditHealth: {
+   151→      active: number; overdue: number; locked: number;
+   152→      utilizationPercent: number;
+   153→      totalExposure: number; totalExposureFormatted: string;
+   154→      totalLimit: number; totalLimitFormatted: string;
+   155→      available: number; availableFormatted: string;
+   156→    };
+   157→  };
+   158→  distributions: {
+   159→    tier: Record<string, { count: number; gmv: number; percentage: number }>;
+   160→    shopType: Record<string, number>;
+   161→    district: { district: string; count: number; gmv: number; gmvFormatted: string }[];
+   162→  };
+   163→  rankings: {
+   164→    topByGmv: { id: string; name: string; district: string | null; loyaltyTier: string; totalOrders: number; totalGmv: number; totalGmvFormatted: string; avgOrderValue: number; avgOrderValueFormatted: string; status: string }[];
+   165→    topByOrders: { id: string; name: string; district: string | null; loyaltyTier: string; totalOrders: number; totalGmv: number; totalGmvFormatted: string; status: string }[];
+   166→    topByPeriodRevenue: { shopId: string; name: string; district: string | null; tier: string; count: number; revenue: number; revenueFormatted: string }[];
+   167→  };
+   168→  trends: { dailyNewShops: { date: string; count: number }[] };
+   169→}
+   170→
+   171→interface ShipmentsData {
+   172→  kpis: {
+   173→    totalShipments: number; shipmentGrowth: number | null;
+   174→    pendingShipments: number; inTransit: number; delivered: number; failed: number;
+   175→    successRate: number; failureRate: number; successRateDelta: number;
+   176→    avgDeliveryHours: number; minDeliveryHours: number; maxDeliveryHours: number;
+   177→    totalValue: number; totalValueFormatted: string;
+   178→    avgShipmentValue: number; avgShipmentValueFormatted: string;
+   179→    internal: number; thirdParty: number;
+   180→    internalSuccessRate: number; thirdPartySuccessRate: number;
+   181→  };
+   182→  distributions: {
+   183→    status: Record<string, number>;
+   184→    deliveryTimeBuckets: Record<string, number>;
+   185→  };
+   186→  trends: { daily: { date: string; total: number; delivered: number; failed: number; inTransit: number }[] };
+   187→  rankings: {
+   188→    drivers: { driverId: string; name: string; phone: string; totalShipments: number; delivered: number; failed: number; inTransit: number; successRate: number; avgDeliveryHours: number; totalValue: number; totalValueFormatted: string }[];
+   189→    districts: { district: string; total: number; delivered: number; failed: number; successRate: number; failureRate: number }[];
+   190→  };
+   191→}
+   192→
+   193→// ============================================
+   194→// Compact VND formatter for charts
+   195→// ============================================
+   196→function compactVND(value: number): string {
+   197→  if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(1)}B`;
+   198→  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+   199→  if (value >= 1_000) return `${(value / 1_000).toFixed(0)}K`;
+   200→  return String(value);
+   201→}
+   202→
+   203→// ============================================
+   204→// Status colors map
+   205→// ============================================
+   206→const ORDER_STATUS_COLORS: Record<string, string> = {
+   207→  PENDING: 'bg-yellow-500', CONFIRMED: 'bg-blue-500', PROCESSING: 'bg-indigo-500',
+   208→  PACKED: 'bg-purple-500', OUT_FOR_DELIVERY: 'bg-cyan-500',
+   209→  DELIVERED: 'bg-red-500', CANCELLED: 'bg-red-500', REFUNDED: 'bg-orange-500',
+   210→};
+   211→
+   212→const ORDER_STATUS_LABELS: Record<string, { en: string; vi: string }> = {
+   213→  PENDING: { en: 'Pending', vi: 'Cho xac nhan' }, CONFIRMED: { en: 'Confirmed', vi: 'Da xac nhan' },
+   214→  PROCESSING: { en: 'Processing', vi: 'Dang xu ly' }, PACKED: { en: 'Packed', vi: 'Da dong goi' },
+   215→  OUT_FOR_DELIVERY: { en: 'Out for Delivery', vi: 'Dang giao' },
+   216→  DELIVERED: { en: 'Delivered', vi: 'Da giao' }, CANCELLED: { en: 'Cancelled', vi: 'Da huy' },
+   217→  REFUNDED: { en: 'Refunded', vi: 'Da hoan' },
+   218→};
+   219→
+   220→const PAYMENT_METHOD_LABELS: Record<string, { en: string; vi: string }> = {
+   221→  CREDIT: { en: 'Credit', vi: 'Cong no' }, DIGITAL: { en: 'Digital', vi: 'Chuyen khoan' }, COD: { en: 'COD', vi: 'Thu tien' },
+   222→};
+   223→
+   224→const TIER_COLORS: Record<string, string> = {
+   225→  BRONZE: 'bg-orange-500', SILVER: 'bg-gray-400', GOLD: 'bg-yellow-500', PLATINUM: 'bg-purple-500',
+   226→};
+   227→
+   228→// ============================================
+   229→// Main Reports Page
+   230→// ============================================
+   231→
+   232→export default function ReportsPage() {
+   233→  const { locale } = useLocale();
+   234→  const t = (en: string, vi: string) => locale === 'vi' ? vi : en;
+   235→
+   236→  const [period, setPeriod] = useState('all');
+   237→  const [activeTab, setActiveTab] = useState('overview');
+   238→
+   239→  // Data state
+   240→  const [overview, setOverview] = useState<OverviewData | null>(null);
+   241→  const [revenue, setRevenue] = useState<RevenueData | null>(null);
+   242→  const [ordersData, setOrdersData] = useState<OrdersData | null>(null);
+   243→  const [productsData, setProductsData] = useState<ProductsData | null>(null);
+   244→  const [shopsData, setShopsData] = useState<ShopsData | null>(null);
+   245→  const [shipmentsData, setShipmentsData] = useState<ShipmentsData | null>(null);
+   246→
+   247→  const [loading, setLoading] = useState(false);
+   248→  const [overviewLoading, setOverviewLoading] = useState(true);
+   249→
+   250→  // Fetch overview
+   251→  const fetchOverview = useCallback(async () => {
+   252→    try {
+   253→      setOverviewLoading(true);
+   254→      const res = await adminFetch(`/api/reports/overview?period=${period}`);
+   255→      const json = await res.json();
+   256→      if (json.success) setOverview(json.data);
+   257→    } catch (err) { console.error('Overview fetch error:', err); }
+   258→    finally { setOverviewLoading(false); }
+   259→  }, [period]);
+   260→
+   261→  // Fetch tab-specific data
+   262→  const fetchTabData = useCallback(async (tab: string) => {
+   263→    if (tab === 'overview') return;
+   264→    setLoading(true);
+   265→    try {
+   266→      const res = await adminFetch(`/api/reports/${tab === 'revenue' ? 'revenue' : tab === 'orders' ? 'orders' : tab === 'products' ? 'products' : tab === 'shops' ? 'shops-analytics' : tab === 'shipments' ? 'shipments-analytics' : ''}?period=${period}`);
+   267→      const json = await res.json();
+   268→      if (json.success) {
+   269→        switch (tab) {
+   270→          case 'revenue': setRevenue(json.data); break;
+   271→          case 'orders': setOrdersData(json.data); break;
+   272→          case 'products': setProductsData(json.data); break;
+   273→          case 'shops': setShopsData(json.data); break;
+   274→          case 'shipments': setShipmentsData(json.data); break;
+   275→        }
+   276→      }
+   277→    } catch (err) { console.error(`${tab} fetch error:`, err); }
+   278→    finally { setLoading(false); }
+   279→  }, [period]);
+   280→
+   281→  useEffect(() => { fetchOverview(); }, [fetchOverview]);
+   282→  useEffect(() => { fetchTabData(activeTab); }, [activeTab, fetchTabData]);
+   283→
+   284→  const handlePeriodChange = (newPeriod: string) => {
+   285→    setPeriod(newPeriod);
+   286→    setActiveTab('overview');
+   287→    setRevenue(null); setOrdersData(null); setProductsData(null);
+   288→    setShopsData(null); setShipmentsData(null);
+   289→  };
+   290→
+   291→  const handleRefresh = () => {
+   292→    fetchOverview();
+   293→    fetchTabData(activeTab);
+   294→  };
+   295→
+   296→  // Export CSV for current tab
+   297→  const handleExport = () => {
+   298→    // Build CSV based on active tab
+   299→    let csv = '';
+   300→    const BOM = '\uFEFF';
+   301→
+   302→    if (activeTab === 'overview' && overview) {
+   303→      csv = 'KPI,Value\n';
+   304→      csv += `${t('Total Revenue', 'Tong Doanh thu')},${overview.kpis.totalRevenue}\n`;
+   305→      csv += `${t('Total Orders', 'Tong Don hang')},${overview.kpis.totalOrders}\n`;
+   306→      csv += `${t('Active Shops', 'Cua hang HD')},${overview.kpis.activeShops}\n`;
+   307→      csv += `${t('Success Rate', 'Ti le thanh cong')},${overview.kpis.successRate}%\n`;
+   308→    } else if (activeTab === 'orders' && ordersData) {
+   309→      csv = 'Date,Orders,Completed,Cancelled,Revenue\n';
+   310→      ordersData.trends.daily.forEach(d => {
+   311→        csv += `${d.date},${d.orders},${d.completed},${d.cancelled},${d.revenue}\n`;
+   312→      });
+   313→    } else if (activeTab === 'revenue' && revenue) {
+   314→      csv = 'Date,Revenue,Orders,AOV\n';
+   315→      revenue.trends.daily.forEach(d => {
+   316→        csv += `${d.date},${d.revenue},${d.orders},${d.avgOrderValue}\n`;
+   317→      });
+   318→    } else if (activeTab === 'products' && productsData) {
+   319→      csv = 'Product,SKU,Revenue,Qty,Category,Brand\n';
+   320→      productsData.rankings.topProducts.forEach(p => {
+   321→        csv += `"${p.name}","${p.sku}",${p.revenue},${p.qty},"${p.category}","${p.brand}"\n`;
+   322→      });
+   323→    } else if (activeTab === 'shops' && shopsData) {
+   324→      csv = 'Name,District,Tier,Orders,GMV\n';
+   325→      shopsData.rankings.topByGmv.forEach(s => {
+   326→        csv += `"${s.name}","${s.district || ''}","${s.loyaltyTier}",${s.totalOrders},${s.totalGmv}\n`;
+   327→      });
+   328→    } else if (activeTab === 'shipments' && shipmentsData) {
+   329→      csv = 'Date,Total,Delivered,Failed,InTransit\n';
+   330→      shipmentsData.trends.daily.forEach(d => {
+   331→        csv += `${d.date},${d.total},${d.delivered},${d.failed},${d.inTransit}\n`;
+   332→      });
+   333→    }
+   334→
+   335→    if (!csv) return;
+   336→    const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
+   337→    const url = URL.createObjectURL(blob);
+   338→    const a = document.createElement('a');
+   339→    a.href = url;
+   340→    a.download = `aladin-report-${activeTab}-${period}-${new Date().toISOString().split('T')[0]}.csv`;
+   341→    a.click();
+   342→    URL.revokeObjectURL(url);
+   343→  };
+   344→
+   345→  // ============================================
+   346→  // OVERVIEW TAB
+   347→  // ============================================
+   348→  const renderOverview = () => {
+   349→    if (overviewLoading) {
+   350→      return (
+   351→        <div className="space-y-4">
+   352→          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+   353→            {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-24 w-full rounded-lg" />)}
+   354→          </div>
+   355→          <Skeleton className="h-64 w-full rounded-lg" />
+   356→        </div>
+   357→      );
+   358→    }
+   359→
+   360→    if (!overview) {
+   361→      return (
+   362→        <div className="text-center py-12">
+   363→          <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+   364→          <p className="text-sm text-muted-foreground">{t('No data available', 'Khong co du lieu')}</p>
+   365→        </div>
+   366→      );
+   367→    }
+   368→
+   369→    const k = overview.kpis;
+   370→
+   371→    return (
+   372→      <div className="space-y-4">
+   373→        {/* KPI Grid */}
+   374→        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+   375→          <KpiCard title="Revenue" titleVi="Doanh thu" value={k.totalRevenueFormatted} icon={<DollarSign className="h-4 w-4" />} growth={k.revenueGrowth} locale={locale} variant="success" />
+   376→          <KpiCard title="Orders" titleVi="Don hang" value={k.totalOrders} icon={<ShoppingCart className="h-4 w-4" />} growth={k.orderGrowth} locale={locale} />
+   377→          <KpiCard title="Active Shops" titleVi="Cua hang HD" value={k.activeShops} icon={<Store className="h-4 w-4" />} locale={locale} suffix={`/ ${k.totalShops}`} />
+   378→          <KpiCard title="Avg Order Value" titleVi="TB Don hang" value={k.avgOrderValueFormatted} icon={<Package className="h-4 w-4" />} locale={locale} />
+   379→          <KpiCard title="Shipments" titleVi="Van chuyen" value={k.deliveredShipments} icon={<Truck className="h-4 w-4" />} locale={locale} suffix={`/ ${k.totalShipments}`} growth={k.successRateDelta ? k.successRateDelta : undefined} />
+   380→          <KpiCard title="Success Rate" titleVi="TL Thanh cong" value={`${k.successRate}%`} icon={<CheckCircle2 className="h-4 w-4" />} locale={locale} variant={k.successRate >= 90 ? 'success' : k.successRate >= 70 ? 'warning' : 'danger'} />
+   381→          <KpiCard title="Credit Exposure" titleVi="Cong no" value={k.totalCreditExposureFormatted} icon={<CreditCard className="h-4 w-4" />} locale={locale} variant={k.overdueShops > 0 ? 'warning' : 'default'} />
+   382→          <KpiCard title="Group Buy Savings" titleVi="Tiet kiem MC" value={k.totalSavingsFormatted} icon={<Tag className="h-4 w-4" />} locale={locale} variant="info" />
+   383→        </div>
+   384→
+   385→        {/* Revenue Trend + Distributions Row */}
+   386→        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+   387→          <div className="lg:col-span-2">
+   388→            <BarChart
+   389→              title="Revenue Trend" titleVi="Xu huong Doanh thu"
+   390→              data={overview.dailyRevenue.map(d => ({
+   391→                label: d.date.slice(5),
+   392→                value: d.revenue,
+   393→                color: d.date === overview.dailyRevenue[overview.dailyRevenue.length - 1]?.date ? 'bg-red-500' : 'bg-red-500/60',
+   394→              }))}
+   395→              formatValue={compactVND}
+   396→              locale={locale}
+   397→              height={200}
+   398→            />
+   399→          </div>
+   400→
+   401→          <DistributionChart
+   402→            title="Order Status" titleVi="Trang thai Don hang"
+   403→            data={Object.entries(overview.distributions.orderStatus)
+   404→              .filter(([, v]) => v > 0)
+   405→              .sort((a, b) => b[1] - a[1])
+   406→              .map(([status, count]) => ({
+   407→                label: ORDER_STATUS_LABELS[status]?.en || status,
+   408→                labelVi: ORDER_STATUS_LABELS[status]?.vi || status,
+   409→                value: count,
+   410→                color: ORDER_STATUS_COLORS[status] || 'bg-gray-400',
+   411→              }))}
+   412→            totalLabel="Total" totalLabelVi="Tong"
+   413→            locale={locale}
+   414→          />
+   415→        </div>
+   416→
+   417→        {/* Bottom Row: Top Categories + Payment + Tier */}
+   418→        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+   419→          <HBarChart
+   420→            title="Top Categories" titleVi="Danh muc hang dau"
+   421→            data={overview.topCategories.slice(0, 8).map(c => ({
+   422→              label: c.name, value: c.revenue,
+   423→              subtitle: c.revenueFormatted,
+   424→            }))}
+   425→            formatValue={compactVND}
+   426→            locale={locale}
+   427→            maxItems={8}
+   428→          />
+   429→
+   430→          <DistributionChart
+   431→            title="Payment Method" titleVi="Phuong thuc TT"
+   432→            data={Object.entries(overview.distributions.paymentMethod)
+   433→              .sort((a, b) => b[1] - a[1])
+   434→              .map(([method, value]) => ({
+   435→                label: PAYMENT_METHOD_LABELS[method]?.en || method,
+   436→                labelVi: PAYMENT_METHOD_LABELS[method]?.vi || method,
+   437→                value,
+   438→                color: method === 'CREDIT' ? 'bg-amber-500' : method === 'DIGITAL' ? 'bg-blue-500' : 'bg-red-500',
+   439→              }))}
+   440→            locale={locale}
+   441→          />
+   442→
+   443→          <DistributionChart
+   444→            title="Loyalty Tiers" titleVi="Cap Thanh vien"
+   445→            data={Object.entries(overview.distributions.loyaltyTier)
+   446→              .sort((a, b) => b[1] - a[1])
+   447→              .map(([tier, count]) => ({
+   448→                label: tier, value: count,
+   449→                color: TIER_COLORS[tier] || 'bg-gray-400',
+   450→              }))}
+   451→            totalLabel="Shops" totalLabelVi="Cua hang"
+   452→            locale={locale}
+   453→          />
+   454→        </div>
+   455→      </div>
+   456→    );
+   457→  };
+   458→
+   459→  // ============================================
+   460→  // REVENUE TAB
+   461→  // ============================================
+   462→  const renderRevenue = () => {
+   463→    if (loading) return <div className="space-y-4"><Skeleton className="h-8 w-full" /><div className="grid grid-cols-4 gap-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}</div><Skeleton className="h-64 w-full" /></div>;
+   464→    if (!revenue) return <div className="text-center py-12"><p className="text-sm text-muted-foreground">{t('Failed to load revenue data.', 'Khong the tai du lieu doanh thu.')}</p><Button variant="outline" size="sm" className="mt-3" onClick={() => fetchTabData('revenue')}>{t('Retry', 'Thu lai')}</Button></div>;
+   465→
+   466→    const k = revenue.kpis;
+   467→
+   468→    return (
+   469→      <div className="space-y-4">
+   470→        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+   471→          <KpiCard title="Total Revenue" titleVi="Tong Doanh thu" value={k.totalRevenueFormatted} icon={<DollarSign className="h-4 w-4" />} growth={k.revenueGrowth} locale={locale} variant="success" />
+   472→          <KpiCard title="Discounts" titleVi="Giam gia" value={k.totalDiscountsFormatted} icon={<Tag className="h-4 w-4" />} locale={locale} variant="warning" />
+   473→          <KpiCard title="Delivery Fees" titleVi="Phi giao" value={k.totalDeliveryFeesFormatted} icon={<Truck className="h-4 w-4" />} locale={locale} />
+   474→          <KpiCard title="Avg Order Value" titleVi="TB Don hang" value={k.avgOrderValueFormatted} icon={<Package className="h-4 w-4" />} locale={locale} />
+   475→        </div>
+   476→
+   477→        {/* Monthly comparison */}
+   478→        <Card>
+   479→          <CardContent className="p-4">
+   480→            <div className="grid grid-cols-3 gap-4 text-center">
+   481→              <div>
+   482→                <p className="text-xs text-muted-foreground">{t('This Month', 'Thang nay')}</p>
+   483→                <p className="text-lg font-bold text-red-700">{k.thisMonthRevenueFormatted}</p>
+   484→              </div>
+   485→              <div>
+   486→                <p className="text-xs text-muted-foreground">{t('Last Month', 'Thang truoc')}</p>
+   487→                <p className="text-lg font-bold">{k.lastMonthRevenueFormatted}</p>
+   488→              </div>
+   489→              <div>
+   490→                <p className="text-xs text-muted-foreground">{t('MoM Growth', 'Tang/thang')}</p>
+   491→                <p className={`text-lg font-bold ${k.monthOverMonth && k.monthOverMonth >= 0 ? 'text-red-600' : 'text-red-600'}`}>
+   492→                  {k.monthOverMonth !== null ? `${k.monthOverMonth >= 0 ? '+' : ''}${k.monthOverMonth.toFixed(1)}%` : '-'}
+   493→                </p>
+   494→              </div>
+   495→            </div>
+   496→          </CardContent>
+   497→        </Card>
+   498→
+   499→        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+   500→          <div className="lg:col-span-2">
+   501→            <BarChart
+   502→              title="Daily Revenue" titleVi="Doanh thu hang ngay"
+   503→              data={revenue.trends.daily.map(d => ({
+   504→                label: d.date.slice(5), value: d.revenue,
+   505→                color: d.date === revenue.trends.daily[revenue.trends.daily.length - 1]?.date ? 'bg-red-500' : 'bg-red-500/50',
+   506→              }))}
+   507→              formatValue={compactVND} locale={locale} height={200}
+   508→            />
+   509→          </div>
+   510→          <DistributionChart
+   511→            title="By Payment Method" titleVi="Theo PT Thanh toan"
+   512→            data={Object.entries(revenue.breakdown.byPaymentMethod)
+   513→              .sort((a, b) => b[1].revenue - a[1].revenue)
+   514→              .map(([method, d]) => ({
+   515→                label: PAYMENT_METHOD_LABELS[method]?.en || method,
+   516→                labelVi: PAYMENT_METHOD_LABELS[method]?.vi || method,
+   517→                value: d.revenue,
+   518→                color: method === 'CREDIT' ? 'bg-amber-500' : method === 'DIGITAL' ? 'bg-blue-500' : 'bg-red-500',
+   519→              }))}
+   520→            locale={locale}
+   521→          />
+   522→        </div>
+   523→
+   524→        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+   525→          <HBarChart
+   526→            title="Revenue by Tier" titleVi="Doanh thu theo Cap"
+   527→            data={Object.entries(revenue.breakdown.byTier)
+   528→              .sort((a, b) => b[1].revenue - a[1].revenue)
+   529→              .map(([tier, d]) => ({
+   530→                label: tier, value: d.revenue, subtitle: `${d.count} orders`,
+   531→                color: TIER_COLORS[tier] || 'bg-gray-400',
+   532→              }))}
+   533→            formatValue={compactVND} locale={locale} maxItems={6}
+   534→          />
+   535→          <HBarChart
+   536→            title="Revenue by District" titleVi="Doanh thu theo Quan"
+   537→            data={revenue.breakdown.byDistrict.map(d => ({
+   538→              label: d.district, value: d.revenue, subtitle: d.revenueFormatted,
+   539→            }))}
+   540→            formatValue={compactVND} locale={locale} maxItems={8}
+   541→          />
+   542→        </div>
+   543→
+   544→        {/* Top Revenue Shops Table */}
+   545→        {revenue.topShops.length > 0 && (
+   546→          <Card>
+   547→            <CardHeader className="pb-2 pt-4 px-4">
+   548→              <CardTitle className="text-sm font-semibold">{t('Top Revenue Shops', 'Cua hang Doanh thu cao')}</CardTitle>
+   549→            </CardHeader>
+   550→            <CardContent className="px-4 pb-4">
+   551→              <Table>
+   552→                <TableHeader>
+   553→                  <TableRow className="bg-muted/30">
+   554→                    <TableHead className="w-8">#</TableHead>
+   555→                    <TableHead>{t('Shop', 'Cua hang')}</TableHead>
+   556→                    <TableHead className="text-right">{t('Revenue', 'Doanh thu')}</TableHead>
+   557→                    <TableHead className="text-right">{t('Orders', 'Don hang')}</TableHead>
+   558→                  </TableRow>
+   559→                </TableHeader>
+   560→                <TableBody>
+   561→                  {revenue.topShops.slice(0, 10).map((s, i) => (
+   562→                    <TableRow key={s.shopId}>
+   563→                      <TableCell className="text-xs text-muted-foreground">{i + 1}</TableCell>
+   564→                      <TableCell className="text-xs font-medium">{s.name}</TableCell>
+   565→                      <TableCell className="text-right text-xs font-semibold">
+   566→                        <SensitiveValue value={s.revenue} maskType="amount" formatOptions={{ formatCurrency: true }} />
+   567→                      </TableCell>
+   568→                      <TableCell className="text-right text-xs">{s.orders}</TableCell>
+   569→                    </TableRow>
+   570→                  ))}
+   571→                </TableBody>
+   572→              </Table>
+   573→            </CardContent>
+   574→          </Card>
+   575→        )}
+   576→      </div>
+   577→    );
+   578→  };
+   579→
+   580→  // ============================================
+   581→  // ORDERS TAB
+   582→  // ============================================
+   583→  const renderOrders = () => {
+   584→    if (loading) return <div className="space-y-4"><div className="grid grid-cols-4 gap-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}</div></div>;
+   585→    if (!ordersData) return <div className="text-center py-12"><p className="text-sm text-muted-foreground">{t('Failed to load orders data.', 'Khong the tai du lieu don hang.')}</p><Button variant="outline" size="sm" className="mt-3" onClick={() => fetchTabData('orders')}>{t('Retry', 'Thu lai')}</Button></div>;
+   586→
+   587→    const k = ordersData.kpis;
+   588→
+   589→    return (
+   590→      <div className="space-y-4">
+   591→        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+   592→          <KpiCard title="Total Orders" titleVi="Tong Don hang" value={k.totalOrders} icon={<ShoppingCart className="h-4 w-4" />} growth={k.orderGrowth} locale={locale} />
+   593→          <KpiCard title="Completed" titleVi="Hoan thanh" value={k.completedOrders} icon={<CheckCircle2 className="h-4 w-4" />} locale={locale} growth={k.completionRate} suffix={`${k.completionRate}%`} />
+   594→          <KpiCard title="Cancelled" titleVi="Da huy" value={k.cancelledOrders} icon={<XCircle className="h-4 w-4" />} locale={locale} variant={k.cancelledOrders > 0 ? 'danger' : 'default'} suffix={`${k.cancellationRate}%`} />
+   595→          <KpiCard title="Avg Items/Order" titleVi="TB SP/Don" value={k.avgItemsPerOrder} icon={<Package className="h-4 w-4" />} locale={locale} />
+   596→        </div>
+   597→
+   598→        {/* Revenue by Payment */}
+   599→        <Card>
+   600→          <CardContent className="p-4">
+   601→            <div className="grid grid-cols-3 gap-4 text-center">
+   602→              <div>
+   603→                <p className="text-xs text-muted-foreground">{t('Credit', 'Cong no')}</p>
+   604→                <p className="text-base font-bold text-amber-700">{k.creditRevenueFormatted}</p>
+   605→              </div>
+   606→              <div>
+   607→                <p className="text-xs text-muted-foreground">{t('Digital', 'Chuyen khoan')}</p>
+   608→                <p className="text-base font-bold text-blue-700">{k.digitalRevenueFormatted}</p>
+   609→              </div>
+   610→              <div>
+   611→                <p className="text-xs text-muted-foreground">{t('COD', 'Thu tien')}</p>
+   612→                <p className="text-base font-bold text-red-700">{k.codRevenueFormatted}</p>
+   613→              </div>
+   614→            </div>
+   615→          </CardContent>
+   616→        </Card>
+   617→
+   618→        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+   619→          <div className="lg:col-span-2">
+   620→            <BarChart
+   621→              title="Order Trend" titleVi="Xu huong Don hang"
+   622→              data={ordersData.trends.daily.map(d => ({
+   623→                label: d.date.slice(5), value: d.orders,
+   624→                color: d.date === ordersData.trends.daily[ordersData.trends.daily.length - 1]?.date ? 'bg-blue-500' : 'bg-blue-500/50',
+   625→              }))}
+   626→              locale={locale} height={200}
+   627→            />
+   628→          </div>
+   629→          <DistributionChart
+   630→            title="Order Status" titleVi="Trang thai"
+   631→            data={Object.entries(ordersData.distributions.status)
+   632→              .filter(([, v]) => v > 0)
+   633→              .sort((a, b) => b[1] - a[1])
+   634→              .map(([s, count]) => ({
+   635→                label: ORDER_STATUS_LABELS[s]?.en || s,
+   636→                labelVi: ORDER_STATUS_LABELS[s]?.vi || s,
+   637→                value: count,
+   638→                color: ORDER_STATUS_COLORS[s] || 'bg-gray-400',
+   639→              }))}
+   640→            totalLabel="Total" totalLabelVi="Tong"
+   641→            locale={locale}
+   642→          />
+   643→        </div>
+   644→
+   645→        {/* Top Ordering Shops */}
+   646→        {ordersData.rankings.topShops.length > 0 && (
+   647→          <Card>
+   648→            <CardHeader className="pb-2 pt-4 px-4">
+   649→              <CardTitle className="text-sm font-semibold">{t('Top Ordering Shops', 'Cua hang Dat nhieu nhat')}</CardTitle>
+   650→            </CardHeader>
+   651→            <CardContent className="px-4 pb-4">
+   652→              <Table>
+   653→                <TableHeader>
+   654→                  <TableRow className="bg-muted/30">
+   655→                    <TableHead className="w-8">#</TableHead>
+   656→                    <TableHead>{t('Shop', 'Cua hang')}</TableHead>
+   657→                    <TableHead>{t('Tier', 'Cap')}</TableHead>
+   658→                    <TableHead className="text-right">{t('Orders', 'DH')}</TableHead>
+   659→                    <TableHead className="text-right">{t('Revenue', 'DT')}</TableHead>
+   660→                  </TableRow>
+   661→                </TableHeader>
+   662→                <TableBody>
+   663→                  {ordersData.rankings.topShops.slice(0, 10).map((s, i) => (
+   664→                    <TableRow key={s.shopId}>
+   665→                      <TableCell className="text-xs text-muted-foreground">{i + 1}</TableCell>
+   666→                      <TableCell className="text-xs font-medium">{s.name}</TableCell>
+   667→                      <TableCell>
+   668→                        <span className={`inline-block h-2 w-2 rounded-sm mr-1 ${TIER_COLORS[s.tier] || 'bg-gray-400'}`} />
+   669→                        <span className="text-[10px]">{s.tier}</span>
+   670→                      </TableCell>
+   671→                      <TableCell className="text-right text-xs font-medium">{s.orders}</TableCell>
+   672→                      <TableCell className="text-right text-xs font-semibold">
+   673→                        <SensitiveValue value={s.revenue} maskType="amount" formatOptions={{ formatCurrency: true, compact: true }} />
+   674→                      </TableCell>
+   675→                    </TableRow>
+   676→                  ))}
+   677→                </TableBody>
+   678→              </Table>
+   679→            </CardContent>
+   680→          </Card>
+   681→        )}
+   682→
+   683→        {/* Largest Orders */}
+   684→        {ordersData.rankings.largestOrders.length > 0 && (
+   685→          <Card>
+   686→            <CardHeader className="pb-2 pt-4 px-4">
+   687→              <CardTitle className="text-sm font-semibold">{t('Largest Orders', 'Don hang lon nhat')}</CardTitle>
+   688→            </CardHeader>
+   689→            <CardContent className="px-4 pb-4">
+   690→              <Table>
+   691→                <TableHeader>
+   692→                  <TableRow className="bg-muted/30">
+   693→                    <TableHead className="w-8">#</TableHead>
+   694→                    <TableHead>{t('Shop', 'Cua hang')}</TableHead>
+   695→                    <TableHead>{t('Items', 'SP')}</TableHead>
+   696→                    <TableHead className="text-right">{t('Amount', 'Tien')}</TableHead>
+   697→                    <TableHead>{t('Status', 'TT')}</TableHead>
+   698→                  </TableRow>
+   699→                </TableHeader>
+   700→                <TableBody>
+   701→                  {ordersData.rankings.largestOrders.slice(0, 10).map((o, i) => (
+   702→                    <TableRow key={o.id}>
+   703→                      <TableCell className="text-xs text-muted-foreground">{i + 1}</TableCell>
+   704→                      <TableCell className="text-xs font-medium">{o.shopName}</TableCell>
+   705→                      <TableCell className="text-xs">{o.itemCount}</TableCell>
+   706→                      <TableCell className="text-right text-xs font-semibold">
+   707→                        <SensitiveValue value={o.totalAmount} maskType="amount" formatOptions={{ formatCurrency: true }} />
+   708→                      </TableCell>
+   709→                      <TableCell>
+   710→                        <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${
+   711→                          o.status === 'DELIVERED' ? 'bg-yellow-50 text-red-700' :
+   712→                          o.status === 'CANCELLED' ? 'bg-red-100 text-red-700' :
+   713→                          'bg-gray-100 text-gray-700'
+   714→                        }`}>
+   715→                          {ORDER_STATUS_LABELS[o.status]?.en || o.status}
+   716→                        </span>
+   717→                      </TableCell>
+   718→                    </TableRow>
+   719→                  ))}
+   720→                </TableBody>
+   721→              </Table>
+   722→            </CardContent>
+   723→          </Card>
+   724→        )}
+   725→      </div>
+   726→    );
+   727→  };
+   728→
+   729→  // ============================================
+   730→  // PRODUCTS TAB
+   731→  // ============================================
+   732→  const renderProducts = () => {
+   733→    if (loading) return <div className="space-y-4"><div className="grid grid-cols-4 gap-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}</div></div>;
+   734→    if (!productsData) return <div className="text-center py-12"><p className="text-sm text-muted-foreground">{t('Failed to load products data.', 'Khong the tai du lieu san pham.')}</p><Button variant="outline" size="sm" className="mt-3" onClick={() => fetchTabData('products')}>{t('Retry', 'Thu lai')}</Button></div>;
+   735→
+   736→    const k = productsData.kpis;
+   737→
+   738→    return (
+   739→      <div className="space-y-4">
+   740→        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+   741→          <KpiCard title="Products Sold" titleVi="SP da ban" value={k.uniqueProductsSold} icon={<Package className="h-4 w-4" />} locale={locale} suffix={`/ ${k.activeProducts}`} />
+   742→          <KpiCard title="Total Items Sold" titleVi="Tong SL ban" value={k.totalItemsSold} icon={<BoxIcon className="h-4 w-4" />} locale={locale} />
+   743→          <KpiCard title="Product Revenue" titleVi="DT San pham" value={k.totalRevenueFormatted} icon={<DollarSign className="h-4 w-4" />} locale={locale} variant="success" />
+   744→          <KpiCard title="Avg Unit Price" titleVi="TB Don gia" value={k.avgUnitPriceFormatted} icon={<Tag className="h-4 w-4" />} locale={locale} />
+   745→        </div>
+   746→
+   747→        {/* Stock Alerts */}
+   748→        {(k.lowStockCount > 0 || k.outOfStockCount > 0) && (
+   749→          <Card className="border-amber-200 bg-amber-50/50">
+   750→            <CardContent className="p-4">
+   751→              <div className="flex items-center gap-2 mb-3">
+   752→                <AlertTriangle className="h-4 w-4 text-amber-600" />
+   753→                <h3 className="text-sm font-semibold text-amber-800">{t('Stock Alerts', 'Canh bao Ton kho')}</h3>
+   754→              </div>
+   755→              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+   756→                <div className="rounded-lg bg-white p-3 border">
+   757→                  <p className="text-xs text-muted-foreground">{t('Out of Stock', 'Het hang')}</p>
+   758→                  <p className="text-xl font-bold text-red-600">{k.outOfStockCount}</p>
+   759→                </div>
+   760→                <div className="rounded-lg bg-white p-3 border">
+   761→                  <p className="text-xs text-muted-foreground">{t('Low Stock (< 10)', 'Sap het (< 10)')}</p>
+   762→                  <p className="text-xl font-bold text-amber-600">{k.lowStockCount}</p>
+   763→                </div>
+   764→                <div className="rounded-lg bg-white p-3 border">
+   765→                  <p className="text-xs text-muted-foreground">{t('Avg Stock Level', 'TB Ton kho')}</p>
+   766→                  <p className="text-xl font-bold">{k.avgStock}</p>
+   767→                </div>
+   768→              </div>
+   769→            </CardContent>
+   770→          </Card>
+   771→        )}
+   772→
+   773→        {/* Private Label */}
+   774→        <Card>
+   775→          <CardContent className="p-4">
+   776→            <div className="grid grid-cols-3 gap-4 text-center">
+   777→              <div>
+   778→                <p className="text-xs text-muted-foreground">{t('Aladin Select', 'Aladin Select')}</p>
+   779→                <p className="text-base font-bold text-blue-700">{k.privateLabelRevenueFormatted}</p>
+   780→                <p className="text-[10px] text-muted-foreground">{k.privateLabelPercentage}% {t('of total', 'tong DT')}</p>
+   781→              </div>
+   782→              <div>
+   783→                <p className="text-xs text-muted-foreground">{t('Regular Products', 'SP Thuong')}</p>
+   784→                <p className="text-base font-bold">{k.regularRevenueFormatted}</p>
+   785→              </div>
+   786→              <div>
+   787→                <p className="text-xs text-muted-foreground">{t('PL Products', 'SP PL')}</p>
+   788→                <p className="text-xl font-bold">{k.privateLabelCount}</p>
+   789→              </div>
+   790→            </div>
+   791→          </CardContent>
+   792→        </Card>
+   793→
+   794→        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+   795→          <HBarChart
+   796→            title="Top Products by Revenue" titleVi="SP Doanh thu cao"
+   797→            data={productsData.rankings.topProducts.slice(0, 10).map(p => ({
+   798→              label: `${p.name} (${p.sku})`, value: p.revenue, subtitle: `${p.qty} units`,
+   799→            }))}
+   800→            formatValue={compactVND} locale={locale} maxItems={10}
+   801→          />
+   802→          <HBarChart
+   803→            title="Top Categories" titleVi="Danh muc"
+   804→            data={productsData.rankings.topCategories.slice(0, 10).map(c => ({
+   805→              label: c.name, value: c.revenue, subtitle: `${c.percentage}%`,
+   806→            }))}
+   807→            formatValue={compactVND} locale={locale} maxItems={10}
+   808→          />
+   809→        </div>
+   810→
+   811→        {/* Out of Stock Table */}
+   812→        {productsData.stockAlerts.outOfStock.length > 0 && (
+   813→          <Card>
+   814→            <CardHeader className="pb-2 pt-4 px-4">
+   815→              <CardTitle className="text-sm font-semibold text-red-700 flex items-center gap-1.5">
+   816→                <XCircle className="h-4 w-4" />
+   817→                {t('Out of Stock Products', 'San pham Het hang')}
+   818→              </CardTitle>
+   819→            </CardHeader>
+   820→            <CardContent className="px-4 pb-4">
+   821→              <Table>
+   822→                <TableHeader>
+   823→                  <TableRow className="bg-red-50/50">
+   824→                    <TableHead>{t('Product', 'San pham')}</TableHead>
+   825→                    <TableHead>{t('SKU', 'SKU')}</TableHead>
+   826→                    <TableHead className="text-right">{t('Price', 'Gia')}</TableHead>
+   827→                  </TableRow>
+   828→                </TableHeader>
+   829→                <TableBody>
+   830→                  {productsData.stockAlerts.outOfStock.slice(0, 10).map(p => (
+   831→                    <TableRow key={p.id}>
+   832→                      <TableCell className="text-xs font-medium">{p.name}</TableCell>
+   833→                      <TableCell className="text-xs text-muted-foreground font-mono">{p.sku}</TableCell>
+   834→                      <TableCell className="text-right text-xs">{p.basePriceFormatted}</TableCell>
+   835→                    </TableRow>
+   836→                  ))}
+   837→                </TableBody>
+   838→              </Table>
+   839→            </CardContent>
+   840→          </Card>
+   841→        )}
+   842→      </div>
+   843→    );
+   844→  };
+   845→
+   846→  // ============================================
+   847→  // SHOPS TAB
+   848→  // ============================================
+   849→  const renderShops = () => {
+   850→    if (loading) return <div className="space-y-4"><div className="grid grid-cols-4 gap-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}</div></div>;
+   851→    if (!shopsData) return <div className="text-center py-12"><p className="text-sm text-muted-foreground">{t('Failed to load shops data.', 'Khong the tai du lieu cua hang.')}</p><Button variant="outline" size="sm" className="mt-3" onClick={() => fetchTabData('shops')}>{t('Retry', 'Thu lai')}</Button></div>;
+   852→
+   853→    const k = shopsData.kpis;
+   854→    const ch = k.creditHealth;
+   855→
+   856→    return (
+   857→      <div className="space-y-4">
+   858→        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+   859→          <KpiCard title="Total Shops" titleVi="Tong CH" value={k.totalShops} icon={<Store className="h-4 w-4" />} locale={locale} />
+   860→          <KpiCard title="Active" titleVi="Hoat dong" value={k.activeShops} icon={<Users className="h-4 w-4" />} locale={locale} variant="success" />
+   861→          <KpiCard title="New Shops" titleVi="CH moi" value={k.newShops} icon={<Store className="h-4 w-4" />} growth={k.newShopsGrowth} locale={locale} variant="info" />
+   862→          <KpiCard title="Dormant" titleVi="Ngung hoat dong" value={k.dormantShops} icon={<AlertTriangle className="h-4 w-4" />} locale={locale} variant={k.dormantShops > 0 ? 'warning' : 'default'} />
+   863→        </div>
+   864→
+   865→        {/* Credit Health */}
+   866→        <Card>
+   867→          <CardContent className="p-4">
+   868→            <h3 className="text-xs font-semibold text-muted-foreground uppercase mb-3">{t('Credit Health', 'Suc khoe Cong no')}</h3>
+   869→            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+   870→              <div className="text-center">
+   871→                <p className="text-xs text-muted-foreground">{t('Active', 'HD')}</p>
+   872→                <p className="text-lg font-bold text-red-600">{ch.active}</p>
+   873→              </div>
+   874→              <div className="text-center">
+   875→                <p className="text-xs text-muted-foreground">{t('Overdue', 'Qua han')}</p>
+   876→                <p className="text-lg font-bold text-amber-600">{ch.overdue}</p>
+   877→              </div>
+   878→              <div className="text-center">
+   879→                <p className="text-xs text-muted-foreground">{t('Locked', 'Bi khoa')}</p>
+   880→                <p className="text-lg font-bold text-red-600">{ch.locked}</p>
+   881→              </div>
+   882→              <div className="text-center">
+   883→                <p className="text-xs text-muted-foreground">{t('Utilization', 'Su dung')}</p>
+   884→                <p className={`text-lg font-bold ${ch.utilizationPercent > 80 ? 'text-red-600' : ch.utilizationPercent > 50 ? 'text-amber-600' : 'text-red-600'}`}>{ch.utilizationPercent}%</p>
+   885→              </div>
+   886→              <div className="text-center">
+   887→                <p className="text-xs text-muted-foreground">{t('Available', 'Con lai')}</p>
+   888→                <p className="text-base font-bold text-red-700">{ch.availableFormatted}</p>
+   889→              </div>
+   890→            </div>
+   891→          </CardContent>
+   892→        </Card>
+   893→
+   894→        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+   895→          <DistributionChart
+   896→            title="Tier Distribution" titleVi="Phan bo Cap"
+   897→            data={Object.entries(shopsData.distributions.tier)
+   898→              .sort((a, b) => b[1].count - a[1].count)
+   899→              .map(([tier, d]) => ({
+   900→                label: tier, value: d.count,
+   901→                color: TIER_COLORS[tier] || 'bg-gray-400',
+   902→                subtitle: `GMV: ${compactVND(d.gmv)}`,
+   903→              }))}
+   904→            totalLabel="Shops" totalLabelVi="Cua hang"
+   905→            locale={locale}
+   906→          />
+   907→          <HBarChart
+   908→            title="GMV by District" titleVi="GMV theo Quan"
+   909→            data={shopsData.distributions.district.map(d => ({
+   910→              label: d.district, value: d.count, subtitle: d.gmvFormatted,
+   911→            }))}
+   912→            locale={locale} maxItems={10}
+   913→          />
+   914→        </div>
+   915→
+   916→        {/* Top GMV Shops Table */}
+   917→        <Card>
+   918→          <CardHeader className="pb-2 pt-4 px-4">
+   919→            <CardTitle className="text-sm font-semibold">{t('Top GMV Shops', 'Cua hang GMV cao')}</CardTitle>
+   920→          </CardHeader>
+   921→          <CardContent className="px-4 pb-4">
+   922→            <Table>
+   923→              <TableHeader>
+   924→                <TableRow className="bg-muted/30">
+   925→                  <TableHead className="w-8">#</TableHead>
+   926→                  <TableHead>{t('Shop', 'Cua hang')}</TableHead>
+   927→                  <TableHead>{t('Tier', 'Cap')}</TableHead>
+   928→                  <TableHead>{t('District', 'Quan')}</TableHead>
+   929→                  <TableHead className="text-right">{t('Orders', 'DH')}</TableHead>
+   930→                  <TableHead className="text-right">{t('GMV', 'GMV')}</TableHead>
+   931→                  <TableHead className="text-right">{t('AOV', 'TB/DH')}</TableHead>
+   932→                </TableRow>
+   933→              </TableHeader>
+   934→              <TableBody>
+   935→                {shopsData.rankings.topByGmv.slice(0, 15).map((s, i) => (
+   936→                  <TableRow key={s.id}>
+   937→                    <TableCell className="text-xs text-muted-foreground">{i + 1}</TableCell>
+   938→                    <TableCell className="text-xs font-medium">{s.name}</TableCell>
+   939→                    <TableCell>
+   940→                      <span className={`inline-block h-2 w-2 rounded-sm mr-1 ${TIER_COLORS[s.loyaltyTier] || 'bg-gray-400'}`} />
+   941→                      <span className="text-[10px]">{s.loyaltyTier}</span>
+   942→                    </TableCell>
+   943→                    <TableCell className="text-xs text-muted-foreground">{s.district || '-'}</TableCell>
+   944→                    <TableCell className="text-right text-xs">{s.totalOrders}</TableCell>
+   945→                    <TableCell className="text-right text-xs font-semibold">
+   946→                      <SensitiveValue value={s.totalGmv} maskType="amount" formatOptions={{ formatCurrency: true, compact: true }} />
+   947→                    </TableCell>
+   948→                    <TableCell className="text-right text-xs">
+   949→                      <SensitiveValue value={s.avgOrderValue} maskType="amount" formatOptions={{ formatCurrency: true }} />
+   950→                    </TableCell>
+   951→                  </TableRow>
+   952→                ))}
+   953→              </TableBody>
+   954→            </Table>
+   955→          </CardContent>
+   956→        </Card>
+   957→      </div>
+   958→    );
+   959→  };
+   960→
+   961→  // ============================================
+   962→  // SHIPMENTS TAB
+   963→  // ============================================
+   964→  const renderShipments = () => {
+   965→    if (loading) return <div className="space-y-4"><div className="grid grid-cols-4 gap-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}</div></div>;
+   966→    if (!shipmentsData) return <div className="text-center py-12"><p className="text-sm text-muted-foreground">{t('Failed to load shipments data.', 'Khong the tai du lieu van chuyen.')}</p><Button variant="outline" size="sm" className="mt-3" onClick={() => fetchTabData('shipments')}>{t('Retry', 'Thu lai')}</Button></div>;
+   967→
+   968→    const k = shipmentsData.kpis;
+   969→
+   970→    return (
+   971→      <div className="space-y-4">
+   972→        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+   973→          <KpiCard title="Total Shipments" titleVi="Tong VC" value={k.totalShipments} icon={<Truck className="h-4 w-4" />} growth={k.shipmentGrowth} locale={locale} />
+   974→          <KpiCard title="Delivered" titleVi="Da giao" value={k.delivered} icon={<CheckCircle2 className="h-4 w-4" />} locale={locale} variant="success" />
+   975→          <KpiCard title="Failed" titleVi="That bai" value={k.failed} icon={<XCircle className="h-4 w-4" />} locale={locale} variant={k.failed > 0 ? 'danger' : 'default'} />
+   976→          <KpiCard title="Success Rate" titleVi="TL Thanh cong" value={`${k.successRate}%`} icon={<TrendingUp className="h-4 w-4" />} growth={k.successRateDelta} locale={locale} variant={k.successRate >= 90 ? 'success' : 'warning'} />
+   977→        </div>
+   978→
+   979→        {/* Delivery Time */}
+   980→        <Card>
+   981→          <CardContent className="p-4">
+   982→            <div className="flex items-center gap-2 mb-3">
+   983→              <Clock className="h-4 w-4 text-muted-foreground" />
+   984→              <h3 className="text-xs font-semibold text-muted-foreground uppercase">{t('Delivery Times', 'Thoi gian Giao hang')}</h3>
+   985→            </div>
+   986→            <div className="grid grid-cols-3 gap-4 text-center">
+   987→              <div>
+   988→                <p className="text-xs text-muted-foreground">{t('Average', 'Trung binh')}</p>
+   989→                <p className="text-xl font-bold">{k.avgDeliveryHours}h</p>
+   990→              </div>
+   991→              <div>
+   992→                <p className="text-xs text-muted-foreground">{t('Fastest', 'Nhanh nhat')}</p>
+   993→                <p className="text-xl font-bold text-red-600">{k.minDeliveryHours}h</p>
+   994→              </div>
+   995→              <div>
+   996→                <p className="text-xs text-muted-foreground">{t('Slowest', 'Cham nhat')}</p>
+   997→                <p className="text-xl font-bold text-red-600">{k.maxDeliveryHours}h</p>
+   998→              </div>
+   999→            </div>
+  1000→          </CardContent>
+  1001→        </Card>
+  1002→
+  1003→        {/* Internal vs 3rd Party */}
+  1004→        <Card>
+  1005→          <CardContent className="p-4">
+  1006→            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+  1007→              <div>
+  1008→                <p className="text-xs text-muted-foreground">{t('Internal Fleet', 'Noi bo')}</p>
+  1009→                <p className="text-lg font-bold">{k.internal}</p>
+  1010→                <p className="text-[10px] text-red-600">{k.internalSuccessRate}% {t('success', 'thanh cong')}</p>
+  1011→              </div>
+  1012→              <div>
+  1013→                <p className="text-xs text-muted-foreground">{t('3rd Party', "Bên thu 3")}</p>
+  1014→                <p className="text-lg font-bold">{k.thirdParty}</p>
+  1015→                <p className="text-[10px] text-blue-600">{k.thirdPartySuccessRate}% {t('success', 'thanh cong')}</p>
+  1016→              </div>
+  1017→              <div>
+  1018→                <p className="text-xs text-muted-foreground">{t('Shipment Value', 'Gia tri VC')}</p>
+  1019→                <p className="text-base font-bold">{k.totalValueFormatted}</p>
+  1020→              </div>
+  1021→              <div>
+  1022→                <p className="text-xs text-muted-foreground">{t('Avg Value', 'TB/Don')}</p>
+  1023→                <p className="text-base font-bold">{k.avgShipmentValueFormatted}</p>
+  1024→              </div>
+  1025→            </div>
+  1026→          </CardContent>
+  1027→        </Card>
+  1028→
+  1029→        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+  1030→          <div className="lg:col-span-2">
+  1031→            <BarChart
+  1032→              title="Shipment Trend" titleVi="Xu huong Van chuyen"
+  1033→              data={shipmentsData.trends.daily.map(d => ({
+  1034→                label: d.date.slice(5), value: d.total,
+  1035→                color: d.date === shipmentsData.trends.daily[shipmentsData.trends.daily.length - 1]?.date ? 'bg-blue-500' : 'bg-blue-500/50',
+  1036→              }))}
+  1037→              locale={locale} height={200}
+  1038→            />
+  1039→          </div>
+  1040→          <DistributionChart
+  1041→            title="Delivery Time Distribution" titleVi="Phan bo TG Giao"
+  1042→            data={Object.entries(shipmentsData.distributions.deliveryTimeBuckets)
+  1043→              .filter(([, v]) => v > 0)
+  1044→              .map(([bucket, count]) => ({
+  1045→                label: bucket === 'under2h' ? '< 2h' : bucket === 'over24h' ? '> 24h' : bucket,
+  1046→                labelVi: bucket === 'under2h' ? '< 2 gio' : bucket === 'over24h' ? '> 24 gio' : bucket,
+  1047→                value: count,
+  1048→                color: bucket === 'under2h' ? 'bg-red-500' : bucket === '2-4h' ? 'bg-blue-500' : bucket === '4-8h' ? 'bg-cyan-500' : bucket === '8-24h' ? 'bg-amber-500' : 'bg-red-500',
+  1049→              }))}
+  1050→            totalLabel="Total" totalLabelVi="Tong"
+  1051→            locale={locale}
+  1052→          />
+  1053→        </div>
+  1054→
+  1055→        {/* Driver Performance Table */}
+  1056→        {shipmentsData.rankings.drivers.length > 0 && (
+  1057→          <Card>
+  1058→            <CardHeader className="pb-2 pt-4 px-4">
+  1059→              <CardTitle className="text-sm font-semibold">{t('Driver Performance', 'Hieu suat Tai xe')}</CardTitle>
+  1060→            </CardHeader>
+  1061→            <CardContent className="px-4 pb-4">
+  1062→              <Table>
+  1063→                <TableHeader>
+  1064→                  <TableRow className="bg-muted/30">
+  1065→                    <TableHead className="w-8">#</TableHead>
+  1066→                    <TableHead>{t('Driver', 'Tai xe')}</TableHead>
+  1067→                    <TableHead className="text-right">{t('Total', 'Tong')}</TableHead>
+  1068→                    <TableHead className="text-right">{t('Delivered', 'Da giao')}</TableHead>
+  1069→                    <TableHead className="text-right">{t('Failed', 'That bai')}</TableHead>
+  1070→                    <TableHead className="text-right">{t('Success', 'TL')}</TableHead>
+  1071→                    <TableHead className="text-right">{t('Avg Time', 'TB TG')}</TableHead>
+  1072→                    <TableHead className="text-right">{t('Value', 'Gia tri')}</TableHead>
+  1073→                  </TableRow>
+  1074→                </TableHeader>
+  1075→                <TableBody>
+  1076→                  {shipmentsData.rankings.drivers.slice(0, 10).map((d, i) => (
+  1077→                    <TableRow key={d.driverId}>
+  1078→                      <TableCell className="text-xs text-muted-foreground">{i + 1}</TableCell>
+  1079→                      <TableCell className="text-xs font-medium">{d.name}</TableCell>
+  1080→                      <TableCell className="text-right text-xs">{d.totalShipments}</TableCell>
+  1081→                      <TableCell className="text-right text-xs font-medium text-red-600">{d.delivered}</TableCell>
+  1082→                      <TableCell className="text-right text-xs">{d.failed > 0 ? <span className="text-red-600">{d.failed}</span> : '-'}</TableCell>
+  1083→                      <TableCell className="text-right">
+  1084→                        <span className={`text-xs font-semibold ${d.successRate >= 90 ? 'text-red-600' : d.successRate >= 70 ? 'text-amber-600' : 'text-red-600'}`}>
+  1085→                          {d.successRate}%
+  1086→                        </span>
+  1087→                      </TableCell>
+  1088→                      <TableCell className="text-right text-xs">{d.avgDeliveryHours > 0 ? `${d.avgDeliveryHours}h` : '-'}</TableCell>
+  1089→                      <TableCell className="text-right text-xs font-semibold">
+  1090→                        <SensitiveValue value={d.totalValue} maskType="amount" formatOptions={{ formatCurrency: true, compact: true }} />
+  1091→                      </TableCell>
+  1092→                    </TableRow>
+  1093→                  ))}
+  1094→                </TableBody>
+  1095→              </Table>
+  1096→            </CardContent>
+  1097→          </Card>
+  1098→        )}
+  1099→
+  1100→        {/* District Performance */}
+  1101→        {shipmentsData.rankings.districts.length > 0 && (
+  1102→          <Card>
+  1103→            <CardHeader className="pb-2 pt-4 px-4">
+  1104→              <CardTitle className="text-sm font-semibold">{t('Delivery by District', 'Giao hang theo Quan')}</CardTitle>
+  1105→            </CardHeader>
+  1106→            <CardContent className="px-4 pb-4">
+  1107→              <Table>
+  1108→                <TableHeader>
+  1109→                  <TableRow className="bg-muted/30">
+  1110→                    <TableHead>{t('District', 'Quan')}</TableHead>
+  1111→                    <TableHead className="text-right">{t('Total', 'Tong')}</TableHead>
+  1112→                    <TableHead className="text-right">{t('Delivered', 'Da giao')}</TableHead>
+  1113→                    <TableHead className="text-right">{t('Failed', 'That bai')}</TableHead>
+  1114→                    <TableHead className="text-right">{t('Success Rate', 'TL TC')}</TableHead>
+  1115→                  </TableRow>
+  1116→                </TableHeader>
+  1117→                <TableBody>
+  1118→                  {shipmentsData.rankings.districts.slice(0, 10).map((d, i) => (
+  1119→                    <TableRow key={i}>
+  1120→                      <TableCell className="text-xs font-medium">{d.district}</TableCell>
+  1121→                      <TableCell className="text-right text-xs">{d.total}</TableCell>
+  1122→                      <TableCell className="text-right text-xs font-medium">{d.delivered}</TableCell>
+  1123→                      <TableCell className="text-right text-xs">{d.failed}</TableCell>
+  1124→                      <TableCell className="text-right">
+  1125→                        <span className={`text-xs font-semibold ${d.successRate >= 90 ? 'text-red-600' : d.successRate >= 70 ? 'text-amber-600' : 'text-red-600'}`}>
+  1126→                          {d.successRate}%
+  1127→                        </span>
+  1128→                      </TableCell>
+  1129→                    </TableRow>
+  1130→                  ))}
+  1131→                </TableBody>
+  1132→              </Table>
+  1133→            </CardContent>
+  1134→          </Card>
+  1135→        )}
+  1136→      </div>
+  1137→    );
+  1138→  };
+  1139→
+  1140→  // ============================================
+  1141→  // RENDER
+  1142→  // ============================================
+  1143→  return (
+  1144→    <div className="flex min-h-screen">
+  1145→      <AdminSidebar />
+  1146→      <SidebarInset>
+  1147→        <AdminHeader />
+  1148→
+  1149→        <main className="flex-1 p-4 md:p-6 lg:p-8 space-y-6">
+  1150→          {/* Page Header */}
+  1151→          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+  1152→            <div>
+  1153→              <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+  1154→                <BarChart3 className="h-6 w-6" />
+  1155→                {t('Analytics & Reports', 'Bao cao & Phan tich')}
+  1156→              </h1>
+  1157→              <p className="text-sm text-muted-foreground mt-1">
+  1158→                {t('Platform-wide analytics, trends, and insights', 'Phan tich, xu huong va thong nhat toan nen tang')}
+  1159→              </p>
+  1160→            </div>
+  1161→            <div className="flex items-center gap-2">
+  1162→              <DateRangePicker value={period} onChange={handlePeriodChange} locale={locale} />
+  1163→              <Button variant="outline" size="sm" onClick={handleRefresh}>
+  1164→                <RefreshCw className="h-4 w-4 mr-1" />
+  1165→                {t('Refresh', 'Lam moi')}
+  1166→              </Button>
+  1167→              <Button variant="outline" size="sm" onClick={handleExport}>
+  1168→                <Download className="h-4 w-4 mr-1" />
+  1169→                {t('Export', 'Xuat')}
+  1170→              </Button>
+  1171→            </div>
+  1172→          </div>
+  1173→
+  1174→          <Separator />
+  1175→
+  1176→          {/* Tabs */}
+  1177→          <Tabs value={activeTab} onValueChange={setActiveTab}>
+  1178→            <TabsList className="grid w-full grid-cols-6">
+  1179→              <TabsTrigger value="overview" className="text-xs">
+  1180→                <BarChart3 className="h-3.5 w-3.5 mr-1" />
+  1181→                {t('Overview', 'Tong quan')}
+  1182→              </TabsTrigger>
+  1183→              <TabsTrigger value="revenue" className="text-xs">
+  1184→                <DollarSign className="h-3.5 w-3.5 mr-1" />
+  1185→                {t('Revenue', 'Doanh thu')}
+  1186→              </TabsTrigger>
+  1187→              <TabsTrigger value="orders" className="text-xs">
+  1188→                <ShoppingCart className="h-3.5 w-3.5 mr-1" />
+  1189→                {t('Orders', 'Don hang')}
+  1190→              </TabsTrigger>
+  1191→              <TabsTrigger value="products" className="text-xs">
+  1192→                <Package className="h-3.5 w-3.5 mr-1" />
+  1193→                {t('Products', 'San pham')}
+  1194→              </TabsTrigger>
+  1195→              <TabsTrigger value="shops" className="text-xs">
+  1196→                <Store className="h-3.5 w-3.5 mr-1" />
+  1197→                {t('Shops', 'Cua hang')}
+  1198→              </TabsTrigger>
+  1199→              <TabsTrigger value="shipments" className="text-xs">
+  1200→                <Truck className="h-3.5 w-3.5 mr-1" />
+  1201→                {t('Shipments', 'Van chuyen')}
+  1202→              </TabsTrigger>
+  1203→            </TabsList>
+  1204→
+  1205→            <TabsContent value="overview" className="mt-4">{renderOverview()}</TabsContent>
+  1206→            <TabsContent value="revenue" className="mt-4">{renderRevenue()}</TabsContent>
+  1207→            <TabsContent value="orders" className="mt-4">{renderOrders()}</TabsContent>
+  1208→            <TabsContent value="products" className="mt-4">{renderProducts()}</TabsContent>
+  1209→            <TabsContent value="shops" className="mt-4">{renderShops()}</TabsContent>
+  1210→            <TabsContent value="shipments" className="mt-4">{renderShipments()}</TabsContent>
+  1211→          </Tabs>
+  1212→        </main>
+  1213→      </SidebarInset>
+  1214→    </div>
+  1215→  );
+  1216→}
+  1217→

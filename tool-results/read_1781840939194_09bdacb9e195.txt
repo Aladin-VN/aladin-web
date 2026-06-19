@@ -1,0 +1,886 @@
+     1→'use client';
+     2→
+     3→import { adminFetch } from '@/lib/admin-fetch';
+     4→import { useLocale, useAuth } from '@/providers/app-provider';
+     5→import { AuthGuard } from '@/components/auth/auth-guard';
+     6→
+     7→import { useState, useEffect, useCallback } from 'react';
+     8→import {
+     9→  Store,
+    10→  ShoppingCart,
+    11→  CreditCard,
+    12→  AlertTriangle,
+    13→  Truck,
+    14→  Tag,
+    15→  Package,
+    16→  BarChart3,
+    17→  DollarSign,
+    18→  Users,
+    19→  ShieldCheck,
+    20→  Clock,
+    21→  Lock,
+    22→  TrendingUp,
+    23→  CheckCircle2,
+    24→  Boxes,
+    25→  RefreshCw,
+    26→} from 'lucide-react';
+    27→import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+    28→import { Badge } from '@/components/ui/badge';
+    29→import { Button } from '@/components/ui/button';
+    30→import { Skeleton } from '@/components/ui/skeleton';
+    31→import {
+    32→  Table,
+    33→  TableBody,
+    34→  TableCell,
+    35→  TableHead,
+    36→  TableHeader,
+    37→  TableRow,
+    38→} from '@/components/ui/table';
+    39→import { AdminSidebar } from '@/components/layout/admin-sidebar';
+    40→import { AdminHeader } from '@/components/layout/admin-header';
+    41→import { SensitiveValue } from '@/components/shared/sensitive-value';
+    42→import { SidebarInset } from '@/components/ui/sidebar';
+    43→import { Separator } from '@/components/ui/separator';
+    44→import { formatVND, ROLES } from '@/lib/security';
+    45→import { BarChart, HBarChart, DistributionChart } from '@/components/reports/charts';
+    46→
+    47→// ============================================
+    48→// Types
+    49→// ============================================
+    50→
+    51→interface DashboardStats {
+    52→  totalShops: number;
+    53→  activeShops: number;
+    54→  totalOrders: number;
+    55→  monthlyOrderCount: number;
+    56→  monthlyGmv: number;
+    57→  monthlyGmvFormatted: string;
+    58→  avgOrderValue: number;
+    59→  avgOrderValueFormatted: string;
+    60→  retentionRate: number;
+    61→  creditExposure: number;
+    62→  creditExposureFormatted: string;
+    63→  overdueAccounts: number;
+    64→  pendingShipments: number;
+    65→  activeGroupDeals: number;
+    66→  totalProducts: number;
+    67→  deliveredOrders: number;
+    68→  deliveredGmv: number;
+    69→  deliveredGmvFormatted: string;
+    70→  pipeline: { status: string; count: number }[];
+    71→  monthlyTrend: { month: string; orders: number; gmv: number }[];
+    72→  paymentBreakdown: {
+    73→    CREDIT?: { count: number; revenue: number; revenueFormatted: string };
+    74→    DIGITAL?: { count: number; revenue: number; revenueFormatted: string };
+    75→    COD?: { count: number; revenue: number; revenueFormatted: string };
+    76→  };
+    77→  topShops: {
+    78→    shopId: string;
+    79→    shopName: string;
+    80→    orderCount: number;
+    81→    totalRevenue: number;
+    82→    totalRevenueFormatted: string;
+    83→  }[];
+    84→  topCategories: {
+    85→    name: string;
+    86→    revenue: number;
+    87→    revenueFormatted: string;
+    88→    qty: number;
+    89→  }[];
+    90→  recentOrders: {
+    91→    id: string;
+    92→    orderNumber: string;
+    93→    shopName: string;
+    94→    status: string;
+    95→    paymentMethod: string;
+    96→    paymentStatus: string;
+    97→    totalAmount: number;
+    98→    totalAmountFormatted: string;
+    99→    itemCount: number;
+   100→    createdAt: string;
+   101→  }[];
+   102→  topProducts: {
+   103→    productId: string;
+   104→    productName: string;
+   105→    productSku: string;
+   106→    totalQty: number;
+   107→    totalRevenue: number;
+   108→    totalRevenueFormatted: string;
+   109→  }[];
+   110→}
+   111→
+   112→// ============================================
+   113→// KPI Card — compact, with accent line
+   114→// ============================================
+   115→
+   116→function KpiCard({
+   117→  title,
+   118→  titleVi,
+   119→  value,
+   120→  formattedValue,
+   121→  icon,
+   122→  subtitle,
+   123→  isSensitive = false,
+   124→  accent = 'yellow',
+   125→  locale,
+   126→}: {
+   127→  title: string;
+   128→  titleVi: string;
+   129→  value: string | number;
+   130→  formattedValue?: string;
+   131→  icon: React.ReactNode;
+   132→  subtitle?: string;
+   133→  isSensitive?: boolean;
+   134→  accent?: 'yellow' | 'red' | 'green' | 'neutral';
+   135→  locale: string;
+   136→}) {
+   137→  const t = locale === 'vi' ? titleVi : title;
+   138→
+   139→  const accentTop = accent === 'yellow'
+   140→    ? 'border-t-yellow-400'
+   141→    : accent === 'red'
+   142→      ? 'border-t-red-500'
+   143→      : accent === 'green'
+   144→        ? 'border-t-green-500'
+   145→        : 'border-t-muted';
+   146→
+   147→  const iconBg = accent === 'yellow'
+   148→    ? 'bg-yellow-50 text-yellow-600 dark:bg-yellow-950/50 dark:text-yellow-400'
+   149→    : accent === 'red'
+   150→      ? 'bg-red-50 text-red-600 dark:bg-red-950/50 dark:text-red-400'
+   151→      : accent === 'green'
+   152→        ? 'bg-green-50 text-green-600 dark:bg-green-950/50 dark:text-green-400'
+   153→        : 'bg-muted text-muted-foreground';
+   154→
+   155→  return (
+   156→    <Card className={`border-t-2 ${accentTop} hover:shadow-md transition-shadow`}>
+   157→      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+   158→        <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t}</CardTitle>
+   159→        <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${iconBg}`}>
+   160→          {icon}
+   161→        </div>
+   162→      </CardHeader>
+   163→      <CardContent className="pb-3">
+   164→        <div className="text-2xl font-bold tracking-tight">
+   165→          {isSensitive ? (
+   166→            <SensitiveValue value={String(formattedValue || value)} maskType="amount" formatOptions={{ formatCurrency: true }} />
+   167→          ) : (
+   168→            formattedValue || value
+   169→          )}
+   170→        </div>
+   171→        {subtitle && (
+   172→          <p className="text-[11px] text-muted-foreground mt-1">{subtitle}</p>
+   173→        )}
+   174→      </CardContent>
+   175→    </Card>
+   176→  );
+   177→}
+   178→
+   179→// ============================================
+   180→// Pipeline Bar Component
+   181→// ============================================
+   182→
+   183→const PIPELINE_STAGES = [
+   184→  { key: 'pending', label: 'Pending', labelVi: 'Cho XL', color: 'bg-gray-200 dark:bg-gray-700', textColor: 'text-gray-700 dark:text-gray-300', icon: Clock },
+   185→  { key: 'confirmed', label: 'Confirmed', labelVi: 'Da XL', color: 'bg-blue-100 dark:bg-blue-900/50', textColor: 'text-blue-700 dark:text-blue-300', icon: ShieldCheck },
+   186→  { key: 'processing', label: 'Processing', labelVi: 'Dang XL', color: 'bg-purple-100 dark:bg-purple-900/50', textColor: 'text-purple-700 dark:text-purple-300', icon: Package },
+   187→  { key: 'packed', label: 'Packed', labelVi: 'Dong goi', color: 'bg-amber-100 dark:bg-amber-900/50', textColor: 'text-amber-700 dark:text-amber-300', icon: Package },
+   188→  { key: 'outForDelivery', label: 'Out for Delivery', labelVi: 'Dang giao', color: 'bg-yellow-100 dark:bg-yellow-900/50', textColor: 'text-yellow-700 dark:text-yellow-300', icon: Truck },
+   189→  { key: 'delivered', label: 'Delivered', labelVi: 'Da giao', color: 'bg-green-100 dark:bg-green-900/50', textColor: 'text-green-700 dark:text-green-300', icon: CheckCircle2 },
+   190→];
+   191→
+   192→function PipelineBar({ stats, locale }: { stats: DashboardStats; locale: string }) {
+   193→  const t = (en: string, vi: string) => locale === 'vi' ? vi : en;
+   194→  const pipeline = stats.pipeline || [];
+   195→  const total = pipeline.reduce((sum, s) => sum + s.count, 0) || 1;
+   196→
+   197→  return (
+   198→    <Card>
+   199→      <CardHeader className="pb-3">
+   200→        <div className="flex items-center justify-between">
+   201→          <div className="flex items-center gap-2.5">
+   202→            <div className="h-8 w-8 rounded-lg bg-red-50 text-red-600 dark:bg-red-950/50 dark:text-red-400 flex items-center justify-center">
+   203→              <Package className="h-4 w-4" />
+   204→            </div>
+   205→            <div>
+   206→              <CardTitle className="text-sm font-semibold">
+   207→                {t('Order Pipeline', 'Luong Don hang')}
+   208→              </CardTitle>
+   209→              <CardDescription className="text-xs">
+   210→                {t('Fulfillment pipeline — orders by status', 'Luong thuc thi — don hang theo trang thai')}
+   211→              </CardDescription>
+   212→            </div>
+   213→          </div>
+   214→          <Badge className="bg-red-600 hover:bg-red-700 text-white font-mono text-xs">
+   215→            {stats.monthlyOrderCount ?? 0} {t('orders', 'don')}
+   216→          </Badge>
+   217→        </div>
+   218→      </CardHeader>
+   219→      <CardContent className="space-y-4">
+   220→        {/* Visual Pipeline Bar */}
+   221→        <div className="flex h-10 rounded-lg overflow-hidden border">
+   222→          {pipeline.map((stage, i) => {
+   223→            const widthPct = Math.max((stage.count / total) * 100, stage.count > 0 ? 3 : 0);
+   224→            const stageConfig = PIPELINE_STAGES[i] || PIPELINE_STAGES[0];
+   225→            return (
+   226→              <div
+   227→                key={stage.status}
+   228→                className="relative flex items-center justify-center transition-all duration-500 group cursor-default"
+   229→                style={{ width: `${widthPct}%` }}
+   230→                title={`${stage.status.replace(/_/g, ' ')}: ${stage.count}`}
+   231→              >
+   232→                <div className={`absolute inset-0 ${stageConfig.color}`} />
+   233→                {stage.count > 0 && (
+   234→                  <span className={`relative text-[11px] font-bold ${stageConfig.textColor}`}>
+   235→                    {stage.count}
+   236→                  </span>
+   237→                )}
+   238→                {i < pipeline.length - 1 && widthPct > 0 && (
+   239→                  <div className="absolute right-0 top-1/2 -translate-y-1/2 w-0 h-0 border-l-[4px] border-l-white dark:border-l-gray-900 border-y-[5px] border-y-transparent z-10" />
+   240→                )}
+   241→              </div>
+   242→            );
+   243→          })}
+   244→        </div>
+   245→
+   246→        {/* Stage Legend */}
+   247→        <div className="flex flex-wrap gap-x-4 gap-y-2">
+   248→          {pipeline.map((stage, i) => {
+   249→            const stageConfig = PIPELINE_STAGES[i] || PIPELINE_STAGES[0];
+   250→            const Icon = stageConfig.icon;
+   251→            return (
+   252→              <div key={stage.status} className="flex items-center gap-1.5">
+   253→                <div className={`h-2.5 w-2.5 rounded-full ${stageConfig.color} ring-1 ring-inset ring-black/10`} />
+   254→                <Icon className={`h-3 w-3 ${stageConfig.textColor}`} />
+   255→                <span className="text-xs text-muted-foreground">
+   256→                  {locale === 'vi' ? stageConfig.labelVi : stageConfig.label}
+   257→                </span>
+   258→                <span className="text-xs font-bold text-foreground">{stage.count}</span>
+   259→              </div>
+   260→            );
+   261→          })}
+   262→        </div>
+   263→      </CardContent>
+   264→    </Card>
+   265→  );
+   266→}
+   267→
+   268→// ============================================
+   269→// Status & Payment Badges
+   270→// ============================================
+   271→
+   272→function OrderStatusBadge({ status }: { status: string }) {
+   273→  const variants: Record<string, string> = {
+   274→    PENDING: 'bg-yellow-100 text-yellow-700 hover:bg-yellow-100',
+   275→    CONFIRMED: 'bg-blue-100 text-blue-700 hover:bg-blue-100',
+   276→    PROCESSING: 'bg-purple-100 text-purple-700 hover:bg-purple-100',
+   277→    PACKED: 'bg-amber-100 text-amber-700 hover:bg-amber-100',
+   278→    OUT_FOR_DELIVERY: 'bg-cyan-100 text-cyan-700 hover:bg-cyan-100',
+   279→    DELIVERED: 'bg-green-100 text-green-700 hover:bg-green-100',
+   280→    CANCELLED: 'bg-red-100 text-red-700 hover:bg-red-100',
+   281→    REFUNDED: 'bg-gray-100 text-gray-700 hover:bg-gray-100',
+   282→  };
+   283→
+   284→  return (
+   285→    <Badge variant="secondary" className={`text-[10px] font-medium px-2 py-0.5 ${variants[status] || ''}`}>
+   286→      {status.replace(/_/g, ' ')}
+   287→    </Badge>
+   288→  );
+   289→}
+   290→
+   291→function PaymentMethodBadge({ method }: { method: string }) {
+   292→  const labels: Record<string, string> = {
+   293→    CREDIT: 'Credit',
+   294→    DIGITAL: 'Digital',
+   295→    COD: 'COD',
+   296→  };
+   297→  return <span className="text-xs text-muted-foreground">{labels[method] || method}</span>;
+   298→}
+   299→
+   300→// ============================================
+   301→// Skeleton Loaders
+   302→// ============================================
+   303→
+   304→function KpiGridSkeleton() {
+   305→  return (
+   306→    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+   307→      {Array.from({ length: 8 }).map((_, i) => (
+   308→        <Card key={i} className="border-t-2 border-t-muted">
+   309→          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+   310→            <Skeleton className="h-3 w-20" />
+   311→            <Skeleton className="h-8 w-8 rounded-lg" />
+   312→          </CardHeader>
+   313→          <CardContent className="pb-3">
+   314→            <Skeleton className="h-7 w-28" />
+   315→            <Skeleton className="h-3 w-16 mt-2" />
+   316→          </CardContent>
+   317→        </Card>
+   318→      ))}
+   319→    </div>
+   320→  );
+   321→}
+   322→
+   323→function ChartSkeleton() {
+   324→  return (
+   325→    <Card>
+   326→      <CardHeader className="pb-2">
+   327→        <Skeleton className="h-4 w-36" />
+   328→        <Skeleton className="h-3 w-48" />
+   329→      </CardHeader>
+   330→      <CardContent>
+   331→        <Skeleton className="h-48 w-full rounded-lg" />
+   332→      </CardContent>
+   333→    </Card>
+   334→  );
+   335→}
+   336→
+   337→// ============================================
+   338→// Main Dashboard Page
+   339→// ============================================
+   340→
+   341→export default function DashboardPage() {
+   342→  const { locale } = useLocale();
+   343→  const { user } = useAuth();
+   344→  const [stats, setStats] = useState<DashboardStats | null>(null);
+   345→  const [loading, setLoading] = useState(true);
+   346→  const userRole = user?.role || 'SHOP_OWNER';
+   347→
+   348→  const fetchStats = useCallback(async () => {
+   349→    try {
+   350→      setLoading(true);
+   351→      const res = await adminFetch('/api/dashboard/stats');
+   352→      const json = await res.json();
+   353→      if (json.success) {
+   354→        setStats(json.data);
+   355→      }
+   356→    } catch (err) {
+   357→      console.error('Failed to fetch dashboard stats:', err);
+   358→    } finally {
+   359→      setLoading(false);
+   360→    }
+   361→  }, []);
+   362→
+   363→  useEffect(() => {
+   364→    fetchStats();
+   365→  }, [fetchStats]);
+   366→
+   367→  const t = (en: string, vi: string) => locale === 'vi' ? vi : en;
+   368→
+   369→  // Role-specific dashboard title
+   370→  const getGreeting = () => {
+   371→    switch (userRole) {
+   372→      case ROLES.ADMIN: return t('Dashboard Overview', 'Tong quan');
+   373→      case ROLES.SHOP_OWNER: return t('My Shop Dashboard', 'Tong quan cua hang');
+   374→      case ROLES.SALES_REP: return t('Sales Dashboard', 'Tong quan ban hang');
+   375→      case ROLES.DRIVER: return t('Delivery Dashboard', 'Tong quan giao hang');
+   376→      case ROLES.BROKER: return t('Broker Dashboard', 'Tong quan dai ly');
+   377→      default: return t('Dashboard', 'Tong quan');
+   378→    }
+   379→  };
+   380→
+   381→  // ---- Derived data for charts ----
+   382→
+   383→  // Monthly trend chart data (GMV bars)
+   384→  const trendChartData = stats?.monthlyTrend?.map((m) => ({
+   385→    label: m.month,
+   386→    value: m.gmv,
+   387→    color: 'bg-yellow-400 dark:bg-yellow-500',
+   388→  })) || [];
+   389→
+   390→  // Monthly trend orders overlay
+   391→  const trendOrdersData = stats?.monthlyTrend?.map((m) => ({
+   392→    label: m.month,
+   393→    value: m.orders,
+   394→    color: 'bg-red-400 dark:bg-red-500',
+   395→  })) || [];
+   396→
+   397→  // Payment breakdown distribution chart
+   398→  const paymentChartData = stats?.paymentBreakdown
+   399→    ? [
+   400→        ...(stats.paymentBreakdown.CREDIT ? [{ label: 'Credit', labelVi: 'Cong no', value: stats.paymentBreakdown.CREDIT.revenue, color: 'bg-red-500' }] : []),
+   401→        ...(stats.paymentBreakdown.DIGITAL ? [{ label: 'Digital', labelVi: 'Chuyen khoan', value: stats.paymentBreakdown.DIGITAL.revenue, color: 'bg-yellow-400' }] : []),
+   402→        ...(stats.paymentBreakdown.COD ? [{ label: 'COD', labelVi: 'COD', value: stats.paymentBreakdown.COD.revenue, color: 'bg-green-500' }] : []),
+   403→      ]
+   404→    : [];
+   405→
+   406→  // Top categories for horizontal bar chart
+   407→  const categoryChartData = stats?.topCategories?.map((c) => ({
+   408→    label: c.name,
+   409→    value: c.revenue,
+   410→    subtitle: `${c.qty.toLocaleString()} ${t('units', 'SP')} · ${c.revenueFormatted}`,
+   411→  })) || [];
+   412→
+   413→  return (
+   414→    <AuthGuard>
+   415→      <div className="flex min-h-screen">
+   416→        <AdminSidebar />
+   417→        <SidebarInset>
+   418→          <AdminHeader />
+   419→
+   420→          <main className="flex-1 p-4 md:p-6 lg:p-6 space-y-5 max-w-full overflow-hidden">
+   421→
+   422→            {/* ===== Page Header ===== */}
+   423→            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+   424→              <div>
+   425→                <h1 className="text-2xl font-bold tracking-tight">
+   426→                  {getGreeting()}
+   427→                </h1>
+   428→                <p className="text-sm text-muted-foreground mt-0.5">
+   429→                  {t('Real-time business metrics and KPIs', 'Chi so kinh doanh va KPI theo thoi gian thuc')}
+   430→                </p>
+   431→              </div>
+   432→              <Button variant="outline" size="sm" onClick={fetchStats} className="w-fit gap-1.5">
+   433→                <RefreshCw className="h-3.5 w-3.5" />
+   434→                {t('Refresh', 'Lam moi')}
+   435→              </Button>
+   436→            </div>
+   437→
+   438→            {/* ===== KPI Grid: 2 rows × 4 ===== */}
+   439→            {loading ? (
+   440→              <KpiGridSkeleton />
+   441→            ) : stats ? (
+   442→              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+   443→                {/* Row 1 */}
+   444→                <KpiCard
+   445→                  title="Total Shops"
+   446→                  titleVi="Tong cua hang"
+   447→                  value={stats.totalShops}
+   448→                  subtitle={`${stats.activeShops.toLocaleString()} ${t('active', 'hoat dong')}`}
+   449→                  icon={<Store className="h-4 w-4" />}
+   450→                  accent="yellow"
+   451→                  locale={locale}
+   452→                />
+   453→                <KpiCard
+   454→                  title="Total GMV"
+   455→                  titleVi="Tong doanh thu"
+   456→                  value={stats.monthlyGmvFormatted}
+   457→                  subtitle={`${t('Delivered', 'Da giao')}: ${stats.deliveredGmvFormatted || '0 ₫'}`}
+   458→                  icon={<DollarSign className="h-4 w-4" />}
+   459→                  isSensitive
+   460→                  accent="red"
+   461→                  locale={locale}
+   462→                />
+   463→                <KpiCard
+   464→                  title="Total Orders"
+   465→                  titleVi="Tong don hang"
+   466→                  value={stats.monthlyOrderCount.toLocaleString()}
+   467→                  subtitle={`${stats.deliveredOrders?.toLocaleString() || 0} ${t('delivered', 'da giao')}`}
+   468→                  icon={<ShoppingCart className="h-4 w-4" />}
+   469→                  accent="yellow"
+   470→                  locale={locale}
+   471→                />
+   472→                <KpiCard
+   473→                  title="Retention Rate"
+   474→                  titleVi="Ty giu chan"
+   475→                  value={`${stats.retentionRate ?? 0}%`}
+   476→                  icon={<Users className="h-4 w-4" />}
+   477→                  accent={stats.retentionRate >= 80 ? 'green' : 'red'}
+   478→                  locale={locale}
+   479→                />
+   480→
+   481→                {/* Row 2 */}
+   482→                <KpiCard
+   483→                  title="Avg. Order Value"
+   484→                  titleVi="TB gia tri don"
+   485→                  value={stats.avgOrderValueFormatted}
+   486→                  icon={<BarChart3 className="h-4 w-4" />}
+   487→                  isSensitive
+   488→                  accent="neutral"
+   489→                  locale={locale}
+   490→                />
+   491→                <KpiCard
+   492→                  title="Credit Exposure"
+   493→                  titleVi="No cong no"
+   494→                  value={stats.creditExposureFormatted}
+   495→                  subtitle={stats.overdueAccounts > 0 ? `${stats.overdueAccounts} ${t('overdue', 'qua han')}` : undefined}
+   496→                  icon={<CreditCard className="h-4 w-4" />}
+   497→                  isSensitive
+   498→                  accent={stats.overdueAccounts > 0 ? 'red' : 'neutral'}
+   499→                  locale={locale}
+   500→                />
+   501→                <KpiCard
+   502→                  title="Pending Shipments"
+   503→                  titleVi="Cho giao hang"
+   504→                  value={stats.pendingShipments}
+   505→                  subtitle={`${stats.activeGroupDeals} ${t('group deals', 'deal mua chung')}`}
+   506→                  icon={<Truck className="h-4 w-4" />}
+   507→                  accent={stats.pendingShipments > 0 ? 'yellow' : 'green'}
+   508→                  locale={locale}
+   509→                />
+   510→                <KpiCard
+   511→                  title="Total Products"
+   512→                  titleVi="Tong san pham"
+   513→                  value={stats.totalProducts || 0}
+   514→                  icon={<Boxes className="h-4 w-4" />}
+   515→                  accent="neutral"
+   516→                  locale={locale}
+   517→                />
+   518→              </div>
+   519→            ) : null}
+   520→
+   521→            {/* ===== Order Pipeline ===== */}
+   522→            {!loading && stats && (
+   523→              <PipelineBar stats={stats} locale={locale} />
+   524→            )}
+   525→
+   526→            {/* ===== Charts Row: Revenue Trend + Payment Breakdown ===== */}
+   527→            {loading ? (
+   528→              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+   529→                <ChartSkeleton />
+   530→                <ChartSkeleton />
+   531→                <ChartSkeleton />
+   532→              </div>
+   533→            ) : stats ? (
+   534→              <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+   535→                {/* Revenue Trend — takes 3/5 width */}
+   536→                <div className="lg:col-span-3">
+   537→                  <BarChart
+   538→                    title="Revenue Trend"
+   539→                    titleVi="Xu huong Doanh thu"
+   540→                    data={trendChartData}
+   541→                    formatValue={(v) => v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}M` : v >= 1_000 ? `${(v / 1_000).toFixed(0)}K` : v.toLocaleString()}
+   542→                    locale={locale}
+   543→                    height={200}
+   544→                    showValues
+   545→                  />
+   546→                </div>
+   547→
+   548→                {/* Payment Breakdown — takes 2/5 width */}
+   549→                <div className="lg:col-span-2">
+   550→                  <DistributionChart
+   551→                    title="Payment Methods"
+   552→                    titleVi="Phuong thuc Thanh toan"
+   553→                    data={paymentChartData}
+   554→                    locale={locale}
+   555→                    totalLabel="Total Revenue"
+   556→                    totalLabelVi="Tong doanh thu"
+   557→                  />
+   558→
+   559→                  {/* Payment method counts underneath */}
+   560→                  {stats.paymentBreakdown && (
+   561→                    <div className="mt-3 grid grid-cols-3 gap-2">
+   562→                      {stats.paymentBreakdown.CREDIT && (
+   563→                        <div className="text-center p-2 rounded-lg bg-red-50 dark:bg-red-950/30">
+   564→                          <p className="text-[10px] text-muted-foreground">{t('Credit', 'Cong no')}</p>
+   565→                          <p className="text-sm font-bold text-red-600">{stats.paymentBreakdown.CREDIT.count}</p>
+   566→                          <p className="text-[10px] text-muted-foreground">{t('orders', 'don')}</p>
+   567→                        </div>
+   568→                      )}
+   569→                      {stats.paymentBreakdown.DIGITAL && (
+   570→                        <div className="text-center p-2 rounded-lg bg-yellow-50 dark:bg-yellow-950/30">
+   571→                          <p className="text-[10px] text-muted-foreground">{t('Digital', 'Chuyen khoan')}</p>
+   572→                          <p className="text-sm font-bold text-yellow-600">{stats.paymentBreakdown.DIGITAL.count}</p>
+   573→                          <p className="text-[10px] text-muted-foreground">{t('orders', 'don')}</p>
+   574→                        </div>
+   575→                      )}
+   576→                      {stats.paymentBreakdown.COD && (
+   577→                        <div className="text-center p-2 rounded-lg bg-green-50 dark:bg-green-950/30">
+   578→                          <p className="text-[10px] text-muted-foreground">COD</p>
+   579→                          <p className="text-sm font-bold text-green-600">{stats.paymentBreakdown.COD.count}</p>
+   580→                          <p className="text-[10px] text-muted-foreground">{t('orders', 'don')}</p>
+   581→                        </div>
+   582→                      )}
+   583→                    </div>
+   584→                  )}
+   585→                </div>
+   586→              </div>
+   587→            ) : null}
+   588→
+   589→            {/* ===== Orders Trend (compact) + Top Categories ===== */}
+   590→            {loading ? (
+   591→              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+   592→                <ChartSkeleton />
+   593→                <ChartSkeleton />
+   594→              </div>
+   595→            ) : stats ? (
+   596→              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+   597→                {/* Monthly Orders Trend */}
+   598→                <BarChart
+   599→                  title="Monthly Orders"
+   600→                  titleVi="Don hang theo thang"
+   601→                  data={trendOrdersData}
+   602→                  formatValue={(v) => v.toLocaleString()}
+   603→                  locale={locale}
+   604→                  height={180}
+   605→                  showValues
+   606→                />
+   607→
+   608→                {/* Top Categories */}
+   609→                <HBarChart
+   610→                  title="Top Categories"
+   611→                  titleVi="Danh muc ban chay"
+   612→                  data={categoryChartData}
+   613→                  formatValue={(v) => v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}M ₫` : formatVND(v)}
+   614→                  locale={locale}
+   615→                  maxItems={6}
+   616→                />
+   617→              </div>
+   618→            ) : null}
+   619→
+   620→            {/* ===== Top Shops Table ===== */}
+   621→            {!loading && stats && (
+   622→              <Card>
+   623→                <CardHeader className="pb-3">
+   624→                  <div className="flex items-center justify-between">
+   625→                    <div className="flex items-center gap-2.5">
+   626→                      <div className="h-8 w-8 rounded-lg bg-yellow-50 text-yellow-600 dark:bg-yellow-950/50 dark:text-yellow-400 flex items-center justify-center">
+   627→                        <Store className="h-4 w-4" />
+   628→                      </div>
+   629→                      <div>
+   630→                        <CardTitle className="text-sm font-semibold">
+   631→                          {t('Top Shops', 'Cua hang hang dau')}
+   632→                        </CardTitle>
+   633→                        <CardDescription className="text-xs">
+   634→                          {t('Ranked by total revenue', 'Xep theo tong doanh thu')}
+   635→                        </CardDescription>
+   636→                      </div>
+   637→                    </div>
+   638→                    <Badge variant="outline" className="font-mono text-xs">
+   639→                      {stats.topShops?.length || 0} {t('shops', 'cua hang')}
+   640→                    </Badge>
+   641→                  </div>
+   642→                </CardHeader>
+   643→                <CardContent>
+   644→                  {stats.topShops && stats.topShops.length > 0 ? (
+   645→                    <div className="max-h-72 overflow-y-auto">
+   646→                      <Table>
+   647→                        <TableHeader>
+   648→                          <TableRow>
+   649→                            <TableHead className="text-xs w-10">#</TableHead>
+   650→                            <TableHead className="text-xs">{t('Shop Name', 'Ten cua hang')}</TableHead>
+   651→                            <TableHead className="text-xs text-right">{t('Orders', 'Don hang')}</TableHead>
+   652→                            <TableHead className="text-xs text-right">{t('Revenue', 'Doanh thu')}</TableHead>
+   653→                          </TableRow>
+   654→                        </TableHeader>
+   655→                        <TableBody>
+   656→                          {stats.topShops.map((shop, index) => (
+   657→                            <TableRow key={shop.shopId}>
+   658→                              <TableCell className="text-xs">
+   659→                                <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold ${
+   660→                                  index === 0 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-400' :
+   661→                                  index === 1 ? 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300' :
+   662→                                  index === 2 ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-400' :
+   663→                                  'bg-muted text-muted-foreground'
+   664→                                }`}>
+   665→                                  {index + 1}
+   666→                                </span>
+   667→                              </TableCell>
+   668→                              <TableCell className="text-xs font-medium">{shop.shopName}</TableCell>
+   669→                              <TableCell className="text-xs text-right font-mono">{shop.orderCount.toLocaleString()}</TableCell>
+   670→                              <TableCell className="text-xs text-right font-semibold">
+   671→                                <SensitiveValue value={shop.totalRevenueFormatted} maskType="amount" formatOptions={{ formatCurrency: true }} />
+   672→                              </TableCell>
+   673→                            </TableRow>
+   674→                          ))}
+   675→                        </TableBody>
+   676→                      </Table>
+   677→                    </div>
+   678→                  ) : (
+   679→                    <div className="text-center py-8 text-muted-foreground">
+   680→                      <Store className="h-8 w-8 mx-auto mb-2 opacity-50" />
+   681→                      <p className="text-sm">{t('No shop data yet', 'Chua co du lieu cua hang')}</p>
+   682→                    </div>
+   683→                  )}
+   684→                </CardContent>
+   685→              </Card>
+   686→            )}
+   687→
+   688→            {/* ===== Bottom Section: Recent Orders + Top Products ===== */}
+   689→            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+   690→              {/* Recent Orders */}
+   691→              <Card>
+   692→                <CardHeader className="pb-3">
+   693→                  <div className="flex items-center justify-between">
+   694→                    <div className="flex items-center gap-2.5">
+   695→                      <div className="h-8 w-8 rounded-lg bg-red-50 text-red-600 dark:bg-red-950/50 dark:text-red-400 flex items-center justify-center">
+   696→                        <ShoppingCart className="h-4 w-4" />
+   697→                      </div>
+   698→                      <div>
+   699→                        <CardTitle className="text-sm font-semibold">
+   700→                          {t('Recent Orders', 'Don hang gan day')}
+   701→                        </CardTitle>
+   702→                        <CardDescription className="text-xs">
+   703→                          {t('Last 10 orders across all shops', '10 don hang gan nhat')}
+   704→                        </CardDescription>
+   705→                      </div>
+   706→                    </div>
+   707→                    <Badge variant="outline" className="font-mono text-xs">
+   708→                      {stats?.recentOrders?.length || 0}
+   709→                    </Badge>
+   710→                  </div>
+   711→                </CardHeader>
+   712→                <CardContent>
+   713→                  {loading ? (
+   714→                    <div className="space-y-2.5">
+   715→                      {Array.from({ length: 5 }).map((_, i) => (
+   716→                        <Skeleton key={i} className="h-14 w-full rounded-lg" />
+   717→                      ))}
+   718→                    </div>
+   719→                  ) : stats && stats.recentOrders && stats.recentOrders.length > 0 ? (
+   720→                    <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+   721→                      {stats.recentOrders.map((order) => (
+   722→                        <div
+   723→                          key={order.id}
+   724→                          className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+   725→                        >
+   726→                          <div className="flex-1 min-w-0">
+   727→                            <div className="flex items-center gap-2">
+   728→                              <span className="text-xs font-mono font-medium">{order.orderNumber}</span>
+   729→                              <OrderStatusBadge status={order.status} />
+   730→                            </div>
+   731→                            <div className="flex items-center gap-2 mt-1">
+   732→                              <span className="text-[11px] text-muted-foreground truncate max-w-[140px]">{order.shopName}</span>
+   733→                              <span className="text-muted-foreground/50">·</span>
+   734→                              <PaymentMethodBadge method={order.paymentMethod} />
+   735→                              <span className="text-muted-foreground/50">·</span>
+   736→                              <span className="text-[11px] text-muted-foreground">{order.itemCount} {t('items', 'SP')}</span>
+   737→                            </div>
+   738→                          </div>
+   739→                          <div className="text-right ml-3 shrink-0">
+   740→                            <SensitiveValue value={order.totalAmountFormatted} maskType="amount" formatOptions={{ formatCurrency: true }} />
+   741→                            <div className="text-[10px] text-muted-foreground mt-0.5">
+   742→                              {new Date(order.createdAt).toLocaleDateString('vi-VN')}
+   743→                            </div>
+   744→                          </div>
+   745→                        </div>
+   746→                      ))}
+   747→                    </div>
+   748→                  ) : (
+   749→                    <div className="text-center py-8 text-muted-foreground">
+   750→                      <ShoppingCart className="h-8 w-8 mx-auto mb-2 opacity-50" />
+   751→                      <p className="text-sm">{t('No orders yet', 'Chua co don hang')}</p>
+   752→                    </div>
+   753→                  )}
+   754→                </CardContent>
+   755→              </Card>
+   756→
+   757→              {/* Top Products */}
+   758→              <Card>
+   759→                <CardHeader className="pb-3">
+   760→                  <div className="flex items-center justify-between">
+   761→                    <div className="flex items-center gap-2.5">
+   762→                      <div className="h-8 w-8 rounded-lg bg-yellow-50 text-yellow-600 dark:bg-yellow-950/50 dark:text-yellow-400 flex items-center justify-center">
+   763→                        <TrendingUp className="h-4 w-4" />
+   764→                      </div>
+   765→                      <div>
+   766→                        <CardTitle className="text-sm font-semibold">
+   767→                          {t('Top Products', 'San pham ban chay')}
+   768→                        </CardTitle>
+   769→                        <CardDescription className="text-xs">
+   770→                          {t('Best sellers by revenue', 'San pham ban chay theo doanh thu')}
+   771→                        </CardDescription>
+   772→                      </div>
+   773→                    </div>
+   774→                    <Badge variant="outline" className="font-mono text-xs">
+   775→                      {stats?.topProducts?.length || 0}
+   776→                    </Badge>
+   777→                  </div>
+   778→                </CardHeader>
+   779→                <CardContent>
+   780→                  {loading ? (
+   781→                    <div className="space-y-2.5">
+   782→                      {Array.from({ length: 5 }).map((_, i) => (
+   783→                        <Skeleton key={i} className="h-14 w-full rounded-lg" />
+   784→                      ))}
+   785→                    </div>
+   786→                  ) : stats && stats.topProducts && stats.topProducts.length > 0 ? (
+   787→                    <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+   788→                      {stats.topProducts.map((product, index) => (
+   789→                        <div
+   790→                          key={product.productId}
+   791→                          className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+   792→                        >
+   793→                          <div className={`flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold shrink-0 ${
+   794→                            index === 0 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-400' :
+   795→                            index === 1 ? 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300' :
+   796→                            index === 2 ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-400' :
+   797→                            'bg-muted text-muted-foreground'
+   798→                          }`}>
+   799→                            {index + 1}
+   800→                          </div>
+   801→                          <div className="flex-1 min-w-0">
+   802→                            <p className="text-xs font-medium truncate">{product.productName}</p>
+   803→                            <p className="text-[10px] text-muted-foreground">
+   804→                              SKU: {product.productSku} · {product.totalQty.toLocaleString()} {t('units', 'don vi')}
+   805→                            </p>
+   806→                          </div>
+   807→                          <div className="text-right shrink-0">
+   808→                            <SensitiveValue value={product.totalRevenueFormatted} maskType="amount" formatOptions={{ formatCurrency: true }} />
+   809→                          </div>
+   810→                        </div>
+   811→                      ))}
+   812→                    </div>
+   813→                  ) : (
+   814→                    <div className="text-center py-8 text-muted-foreground">
+   815→                      <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
+   816→                      <p className="text-sm">{t('No product data yet', 'Chua co du lieu san pham')}</p>
+   817→                    </div>
+   818→                  )}
+   819→                </CardContent>
+   820→              </Card>
+   821→            </div>
+   822→
+   823→            {/* ===== Platform Rules Footer ===== */}
+   824→            <Card className="border-dashed">
+   825→              <CardHeader className="pb-3">
+   826→                <CardTitle className="text-sm flex items-center gap-2">
+   827→                  <div className="h-6 w-6 rounded-md bg-red-50 text-red-600 dark:bg-red-950/50 dark:text-red-400 flex items-center justify-center">
+   828→                    <ShieldCheck className="h-3.5 w-3.5" />
+   829→                  </div>
+   830→                  {t('Active Automation Rules', 'Quy tac Tu dong hoa Dang hoat dong')}
+   831→                </CardTitle>
+   832→              </CardHeader>
+   833→              <CardContent>
+   834→                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+   835→                  <div className="flex items-start gap-3">
+   836→                    <div className="h-8 w-8 rounded-lg bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-400 flex items-center justify-center shrink-0 mt-0.5">
+   837→                      <Lock className="h-4 w-4" />
+   838→                    </div>
+   839→                    <div>
+   840→                      <p className="text-sm font-medium">{t('Credit Auto-Lock', 'Tu khoa Cong no')}</p>
+   841→                      <p className="text-xs text-muted-foreground mt-0.5">
+   842→                        {t(
+   843→                          'Shops with unpaid credit after Day 7 are auto-locked from placing new orders.',
+   844→                          'Cua hang chua tra no sau ngay 7 se bi tu dong khoa khong dat duoc don hang moi.'
+   845→                        )}
+   846→                      </p>
+   847→                    </div>
+   848→                  </div>
+   849→                  <div className="flex items-start gap-3">
+   850→                    <div className="h-8 w-8 rounded-lg bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-400 flex items-center justify-center shrink-0 mt-0.5">
+   851→                      <Clock className="h-4 w-4" />
+   852→                    </div>
+   853→                    <div>
+   854→                      <p className="text-sm font-medium">{t('Group Buy Threshold', 'Nguong Mua chung')}</p>
+   855→                      <p className="text-xs text-muted-foreground mt-0.5">
+   856→                        {t(
+   857→                          'No PO sent to distributor until MOQ is met. Auto-cancel if timer expires.',
+   858→                          'Khong gui don cho NPP cho den khi dat SL muc tieu. Tu dong huy neu het han.'
+   859→                        )}
+   860→                      </p>
+   861→                    </div>
+   862→                  </div>
+   863→                  <div className="flex items-start gap-3">
+   864→                    <div className="h-8 w-8 rounded-lg bg-green-100 text-green-600 dark:bg-green-900/50 dark:text-green-400 flex items-center justify-center shrink-0 mt-0.5">
+   865→                      <Truck className="h-4 w-4" />
+   866→                    </div>
+   867→                    <div>
+   868→                      <p className="text-sm font-medium">{t('Cash Reconciliation', 'Doi chieu Tien mat')}</p>
+   869→                      <p className="text-xs text-muted-foreground mt-0.5">
+   870→                        {t(
+   871→                          'Drivers must confirm cash collection in app before shop can open new credit.',
+   872→                          'Tai xe phai xac nhan thu tien trong app truoc khi cua hang co the mo tin dung moi.'
+   873→                        )}
+   874→                      </p>
+   875→                    </div>
+   876→                  </div>
+   877→                </div>
+   878→              </CardContent>
+   879→            </Card>
+   880→
+   881→          </main>
+   882→        </SidebarInset>
+   883→      </div>
+   884→    </AuthGuard>
+   885→  );
+   886→}
