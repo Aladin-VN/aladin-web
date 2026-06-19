@@ -315,7 +315,7 @@ export default function ManufacturersPage() {
                   </Button>
                 </div>
               ) : (
-                <div>
+                <div className="w-full">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-muted/30">

@@ -40,9 +40,13 @@ import { AdminSidebar } from '@/components/layout/admin-sidebar';
 import { AdminHeader } from '@/components/layout/admin-header';
 import { SensitiveValue } from '@/components/shared/sensitive-value';
 import { SidebarInset } from '@/components/ui/sidebar';
-import { Separator } from '@/components/ui/separator';
-import { formatVND, ROLES } from '@/lib/security';
-import { BarChart, HBarChart, DistributionChart } from '@/components/reports/charts';
+import { ROLES } from '@/lib/security';
+import {
+  RevenueTrendChart,
+  OrderPipelineDonut,
+  TopCategoriesBar,
+  PaymentBreakdownChart,
+} from '@/components/reports/charts';
 
 // ============================================
 // Types
@@ -386,38 +390,6 @@ export default function DashboardPage() {
     }
   };
 
-  // ---- Derived data for charts ----
-
-  // Monthly trend chart data (GMV bars)
-  const trendChartData = stats?.monthlyTrend?.map((m) => ({
-    label: m.month,
-    value: m.gmv,
-    color: 'bg-yellow-400 dark:bg-yellow-500',
-  })) || [];
-
-  // Monthly trend orders overlay
-  const trendOrdersData = stats?.monthlyTrend?.map((m) => ({
-    label: m.month,
-    value: m.orders,
-    color: 'bg-red-400 dark:bg-red-500',
-  })) || [];
-
-  // Payment breakdown distribution chart
-  const paymentChartData = stats?.paymentBreakdown
-    ? [
-        ...(stats.paymentBreakdown.CREDIT ? [{ label: 'Credit', labelVi: 'Cong no', value: stats.paymentBreakdown.CREDIT.revenue, color: 'bg-red-500' }] : []),
-        ...(stats.paymentBreakdown.DIGITAL ? [{ label: 'Digital', labelVi: 'Chuyen khoan', value: stats.paymentBreakdown.DIGITAL.revenue, color: 'bg-yellow-400' }] : []),
-        ...(stats.paymentBreakdown.COD ? [{ label: 'COD', labelVi: 'COD', value: stats.paymentBreakdown.COD.revenue, color: 'bg-green-500' }] : []),
-      ]
-    : [];
-
-  // Top categories for horizontal bar chart
-  const categoryChartData = stats?.topCategories?.map((c) => ({
-    label: c.name,
-    value: c.revenue,
-    subtitle: `${c.qty.toLocaleString()} ${t('units', 'SP')} · ${c.revenueFormatted}`,
-  })) || [];
-
   return (
     <AuthGuard>
       <div className="flex min-h-screen">
@@ -425,7 +397,7 @@ export default function DashboardPage() {
         <SidebarInset>
           <AdminHeader />
 
-          <main className="flex-1 p-4 md:p-6 lg:p-6 space-y-5 max-w-full overflow-hidden">
+          <main className="flex-1 p-4 md:p-6 space-y-6">
 
             {/* ===== Page Header ===== */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -452,7 +424,7 @@ export default function DashboardPage() {
             {loading ? (
               <KpiGridSkeleton />
             ) : stats ? (
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-4 gap-4">
                 {/* Row 1 */}
                 <KpiCard
                   title="Total Shops"
@@ -536,98 +508,60 @@ export default function DashboardPage() {
               <PipelineBar stats={stats} locale={locale} />
             )}
 
-            {/* ===== Charts Row: Revenue Trend + Payment Breakdown ===== */}
+            {/* ===== Charts Grid: Revenue Trend + Pipeline Donut ===== */}
             {loading ? (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <ChartSkeleton />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <ChartSkeleton />
                 <ChartSkeleton />
               </div>
             ) : stats ? (
-              <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-                {/* Revenue Trend — takes 3/5 width */}
-                <div className="lg:col-span-3">
-                  <BarChart
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Revenue Trend — full width on large screens */}
+                <div className="lg:col-span-2">
+                  <RevenueTrendChart
+                    data={stats.monthlyTrend || []}
                     title="Revenue Trend"
                     titleVi="Xu huong Doanh thu"
-                    data={trendChartData}
-                    formatValue={(v) => v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}M` : v >= 1_000 ? `${(v / 1_000).toFixed(0)}K` : v.toLocaleString()}
+                    description="Monthly GMV and order volume"
+                    descriptionVi="Doanh thu va so luong don hang theo thang"
                     locale={locale}
-                    height={200}
-                    showValues
                   />
                 </div>
 
-                {/* Payment Breakdown — takes 2/5 width */}
-                <div className="lg:col-span-2">
-                  <DistributionChart
-                    title="Payment Methods"
-                    titleVi="Phuong thuc Thanh toan"
-                    data={paymentChartData}
-                    locale={locale}
-                    totalLabel="Total Revenue"
-                    totalLabelVi="Tong doanh thu"
-                  />
+                {/* Order Pipeline Donut */}
+                <OrderPipelineDonut
+                  data={stats.pipeline || []}
+                  totalOrders={stats.monthlyOrderCount || 0}
+                  title="Order Pipeline"
+                  titleVi="Luong Don hang"
+                  locale={locale}
+                />
 
-                  {/* Payment method counts underneath */}
-                  {stats.paymentBreakdown && (
-                    <div className="mt-3 grid grid-cols-3 gap-2">
-                      {stats.paymentBreakdown.CREDIT && (
-                        <div className="text-center p-2 rounded-lg bg-red-50 dark:bg-red-950/30">
-                          <p className="text-[10px] text-muted-foreground">{t('Credit', 'Cong no')}</p>
-                          <p className="text-sm font-bold text-red-600">{stats.paymentBreakdown.CREDIT.count}</p>
-                          <p className="text-[10px] text-muted-foreground">{t('orders', 'don')}</p>
-                        </div>
-                      )}
-                      {stats.paymentBreakdown.DIGITAL && (
-                        <div className="text-center p-2 rounded-lg bg-yellow-50 dark:bg-yellow-950/30">
-                          <p className="text-[10px] text-muted-foreground">{t('Digital', 'Chuyen khoan')}</p>
-                          <p className="text-sm font-bold text-yellow-600">{stats.paymentBreakdown.DIGITAL.count}</p>
-                          <p className="text-[10px] text-muted-foreground">{t('orders', 'don')}</p>
-                        </div>
-                      )}
-                      {stats.paymentBreakdown.COD && (
-                        <div className="text-center p-2 rounded-lg bg-green-50 dark:bg-green-950/30">
-                          <p className="text-[10px] text-muted-foreground">COD</p>
-                          <p className="text-sm font-bold text-green-600">{stats.paymentBreakdown.COD.count}</p>
-                          <p className="text-[10px] text-muted-foreground">{t('orders', 'don')}</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+                {/* Payment Breakdown Pie */}
+                <PaymentBreakdownChart
+                  data={Object.entries(stats.paymentBreakdown || {}).map(([method, d]) => ({
+                    method,
+                    count: d.count,
+                    revenue: d.revenue,
+                    revenueFormatted: d.revenueFormatted,
+                  }))}
+                  title="Payment Methods"
+                  titleVi="Phuong thuc Thanh toan"
+                  locale={locale}
+                />
               </div>
             ) : null}
 
-            {/* ===== Orders Trend (compact) + Top Categories ===== */}
+            {/* ===== Top Categories Horizontal Bar ===== */}
             {loading ? (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <ChartSkeleton />
-                <ChartSkeleton />
-              </div>
+              <ChartSkeleton />
             ) : stats ? (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {/* Monthly Orders Trend */}
-                <BarChart
-                  title="Monthly Orders"
-                  titleVi="Don hang theo thang"
-                  data={trendOrdersData}
-                  formatValue={(v) => v.toLocaleString()}
-                  locale={locale}
-                  height={180}
-                  showValues
-                />
-
-                {/* Top Categories */}
-                <HBarChart
-                  title="Top Categories"
-                  titleVi="Danh muc ban chay"
-                  data={categoryChartData}
-                  formatValue={(v) => v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}M ₫` : formatVND(v)}
-                  locale={locale}
-                  maxItems={6}
-                />
-              </div>
+              <TopCategoriesBar
+                data={stats.topCategories || []}
+                title="Top Categories"
+                titleVi="Danh muc ban chay"
+                locale={locale}
+              />
             ) : null}
 
             {/* ===== Top Shops Table ===== */}

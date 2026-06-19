@@ -239,7 +239,7 @@ export default function BrokerCommissionsPage() {
                   </p>
                 </div>
               ) : (
-                <div>
+                <div className="w-full">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-muted/30">

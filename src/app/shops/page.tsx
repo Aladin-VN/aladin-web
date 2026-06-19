@@ -368,7 +368,7 @@ export default function ShopsPage() {
       <SidebarInset>
         <AdminHeader />
 
-        <main className="flex-1 p-4 md:p-6 lg:p-8 space-y-6">
+        <main className="flex-1 p-4 md:p-6 space-y-6">
           {/* Page Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
@@ -615,7 +615,7 @@ export default function ShopsPage() {
                   </p>
                 </div>
               ) : (
-                <div>
+                <div className="w-full">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-muted/30">

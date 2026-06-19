@@ -476,7 +476,7 @@ export default function UsersPage() {
                   )}
                 </div>
               ) : (
-                <div>
+                <div className="w-full">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-muted/30">

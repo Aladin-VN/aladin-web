@@ -288,7 +288,7 @@ export default function GroupBuyPage() {
       <SidebarInset>
         <AdminHeader />
 
-        <main className="flex-1 p-4 md:p-6 lg:p-8 space-y-6">
+        <main className="flex-1 p-4 md:p-6 space-y-6">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
@@ -466,7 +466,7 @@ export default function GroupBuyPage() {
                   </Button>
                 </div>
               ) : (
-                <div>
+                <div className="w-full">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-muted/30">

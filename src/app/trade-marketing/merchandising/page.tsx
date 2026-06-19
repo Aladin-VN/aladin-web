@@ -336,7 +336,7 @@ export default function MerchandisingPage() {
                   </p>
                 </div>
               ) : (
-                <div>
+                <div className="w-full">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-muted/30">

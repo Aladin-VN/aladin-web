@@ -282,7 +282,7 @@ export default function CreditPage() {
       <SidebarInset>
         <AdminHeader />
 
-        <main className="flex-1 p-4 md:p-6 lg:p-8 space-y-6">
+        <main className="flex-1 p-4 md:p-6 space-y-6">
           {/* Page Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
@@ -605,7 +605,7 @@ export default function CreditPage() {
                 </div>
               ) : (
                 <div>
-                  <div className="overflow-x-auto">
+                  <div className="w-full overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-muted/30">

@@ -225,6 +225,15 @@ const TIER_COLORS: Record<string, string> = {
   BRONZE: 'bg-orange-500', SILVER: 'bg-gray-400', GOLD: 'bg-yellow-500', PLATINUM: 'bg-purple-500',
 };
 
+// Tab-to-endpoint mapping for reports API
+const REPORT_TAB_ENDPOINTS: Record<string, string> = {
+  revenue: 'revenue',
+  orders: 'orders',
+  products: 'products',
+  shops: 'shops-analytics',
+  shipments: 'shipments-analytics',
+};
+
 // ============================================
 // Main Reports Page
 // ============================================
@@ -261,9 +270,11 @@ export default function ReportsPage() {
   // Fetch tab-specific data
   const fetchTabData = useCallback(async (tab: string) => {
     if (tab === 'overview') return;
+    const endpoint = REPORT_TAB_ENDPOINTS[tab];
+    if (!endpoint) return;
     setLoading(true);
     try {
-      const res = await adminFetch(`/api/reports/${tab === 'revenue' ? 'revenue' : tab === 'orders' ? 'orders' : tab === 'products' ? 'products' : tab === 'shops' ? 'shops-analytics' : tab === 'shipments' ? 'shipments-analytics' : ''}?period=${period}`);
+      const res = await adminFetch(`/api/reports/${endpoint}?period=${period}`);
       const json = await res.json();
       if (json.success) {
         switch (tab) {
@@ -283,9 +294,6 @@ export default function ReportsPage() {
 
   const handlePeriodChange = (newPeriod: string) => {
     setPeriod(newPeriod);
-    setActiveTab('overview');
-    setRevenue(null); setOrdersData(null); setProductsData(null);
-    setShopsData(null); setShipmentsData(null);
   };
 
   const handleRefresh = () => {
@@ -1146,7 +1154,7 @@ export default function ReportsPage() {
       <SidebarInset>
         <AdminHeader />
 
-        <main className="flex-1 p-4 md:p-6 lg:p-8 space-y-6">
+        <main className="flex-1 p-4 md:p-6 space-y-6">
           {/* Page Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
