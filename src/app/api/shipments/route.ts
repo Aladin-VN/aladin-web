@@ -144,7 +144,6 @@ export async function GET(request: NextRequest) {
           deliveredAt: s.deliveredAt,
           thirdPartyTrackingId: s.thirdPartyTrackingId,
           createdAt: s.createdAt,
-          updatedAt: s.updatedAt,
         })),
         pagination: {
           page,

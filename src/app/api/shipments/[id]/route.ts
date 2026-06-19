@@ -56,7 +56,6 @@ export async function GET(
               select: {
                 id: true,
                 name: true,
-                phone: true,
                 address: true,
                 district: true,
                 province: true,
@@ -93,7 +92,6 @@ export async function GET(
       thirdPartyTrackingId: shipment.thirdPartyTrackingId,
       thirdPartyStatus: shipment.thirdPartyStatus,
       createdAt: shipment.createdAt,
-      updatedAt: shipment.updatedAt,
       order: {
         id: shipment.order.id,
         orderNumber: shipment.order.orderNumber,
