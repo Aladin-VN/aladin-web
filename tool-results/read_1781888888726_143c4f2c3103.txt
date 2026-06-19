@@ -1,0 +1,708 @@
+     1→'use client';
+     2→import { adminFetch } from '@/lib/admin-fetch';
+     3→import { useLocale } from '@/providers/app-provider';
+     4→
+     5→import { useState, useEffect, useCallback, useRef } from 'react';
+     6→import {
+     7→  ShoppingCart,
+     8→  Plus,
+     9→  Search,
+    10→  ChevronLeft,
+    11→  ChevronRight,
+    12→  RefreshCw,
+    13→  Loader2,
+    14→  Package,
+    15→  Clock,
+    16→  CheckCircle2,
+    17→  CalendarDays,
+    18→  RotateCcw,
+    19→} from 'lucide-react';
+    20→import { Card, CardContent } from '@/components/ui/card';
+    21→import { Button } from '@/components/ui/button';
+    22→import { Skeleton } from '@/components/ui/skeleton';
+    23→import { Input } from '@/components/ui/input';
+    24→import {
+    25→  Select,
+    26→  SelectContent,
+    27→  SelectItem,
+    28→  SelectTrigger,
+    29→  SelectValue,
+    30→} from '@/components/ui/select';
+    31→import {
+    32→  Table,
+    33→  TableBody,
+    34→  TableCell,
+    35→  TableHead,
+    36→  TableHeader,
+    37→  TableRow,
+    38→} from '@/components/ui/table';
+    39→import { AdminSidebar } from '@/components/layout/admin-sidebar';
+    40→import { AdminHeader } from '@/components/layout/admin-header';
+    41→import { SidebarInset } from '@/components/ui/sidebar';
+    42→import { Separator } from '@/components/ui/separator';
+    43→import { SensitiveValue } from '@/components/shared/sensitive-value';
+    44→import { OrderStatusBadge, PaymentMethodBadge, PaymentStatusBadge } from '@/components/orders/order-status-badge';
+    45→import { OrderDetailDrawer } from '@/components/orders/order-detail-drawer';
+    46→import { OrderCreateDialog } from '@/components/orders/order-create-dialog';
+    47→
+    48→// ============================================
+    49→// Types
+    50→// ============================================
+    51→
+    52→interface OrderListItem {
+    53→  id: string;
+    54→  orderNumber: string;
+    55→  shopName: string;
+    56→  status: string;
+    57→  paymentMethod: string;
+    58→  paymentStatus: string;
+    59→  totalAmount: number;
+    60→  totalAmountFormatted: string;
+    61→  itemCount: number;
+    62→  createdAt: string;
+    63→}
+    64→
+    65→interface OrdersResponse {
+    66→  items: OrderListItem[];
+    67→  pagination: {
+    68→    page: number;
+    69→    limit: number;
+    70→    total: number;
+    71→    totalPages: number;
+    72→  };
+    73→}
+    74→
+    75→interface OrderStats {
+    76→  totalOrders: number;
+    77→  pendingOrders: number;
+    78→  todayOrders: number;
+    79→  monthlyGmvFormatted: string;
+    80→  processingOrders: number;
+    81→  deliveredToday: number;
+    82→  ordersByStatus: Record<string, number>;
+    83→}
+    84→
+    85→// ============================================
+    86→// Stat Card Mini
+    87→// ============================================
+    88→
+    89→function StatCardMini({
+    90→  title,
+    91→  titleVi,
+    92→  value,
+    93→  icon,
+    94→  variant = 'default',
+    95→  locale,
+    96→  isSensitive = false,
+    97→}: {
+    98→  title: string;
+    99→  titleVi: string;
+   100→  value: string | number;
+   101→  icon: React.ReactNode;
+   102→  variant?: 'default' | 'warning' | 'danger' | 'success';
+   103→  locale: string;
+   104→  isSensitive?: boolean;
+   105→}) {
+   106→  const label = locale === 'vi' ? titleVi : title;
+   107→
+   108→  return (
+   109→    <Card className={
+   110→      variant === 'danger' ? 'border-red-200 bg-red-50/50 dark:border-red-900 dark:bg-red-950/30' :
+   111→      variant === 'warning' ? 'border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/30' :
+   112→      variant === 'success' ? 'border-yellow-100 bg-yellow-50/50 dark:border-red-900 dark:bg-emerald-950/30' :
+   113→      ''
+   114→    }>
+   115→      <CardContent className="p-4">
+   116→        <div className="flex items-center justify-between">
+   117→          <div>
+   118→            <p className="text-xs text-muted-foreground font-medium">{label}</p>
+   119→            <p className="text-xl font-bold mt-1">
+   120→              {isSensitive ? (
+   121→                <SensitiveValue value={String(value)} maskType="amount" formatOptions={{ formatCurrency: true }} />
+   122→              ) : (
+   123→                typeof value === 'number' ? value.toLocaleString() : value
+   124→              )}
+   125→            </p>
+   126→          </div>
+   127→          <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${
+   128→            variant === 'danger' ? 'bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-400' :
+   129→            variant === 'warning' ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400' :
+   130→            variant === 'success' ? 'bg-yellow-50 text-red-600 dark:bg-red-900/50 dark:text-yellow-500' :
+   131→            'bg-muted text-muted-foreground'
+   132→          }`}>
+   133→            {icon}
+   134→          </div>
+   135→        </div>
+   136→      </CardContent>
+   137→    </Card>
+   138→  );
+   139→}
+   140→
+   141→// ============================================
+   142→// Main Orders Page
+   143→// ============================================
+   144→
+   145→export default function OrdersPage() {
+   146→  const { locale } = useLocale();
+   147→  const t = (en: string, vi: string) => locale === 'vi' ? vi : en;
+   148→
+   149→  // Data state
+   150→  const [orders, setOrders] = useState<OrderListItem[]>([]);
+   151→  const [loading, setLoading] = useState(true);
+   152→  const [stats, setStats] = useState<OrderStats | null>(null);
+   153→
+   154→  // Filter state
+   155→  const [searchQuery, setSearchQuery] = useState('');
+   156→  const [debouncedSearch, setDebouncedSearch] = useState('');
+   157→  const [statusFilter, setStatusFilter] = useState('all');
+   158→  const [paymentMethodFilter, setPaymentMethodFilter] = useState('all');
+   159→  const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
+   160→  const [dateFrom, setDateFrom] = useState('');
+   161→  const [dateTo, setDateTo] = useState('');
+   162→  const [page, setPage] = useState(1);
+   163→  const [totalPages, setTotalPages] = useState(1);
+   164→  const [totalOrdersCount, setTotalOrdersCount] = useState(0);
+   165→  const limit = 20;
+   166→
+   167→  // Dialog / Drawer state
+   168→  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+   169→  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+   170→  const [drawerOpen, setDrawerOpen] = useState(false);
+   171→
+   172→  // Refs
+   173→  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+   174→
+   175→  // Debounced search
+   176→  useEffect(() => {
+   177→    if (searchTimeoutRef.current) {
+   178→      clearTimeout(searchTimeoutRef.current);
+   179→    }
+   180→    searchTimeoutRef.current = setTimeout(() => {
+   181→      setDebouncedSearch(searchQuery);
+   182→      setPage(1);
+   183→    }, 300);
+   184→    return () => {
+   185→      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+   186→    };
+   187→  }, [searchQuery]);
+   188→
+   189→  // Fetch orders
+   190→  const fetchOrders = useCallback(async () => {
+   191→    try {
+   192→      setLoading(true);
+   193→      const params = new URLSearchParams({
+   194→        page: String(page),
+   195→        limit: String(limit),
+   196→        search: debouncedSearch,
+   197→      });
+   198→
+   199→      if (statusFilter !== 'all') params.set('status', statusFilter);
+   200→      if (paymentMethodFilter !== 'all') params.set('paymentMethod', paymentMethodFilter);
+   201→      if (paymentStatusFilter !== 'all') params.set('paymentStatus', paymentStatusFilter);
+   202→      if (dateFrom) params.set('dateFrom', dateFrom);
+   203→      if (dateTo) params.set('dateTo', dateTo);
+   204→
+   205→      const res = await adminFetch(`/api/orders?${params.toString()}`);
+   206→      const json = await res.json();
+   207→
+   208→      if (json.success) {
+   209→        const data: OrdersResponse = json.data;
+   210→        setOrders(data.items || []);
+   211→        setTotalPages(data.pagination.totalPages);
+   212→        setTotalOrdersCount(data.pagination.total);
+   213→      }
+   214→    } catch (err) {
+   215→      console.error('Failed to fetch orders:', err);
+   216→    } finally {
+   217→      setLoading(false);
+   218→    }
+   219→  }, [page, debouncedSearch, statusFilter, paymentMethodFilter, paymentStatusFilter, dateFrom, dateTo, limit]);
+   220→
+   221→  // Fetch stats
+   222→  const fetchStats = useCallback(async () => {
+   223→    try {
+   224→      const res = await adminFetch('/api/orders/stats');
+   225→      const json = await res.json();
+   226→      if (json.success) {
+   227→        const data = json.data;
+   228→        setStats({
+   229→          totalOrders: data.totalOrders || 0,
+   230→          pendingOrders: data.pendingOrders || 0,
+   231→          todayOrders: data.todayOrders || 0,
+   232→          monthlyGmvFormatted: data.monthlyGmvFormatted || '0 ₫',
+   233→          processingOrders: data.ordersByStatus?.PROCESSING || 0,
+   234→          deliveredToday: data.todayOrders || 0,
+   235→          ordersByStatus: data.ordersByStatus || {},
+   236→        });
+   237→      }
+   238→    } catch (err) {
+   239→      console.error('Failed to fetch stats:', err);
+   240→    }
+   241→  }, []);
+   242→
+   243→  // Initial load
+   244→  useEffect(() => {
+   245→    fetchStats();
+   246→  }, [fetchStats]);
+   247→
+   248→  // Re-fetch on filter/page change
+   249→  useEffect(() => {
+   250→    fetchOrders();
+   251→  }, [fetchOrders]);
+   252→
+   253→  // Row click handler
+   254→  const handleRowClick = (orderId: string) => {
+   255→    setSelectedOrderId(orderId);
+   256→    setDrawerOpen(true);
+   257→  };
+   258→
+   259→  // Reset filters
+   260→  const handleResetFilters = () => {
+   261→    setSearchQuery('');
+   262→    setStatusFilter('all');
+   263→    setPaymentMethodFilter('all');
+   264→    setPaymentStatusFilter('all');
+   265→    setDateFrom('');
+   266→    setDateTo('');
+   267→    setPage(1);
+   268→  };
+   269→
+   270→  // Refresh
+   271→  const handleRefresh = () => {
+   272→    fetchOrders();
+   273→    fetchStats();
+   274→  };
+   275→
+   276→  // After create / status change
+   277→  const handleDataChanged = () => {
+   278→    fetchOrders();
+   279→    fetchStats();
+   280→  };
+   281→
+   282→  // Page range for pagination
+   283→  const getPageNumbers = () => {
+   284→    const pages: number[] = [];
+   285→    const maxVisible = 5;
+   286→    let start = Math.max(1, page - Math.floor(maxVisible / 2));
+   287→    const end = Math.min(totalPages, start + maxVisible - 1);
+   288→    if (end - start + 1 < maxVisible) {
+   289→      start = Math.max(1, end - maxVisible + 1);
+   290→    }
+   291→    for (let i = start; i <= end; i++) {
+   292→      pages.push(i);
+   293→    }
+   294→    return pages;
+   295→  };
+   296→
+   297→  const hasActiveFilters = debouncedSearch || statusFilter !== 'all' || paymentMethodFilter !== 'all' || paymentStatusFilter !== 'all' || dateFrom || dateTo;
+   298→
+   299→  return (
+   300→    <div className="flex min-h-screen">
+   301→      <AdminSidebar />
+   302→      <SidebarInset>
+   303→        <AdminHeader />
+   304→
+   305→        <main className="flex-1 p-4 md:p-6 space-y-6">
+   306→          {/* Page Header */}
+   307→          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+   308→            <div>
+   309→              <h1 className="text-2xl font-bold tracking-tight">
+   310→                {t('Orders', 'Đơn hàng')}
+   311→              </h1>
+   312→              <p className="text-sm text-muted-foreground mt-1">
+   313→                {t('Manage orders, track fulfillment, and payments', 'Quản lý đơn hàng, theo dõi xử lý và thanh toán')}
+   314→              </p>
+   315→            </div>
+   316→            <div className="flex items-center gap-2">
+   317→              <Button variant="outline" size="sm" onClick={handleRefresh}>
+   318→                <RefreshCw className="h-4 w-4 mr-1" />
+   319→                {t('Refresh', 'Làm mới')}
+   320→              </Button>
+   321→              <Button
+   322→                size="sm"
+   323→                onClick={() => setCreateDialogOpen(true)}
+   324→                className="bg-red-600 hover:bg-red-700 text-white"
+   325→              >
+   326→                <Plus className="h-4 w-4 mr-1" />
+   327→                {t('Create Order', 'Tạo đơn hàng')}
+   328→              </Button>
+   329→            </div>
+   330→          </div>
+   331→
+   332→          <Separator />
+   333→
+   334→          {/* Stats Bar */}
+   335→          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+   336→            <StatCardMini
+   337→              title="Total Orders"
+   338→              titleVi="Tổng đơn hàng"
+   339→              value={stats?.totalOrders || 0}
+   340→              icon={<ShoppingCart className="h-4 w-4" />}
+   341→              variant="default"
+   342→              locale={locale}
+   343→            />
+   344→            <StatCardMini
+   345→              title="Pending"
+   346→              titleVi="Chờ xác nhận"
+   347→              value={stats?.pendingOrders || 0}
+   348→              icon={<Clock className="h-4 w-4" />}
+   349→              variant="warning"
+   350→              locale={locale}
+   351→            />
+   352→            <StatCardMini
+   353→              title="Processing"
+   354→              titleVi="Đang xử lý"
+   355→              value={stats?.processingOrders || 0}
+   356→              icon={<Package className="h-4 w-4" />}
+   357→              variant="default"
+   358→              locale={locale}
+   359→            />
+   360→            <StatCardMini
+   361→              title="Delivered Today"
+   362→              titleVi="Giao hôm nay"
+   363→              value={stats?.deliveredToday || 0}
+   364→              icon={<CheckCircle2 className="h-4 w-4" />}
+   365→              variant="success"
+   366→              locale={locale}
+   367→            />
+   368→          </div>
+   369→
+   370→          {/* Filters Bar */}
+   371→          <Card>
+   372→            <CardContent className="p-4">
+   373→              <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+   374→                {/* Search */}
+   375→                <div className="relative flex-1 min-w-[200px] max-w-sm">
+   376→                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+   377→                  <Input
+   378→                    type="search"
+   379→                    placeholder={t('Search by order number, shop name...', 'Tìm theo mã đơn, tên cửa hàng...')}
+   380→                    className="pl-8 h-9"
+   381→                    value={searchQuery}
+   382→                    onChange={(e) => setSearchQuery(e.target.value)}
+   383→                  />
+   384→                </div>
+   385→
+   386→                {/* Status Filter */}
+   387→                <Select value={statusFilter} onValueChange={(val) => { setStatusFilter(val); setPage(1); }}>
+   388→                  <SelectTrigger className="w-full sm:w-[170px] h-9">
+   389→                    <SelectValue placeholder={t('All Status', 'Tất cả trạng thái')} />
+   390→                  </SelectTrigger>
+   391→                  <SelectContent>
+   392→                    <SelectItem value="all">{t('All Status', 'Tất cả trạng thái')}</SelectItem>
+   393→                    <SelectItem value="PENDING">
+   394→                      <span className="flex items-center gap-1.5">
+   395→                        <span className="h-2 w-2 rounded-full bg-yellow-500" />
+   396→                        {t('Pending', 'Chờ xác nhận')}
+   397→                      </span>
+   398→                    </SelectItem>
+   399→                    <SelectItem value="CONFIRMED">
+   400→                      <span className="flex items-center gap-1.5">
+   401→                        <span className="h-2 w-2 rounded-full bg-blue-500" />
+   402→                        {t('Confirmed', 'Đã xác nhận')}
+   403→                      </span>
+   404→                    </SelectItem>
+   405→                    <SelectItem value="PROCESSING">
+   406→                      <span className="flex items-center gap-1.5">
+   407→                        <span className="h-2 w-2 rounded-full bg-indigo-500" />
+   408→                        {t('Processing', 'Đang xử lý')}
+   409→                      </span>
+   410→                    </SelectItem>
+   411→                    <SelectItem value="PACKED">
+   412→                      <span className="flex items-center gap-1.5">
+   413→                        <span className="h-2 w-2 rounded-full bg-purple-500" />
+   414→                        {t('Packed', 'Đã đóng gói')}
+   415→                      </span>
+   416→                    </SelectItem>
+   417→                    <SelectItem value="OUT_FOR_DELIVERY">
+   418→                      <span className="flex items-center gap-1.5">
+   419→                        <span className="h-2 w-2 rounded-full bg-cyan-500" />
+   420→                        {t('Out for Delivery', 'Đang giao')}
+   421→                      </span>
+   422→                    </SelectItem>
+   423→                    <SelectItem value="DELIVERED">
+   424→                      <span className="flex items-center gap-1.5">
+   425→                        <span className="h-2 w-2 rounded-full bg-red-500" />
+   426→                        {t('Delivered', 'Đã giao')}
+   427→                      </span>
+   428→                    </SelectItem>
+   429→                    <SelectItem value="CANCELLED">
+   430→                      <span className="flex items-center gap-1.5">
+   431→                        <span className="h-2 w-2 rounded-full bg-red-500" />
+   432→                        {t('Cancelled', 'Đã hủy')}
+   433→                      </span>
+   434→                    </SelectItem>
+   435→                  </SelectContent>
+   436→                </Select>
+   437→
+   438→                {/* Payment Method Filter */}
+   439→                <Select value={paymentMethodFilter} onValueChange={(val) => { setPaymentMethodFilter(val); setPage(1); }}>
+   440→                  <SelectTrigger className="w-full sm:w-[160px] h-9">
+   441→                    <SelectValue placeholder={t('Payment Method', 'PT thanh toán')} />
+   442→                  </SelectTrigger>
+   443→                  <SelectContent>
+   444→                    <SelectItem value="all">{t('All Methods', 'Tất cả PT')}</SelectItem>
+   445→                    <SelectItem value="CREDIT">{t('7-Day Credit', 'Công nợ 7 ngày')}</SelectItem>
+   446→                    <SelectItem value="DIGITAL">{t('Digital', 'Thanh toán số')}</SelectItem>
+   447→                    <SelectItem value="COD">COD</SelectItem>
+   448→                  </SelectContent>
+   449→                </Select>
+   450→
+   451→                {/* Payment Status Filter */}
+   452→                <Select value={paymentStatusFilter} onValueChange={(val) => { setPaymentStatusFilter(val); setPage(1); }}>
+   453→                  <SelectTrigger className="w-full sm:w-[130px] h-9">
+   454→                    <SelectValue placeholder={t('Payment', 'Thanh toán')} />
+   455→                  </SelectTrigger>
+   456→                  <SelectContent>
+   457→                    <SelectItem value="all">{t('All', 'Tất cả')}</SelectItem>
+   458→                    <SelectItem value="PENDING">{t('Unpaid', 'Chưa TT')}</SelectItem>
+   459→                    <SelectItem value="PAID">{t('Paid', 'Đã TT')}</SelectItem>
+   460→                  </SelectContent>
+   461→                </Select>
+   462→
+   463→                {/* Date From */}
+   464→                <div className="relative">
+   465→                  <CalendarDays className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+   466→                  <Input
+   467→                    type="date"
+   468→                    className="pl-8 h-9 w-[145px]"
+   469→                    value={dateFrom}
+   470→                    onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+   471→                    max={dateTo || undefined}
+   472→                  />
+   473→                </div>
+   474→
+   475→                {/* Date To */}
+   476→                <div className="relative">
+   477→                  <CalendarDays className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+   478→                  <Input
+   479→                    type="date"
+   480→                    className="pl-8 h-9 w-[145px]"
+   481→                    value={dateTo}
+   482→                    onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+   483→                    min={dateFrom || undefined}
+   484→                  />
+   485→                </div>
+   486→
+   487→                {/* Reset */}
+   488→                {hasActiveFilters && (
+   489→                  <Button
+   490→                    variant="ghost"
+   491→                    size="sm"
+   492→                    className="h-9"
+   493→                    onClick={handleResetFilters}
+   494→                  >
+   495→                    <RotateCcw className="h-3.5 w-3.5 mr-1" />
+   496→                    {t('Reset', 'Đặt lại')}
+   497→                  </Button>
+   498→                )}
+   499→              </div>
+   500→            </CardContent>
+   501→          </Card>
+   502→
+   503→          {/* Orders Table */}
+   504→          <Card>
+   505→            <CardContent className="p-0">
+   506→              {loading ? (
+   507→                <div className="p-4 space-y-3">
+   508→                  <Skeleton className="h-10 w-full" />
+   509→                  {Array.from({ length: 8 }).map((_, i) => (
+   510→                    <Skeleton key={i} className="h-12 w-full" />
+   511→                  ))}
+   512→                </div>
+   513→              ) : orders.length === 0 ? (
+   514→                /* Empty State */
+   515→                <div className="text-center py-16 px-4">
+   516→                  <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+   517→                    <ShoppingCart className="h-8 w-8 text-muted-foreground" />
+   518→                  </div>
+   519→                  <h3 className="text-lg font-semibold">
+   520→                    {t('No orders found', 'Không tìm thấy đơn hàng')}
+   521→                  </h3>
+   522→                  <p className="text-sm text-muted-foreground mt-1 max-w-md mx-auto">
+   523→                    {hasActiveFilters
+   524→                      ? t(
+   525→                          'Try adjusting your search or filters to find what you are looking for.',
+   526→                          'Thử thay đổi tìm kiếm hoặc bộ lọc để tìm đơn hàng.'
+   527→                        )
+   528→                      : t(
+   529→                          'Get started by creating your first order.',
+   530→                          'Bắt đầu bằng cách tạo đơn hàng đầu tiên.'
+   531→                        )}
+   532→                  </p>
+   533→                  {!hasActiveFilters && (
+   534→                    <Button
+   535→                      className="mt-4 bg-red-600 hover:bg-red-700 text-white"
+   536→                      onClick={() => setCreateDialogOpen(true)}
+   537→                    >
+   538→                      <Plus className="h-4 w-4 mr-2" />
+   539→                      {t('Create First Order', 'Tạo đơn hàng đầu tiên')}
+   540→                    </Button>
+   541→                  )}
+   542→                </div>
+   543→              ) : (
+   544→                <div className="w-full">
+   545→                  <Table>
+   546→                    <TableHeader>
+   547→                      <TableRow className="bg-muted/30">
+   548→                        <TableHead className="w-[130px]">{t('Order #', 'Mã ĐH')}</TableHead>
+   549→                        <TableHead>{t('Shop', 'Cửa hàng')}</TableHead>
+   550→                        <TableHead>{t('Status', 'TT')}</TableHead>
+   551→                        <TableHead className="hidden md:table-cell">{t('Payment', 'Thanh toán')}</TableHead>
+   552→                        <TableHead className="hidden md:table-cell">{t('PT Status', 'TT Thanh toán')}</TableHead>
+   553→                        <TableHead className="hidden sm:table-cell text-center">{t('Items', 'SP')}</TableHead>
+   554→                        <TableHead className="text-right">{t('Total', 'Tổng')}</TableHead>
+   555→                        <TableHead className="hidden lg:table-cell">{t('Date', 'Ngày tạo')}</TableHead>
+   556→                        <TableHead className="text-right">{t('Actions', 'TH')}</TableHead>
+   557→                      </TableRow>
+   558→                    </TableHeader>
+   559→                    <TableBody>
+   560→                      {orders.map((order) => (
+   561→                        <TableRow
+   562→                          key={order.id}
+   563→                          className="cursor-pointer hover:bg-muted/50 transition-colors"
+   564→                          onClick={() => handleRowClick(order.id)}
+   565→                        >
+   566→                          {/* Order Number */}
+   567→                          <TableCell className="font-mono text-xs font-medium">
+   568→                            {order.orderNumber}
+   569→                          </TableCell>
+   570→
+   571→                          {/* Shop Name */}
+   572→                          <TableCell>
+   573→                            <span className="text-sm font-medium truncate block max-w-[200px]">
+   574→                              {order.shopName}
+   575→                            </span>
+   576→                          </TableCell>
+   577→
+   578→                          {/* Status */}
+   579→                          <TableCell>
+   580→                            <OrderStatusBadge status={order.status} locale={locale} />
+   581→                          </TableCell>
+   582→
+   583→                          {/* Payment Method */}
+   584→                          <TableCell className="hidden md:table-cell">
+   585→                            <PaymentMethodBadge method={order.paymentMethod} locale={locale} />
+   586→                          </TableCell>
+   587→
+   588→                          {/* Payment Status */}
+   589→                          <TableCell className="hidden md:table-cell">
+   590→                            <PaymentStatusBadge status={order.paymentStatus} locale={locale} />
+   591→                          </TableCell>
+   592→
+   593→                          {/* Items Count */}
+   594→                          <TableCell className="hidden sm:table-cell text-center">
+   595→                            <span className="text-xs text-muted-foreground">
+   596→                              {order.itemCount}
+   597→                            </span>
+   598→                          </TableCell>
+   599→
+   600→                          {/* Total Amount */}
+   601→                          <TableCell className="text-right">
+   602→                            <span className="text-sm font-semibold">
+   603→                              <SensitiveValue
+   604→                                value={order.totalAmount}
+   605→                                maskType="amount"
+   606→                                formatOptions={{ formatCurrency: true }}
+   607→                              />
+   608→                            </span>
+   609→                          </TableCell>
+   610→
+   611→                          {/* Created Date */}
+   612→                          <TableCell className="hidden lg:table-cell">
+   613→                            <span className="text-xs text-muted-foreground">
+   614→                              {new Date(order.createdAt).toLocaleDateString('vi-VN', {
+   615→                                day: '2-digit',
+   616→                                month: '2-digit',
+   617→                                year: 'numeric',
+   618→                                hour: '2-digit',
+   619→                                minute: '2-digit',
+   620→                              })}
+   621→                            </span>
+   622→                          </TableCell>
+   623→
+   624→                          {/* Actions */}
+   625→                          <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+   626→                            <Button
+   627→                              variant="ghost"
+   628→                              size="sm"
+   629→                              className="h-8 text-xs"
+   630→                              onClick={() => handleRowClick(order.id)}
+   631→                            >
+   632→                              {t('View', 'Xem')}
+   633→                            </Button>
+   634→                          </TableCell>
+   635→                        </TableRow>
+   636→                      ))}
+   637→                    </TableBody>
+   638→                  </Table>
+   639→
+   640→                  {/* Pagination */}
+   641→                  {totalPages > 1 && (
+   642→                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t">
+   643→                      <p className="text-xs text-muted-foreground">
+   644→                        {t(
+   645→                          `Showing ${(page - 1) * limit + 1}–${Math.min(page * limit, totalOrdersCount)} of ${totalOrdersCount} orders`,
+   646→                          `Hiển thị ${(page - 1) * limit + 1}–${Math.min(page * limit, totalOrdersCount)} / ${totalOrdersCount} đơn hàng`
+   647→                        )}
+   648→                      </p>
+   649→                      <div className="flex items-center gap-1">
+   650→                        <Button
+   651→                          variant="outline"
+   652→                          size="icon"
+   653→                          className="h-8 w-8"
+   654→                          disabled={page <= 1}
+   655→                          onClick={() => setPage((p) => Math.max(1, p - 1))}
+   656→                        >
+   657→                          <ChevronLeft className="h-4 w-4" />
+   658→                        </Button>
+   659→                        {getPageNumbers().map((p) => (
+   660→                          <Button
+   661→                            key={p}
+   662→                            variant={p === page ? 'default' : 'outline'}
+   663→                            size="icon"
+   664→                            className={`h-8 w-8 text-xs ${p === page ? 'bg-red-600 hover:bg-red-700 text-white' : ''}`}
+   665→                            onClick={() => setPage(p)}
+   666→                          >
+   667→                            {p}
+   668→                          </Button>
+   669→                        ))}
+   670→                        <Button
+   671→                          variant="outline"
+   672→                          size="icon"
+   673→                          className="h-8 w-8"
+   674→                          disabled={page >= totalPages}
+   675→                          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+   676→                        >
+   677→                          <ChevronRight className="h-4 w-4" />
+   678→                        </Button>
+   679→                      </div>
+   680→                    </div>
+   681→                  )}
+   682→                </div>
+   683→              )}
+   684→            </CardContent>
+   685→          </Card>
+   686→        </main>
+   687→
+   688→        {/* Order Detail Drawer */}
+   689→        <OrderDetailDrawer
+   690→          open={drawerOpen}
+   691→          onOpenChange={setDrawerOpen}
+   692→          orderId={selectedOrderId}
+   693→          locale={locale}
+   694→          onStatusChanged={handleDataChanged}
+   695→        />
+   696→
+   697→        {/* Create Order Dialog */}
+   698→        <OrderCreateDialog
+   699→          open={createDialogOpen}
+   700→          onOpenChange={setCreateDialogOpen}
+   701→          locale={locale}
+   702→          onCreated={handleDataChanged}
+   703→        />
+   704→      </SidebarInset>
+   705→    </div>
+   706→  );
+   707→}
+   708→

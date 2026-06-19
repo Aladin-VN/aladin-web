@@ -25,7 +25,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -360,14 +359,18 @@ export function OrderDetailDrawer({
                   <span className="font-mono text-sm">{order.orderNumber}</span>
                   <OrderStatusBadge status={order.status} locale={locale} size="md" />
                 </>
-              ) : null}
+              ) : (
+                <span>{t('Order Detail', 'Chi tiết đơn hàng')}</span>
+              )}
             </SheetTitle>
             <SheetDescription>
               {loading ? (
                 <Skeleton className="h-4 w-24" />
               ) : order ? (
                 new Date(order.createdAt).toLocaleString('vi-VN')
-              ) : null}
+              ) : (
+                <span>{t('Loading...', 'Đang tải...')}</span>
+              )}
             </SheetDescription>
           </SheetHeader>
 
@@ -598,14 +601,14 @@ export function OrderDetailDrawer({
             <AlertDialogCancel disabled={actionLoading}>
               {t('Back', 'Quay lại')}
             </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleCancel}
+            <Button
+              onClick={(e) => { e.preventDefault(); handleCancel(); }}
               disabled={!cancelReason.trim() || actionLoading}
               className="bg-red-600 hover:bg-red-700 text-white"
             >
               {actionLoading && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
               {t('Confirm Cancel', 'Xác nhận hủy')}
-            </AlertDialogAction>
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

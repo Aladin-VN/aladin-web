@@ -167,7 +167,9 @@ export function BrokerDetailDrawer({
                 <span>{broker.user.name}</span>
                 <BrokerTierBadge tier={broker.tier} locale={locale} size="md" />
               </>
-            ) : null}
+            ) : (
+                <span>{t('Broker Detail', 'Chi tiết đại lý')}</span>
+              )}
           </SheetTitle>
           <SheetDescription>
             {loading ? (
@@ -177,7 +179,9 @@ export function BrokerDetailDrawer({
                 <UserStatusBadge status={broker.user.status} locale={locale} />
                 {broker.ward && <span>{broker.ward.name}, {broker.ward.district}</span>}
               </span>
-            ) : null}
+            ) : (
+              <span>{t('Loading...', 'Đang tải...')}</span>
+            )}
           </SheetDescription>
         </SheetHeader>
 
@@ -257,7 +261,7 @@ export function BrokerDetailDrawer({
                   <span className="text-xs text-muted-foreground">{t('Email', 'Email')}</span>
                   <p className="text-sm font-medium">
                     {broker.user.email ? (
-                      <SensitiveValue value={broker.user.email} maskType="email" />
+                      <SensitiveValue value={broker.user.email} maskType="name" />
                     ) : '-'}
                   </p>
                 </div>

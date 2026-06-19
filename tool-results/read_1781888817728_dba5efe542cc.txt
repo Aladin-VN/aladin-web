@@ -1,0 +1,826 @@
+     1→'use client';
+     2→import { adminFetch } from '@/lib/admin-fetch';
+     3→import { useLocale } from '@/providers/app-provider';
+     4→
+     5→import { useState, useEffect, useCallback, useRef } from 'react';
+     6→import {
+     7→  Store,
+     8→  Search,
+     9→  ChevronLeft,
+    10→  ChevronRight,
+    11→  RefreshCw,
+    12→  Loader2,
+    13→  Edit,
+    14→  MapPin,
+    15→  TrendingUp,
+    16→  Users,
+    17→  AlertTriangle,
+    18→  Crown,
+    19→  Plus,
+    20→  RotateCcw,
+    21→  ArrowUpDown,
+    22→  Download,
+    23→  CreditCard,
+    24→} from 'lucide-react';
+    25→import { Card, CardContent } from '@/components/ui/card';
+    26→import { Button } from '@/components/ui/button';
+    27→import { Skeleton } from '@/components/ui/skeleton';
+    28→import { Input } from '@/components/ui/input';
+    29→import {
+    30→  Select,
+    31→  SelectContent,
+    32→  SelectItem,
+    33→  SelectTrigger,
+    34→  SelectValue,
+    35→} from '@/components/ui/select';
+    36→import {
+    37→  Table,
+    38→  TableBody,
+    39→  TableCell,
+    40→  TableHead,
+    41→  TableHeader,
+    42→  TableRow,
+    43→} from '@/components/ui/table';
+    44→import { AdminSidebar } from '@/components/layout/admin-sidebar';
+    45→import { AdminHeader } from '@/components/layout/admin-header';
+    46→import { SidebarInset } from '@/components/ui/sidebar';
+    47→import { Separator } from '@/components/ui/separator';
+    48→import { SensitiveValue } from '@/components/shared/sensitive-value';
+    49→import {
+    50→  LoyaltyTierBadge,
+    51→  CreditStatusBadge,
+    52→  ShopTypeBadge,
+    53→} from '@/components/shops/shop-status-badge';
+    54→import { ShopDetailDrawer } from '@/components/shops/shop-detail-drawer';
+    55→import { ShopEditDialog } from '@/components/shops/shop-edit-dialog';
+    56→
+    57→// ============================================
+    58→// Types
+    59→// ============================================
+    60→
+    61→interface ShopListItem {
+    62→  id: string;
+    63→  name: string;
+    64→  nameEn: string | null;
+    65→  district: string | null;
+    66→  province: string;
+    67→  address: string | null;
+    68→  shopType: string;
+    69→  loyaltyTier: string;
+    70→  creditStatus: string;
+    71→  creditLimit: number;
+    72→  creditLimitFormatted: string;
+    73→  creditBalance: number;
+    74→  creditBalanceFormatted: string;
+    75→  creditAvailable: number;
+    76→  creditAvailableFormatted: string;
+    77→  totalOrders: number;
+    78→  totalGmv: number;
+    79→  totalGmvFormatted: string;
+    80→  avgOrderValue: number;
+    81→  avgOrderValueFormatted: string;
+    82→  createdAt: string;
+    83→  ward: { id: string; name: string } | null;
+    84→  user: { id: string; phone: string; name: string; status: string; zaloId: string | null } | null;
+    85→}
+    86→
+    87→interface ShopsResponse {
+    88→  items: ShopListItem[];
+    89→  pagination: {
+    90→    page: number;
+    91→    limit: number;
+    92→    total: number;
+    93→    totalPages: number;
+    94→  };
+    95→}
+    96→
+    97→interface ShopStats {
+    98→  totalShops: number;
+    99→  activeShops: number;
+   100→  lockedShops: number;
+   101→  overdueShops: number;
+   102→  platinumShops: number;
+   103→  newThisMonth: number;
+   104→  totalGmv: number;
+   105→  totalGmvFormatted: string;
+   106→  totalCreditExposure: number;
+   107→  totalCreditExposureFormatted: string;
+   108→  tierDistribution: Record<string, number>;
+   109→  creditDistribution: Record<string, number>;
+   110→  topDistricts: { district: string; count: number }[];
+   111→  shopTypeDistribution: Record<string, number>;
+   112→}
+   113→
+   114→// ============================================
+   115→// Stat Card Mini
+   116→// ============================================
+   117→
+   118→function StatCardMini({
+   119→  title,
+   120→  titleVi,
+   121→  value,
+   122→  icon,
+   123→  variant = 'default',
+   124→  locale,
+   125→  isSensitive = false,
+   126→}: {
+   127→  title: string;
+   128→  titleVi: string;
+   129→  value: string | number;
+   130→  icon: React.ReactNode;
+   131→  variant?: 'default' | 'warning' | 'danger' | 'success';
+   132→  locale: string;
+   133→  isSensitive?: boolean;
+   134→}) {
+   135→  const label = locale === 'vi' ? titleVi : title;
+   136→
+   137→  return (
+   138→    <Card className={
+   139→      variant === 'danger' ? 'border-red-200 bg-red-50/50 dark:border-red-900 dark:bg-red-950/30' :
+   140→      variant === 'warning' ? 'border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/30' :
+   141→      variant === 'success' ? 'border-yellow-100 bg-yellow-50/50 dark:border-red-900 dark:bg-emerald-950/30' :
+   142→      ''
+   143→    }>
+   144→      <CardContent className="p-4">
+   145→        <div className="flex items-center justify-between">
+   146→          <div>
+   147→            <p className="text-xs text-muted-foreground font-medium">{label}</p>
+   148→            <p className="text-xl font-bold mt-1">
+   149→              {isSensitive ? (
+   150→                <SensitiveValue value={String(value)} maskType="amount" formatOptions={{ formatCurrency: true }} />
+   151→              ) : (
+   152→                typeof value === 'number' ? value.toLocaleString() : value
+   153→              )}
+   154→            </p>
+   155→          </div>
+   156→          <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${
+   157→            variant === 'danger' ? 'bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-400' :
+   158→            variant === 'warning' ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400' :
+   159→            variant === 'success' ? 'bg-yellow-50 text-red-600 dark:bg-red-900/50 dark:text-yellow-500' :
+   160→            'bg-muted text-muted-foreground'
+   161→          }`}>
+   162→            {icon}
+   163→          </div>
+   164→        </div>
+   165→      </CardContent>
+   166→    </Card>
+   167→  );
+   168→}
+   169→
+   170→// ============================================
+   171→// Main Shops Page
+   172→// ============================================
+   173→
+   174→export default function ShopsPage() {
+   175→  const { locale } = useLocale();
+   176→  const t = (en: string, vi: string) => locale === 'vi' ? vi : en;
+   177→
+   178→  // Data state
+   179→  const [shops, setShops] = useState<ShopListItem[]>([]);
+   180→  const [loading, setLoading] = useState(true);
+   181→  const [stats, setStats] = useState<ShopStats | null>(null);
+   182→
+   183→  // Filter state
+   184→  const [searchQuery, setSearchQuery] = useState('');
+   185→  const [debouncedSearch, setDebouncedSearch] = useState('');
+   186→  const [creditStatusFilter, setCreditStatusFilter] = useState('all');
+   187→  const [loyaltyTierFilter, setLoyaltyTierFilter] = useState('all');
+   188→  const [shopTypeFilter, setShopTypeFilter] = useState('all');
+   189→  const [sortBy, setSortBy] = useState('createdAt');
+   190→  const [sortOrder, setSortOrder] = useState('desc');
+   191→  const [page, setPage] = useState(1);
+   192→  const [totalPages, setTotalPages] = useState(1);
+   193→  const [totalShopsCount, setTotalShopsCount] = useState(0);
+   194→  const limit = 20;
+   195→
+   196→  // Dialog / Drawer state
+   197→  const [selectedShopId, setSelectedShopId] = useState<string | null>(null);
+   198→  const [drawerOpen, setDrawerOpen] = useState(false);
+   199→  const [editDialogOpen, setEditDialogOpen] = useState(false);
+   200→
+   201→  // Refs
+   202→  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+   203→
+   204→  // Debounced search
+   205→  useEffect(() => {
+   206→    if (searchTimeoutRef.current) {
+   207→      clearTimeout(searchTimeoutRef.current);
+   208→    }
+   209→    searchTimeoutRef.current = setTimeout(() => {
+   210→      setDebouncedSearch(searchQuery);
+   211→      setPage(1);
+   212→    }, 300);
+   213→    return () => {
+   214→      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+   215→    };
+   216→  }, [searchQuery]);
+   217→
+   218→  // Fetch shops
+   219→  const fetchShops = useCallback(async () => {
+   220→    try {
+   221→      setLoading(true);
+   222→      const params = new URLSearchParams({
+   223→        page: String(page),
+   224→        limit: String(limit),
+   225→        search: debouncedSearch,
+   226→        sortBy,
+   227→        sortOrder,
+   228→      });
+   229→
+   230→      if (creditStatusFilter !== 'all') params.set('creditStatus', creditStatusFilter);
+   231→      if (loyaltyTierFilter !== 'all') params.set('loyaltyTier', loyaltyTierFilter);
+   232→      if (shopTypeFilter !== 'all') params.set('shopType', shopTypeFilter);
+   233→
+   234→      const res = await adminFetch(`/api/shops?${params.toString()}`);
+   235→      const json = await res.json();
+   236→
+   237→      if (json.success) {
+   238→        const data: ShopsResponse = json.data;
+   239→        setShops(data.items || []);
+   240→        setTotalPages(data.pagination.totalPages);
+   241→        setTotalShopsCount(data.pagination.total);
+   242→      }
+   243→    } catch (err) {
+   244→      console.error('Failed to fetch shops:', err);
+   245→    } finally {
+   246→      setLoading(false);
+   247→    }
+   248→  }, [page, debouncedSearch, creditStatusFilter, loyaltyTierFilter, shopTypeFilter, sortBy, sortOrder, limit]);
+   249→
+   250→  // Fetch stats
+   251→  const fetchStats = useCallback(async () => {
+   252→    try {
+   253→      const res = await adminFetch('/api/shops/stats');
+   254→      const json = await res.json();
+   255→      if (json.success) {
+   256→        setStats(json.data);
+   257→      }
+   258→    } catch (err) {
+   259→      console.error('Failed to fetch shop stats:', err);
+   260→    }
+   261→  }, []);
+   262→
+   263→  // Initial load
+   264→  useEffect(() => {
+   265→    fetchStats();
+   266→  }, [fetchStats]);
+   267→
+   268→  // Re-fetch on filter/page change
+   269→  useEffect(() => {
+   270→    fetchShops();
+   271→  }, [fetchShops]);
+   272→
+   273→  // Row click handler
+   274→  const handleRowClick = (shopId: string) => {
+   275→    setSelectedShopId(shopId);
+   276→    setDrawerOpen(true);
+   277→  };
+   278→
+   279→  // Edit handler
+   280→  const handleEdit = (e: React.MouseEvent, shopId: string) => {
+   281→    e.stopPropagation();
+   282→    setSelectedShopId(shopId);
+   283→    setEditDialogOpen(true);
+   284→  };
+   285→
+   286→  // Reset filters
+   287→  const handleResetFilters = () => {
+   288→    setSearchQuery('');
+   289→    setCreditStatusFilter('all');
+   290→    setLoyaltyTierFilter('all');
+   291→    setShopTypeFilter('all');
+   292→    setSortBy('createdAt');
+   293→    setSortOrder('desc');
+   294→    setPage(1);
+   295→  };
+   296→
+   297→  // Refresh
+   298→  const handleRefresh = () => {
+   299→    fetchShops();
+   300→    fetchStats();
+   301→  };
+   302→
+   303→  // After edit
+   304→  const handleDataChanged = () => {
+   305→    fetchShops();
+   306→    fetchStats();
+   307→  };
+   308→
+   309→  // Toggle sort direction
+   310→  const handleSortToggle = () => {
+   311→    setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'asc'));
+   312→  };
+   313→
+   314→  // Page range for pagination
+   315→  const getPageNumbers = () => {
+   316→    const pages: number[] = [];
+   317→    const maxVisible = 5;
+   318→    let start = Math.max(1, page - Math.floor(maxVisible / 2));
+   319→    const end = Math.min(totalPages, start + maxVisible - 1);
+   320→    if (end - start + 1 < maxVisible) {
+   321→      start = Math.max(1, end - maxVisible + 1);
+   322→    }
+   323→    for (let i = start; i <= end; i++) {
+   324→      pages.push(i);
+   325→    }
+   326→    return pages;
+   327→  };
+   328→
+   329→  const hasActiveFilters = debouncedSearch || creditStatusFilter !== 'all' || loyaltyTierFilter !== 'all' || shopTypeFilter !== 'all';
+   330→
+   331→  // Export CSV
+   332→  const handleExportCSV = () => {
+   333→    if (shops.length === 0) return;
+   334→    const headers = locale === 'vi'
+   335→      ? ['Ten', 'Chu', 'Dien thoai', 'Quan', 'Tinh', 'Loai', 'Cap TV', 'Trang thai no', 'Han muc', 'Da dung', 'Con lai', 'Tong DH', 'Tong GMV', 'Ngay tao']
+   336→      : ['Name', 'Owner', 'Phone', 'District', 'Province', 'Type', 'Tier', 'Credit Status', 'Limit', 'Used', 'Available', 'Orders', 'GMV', 'Created'];
+   337→
+   338→    const rows = shops.map((s) => [
+   339→      s.name,
+   340→      s.user?.name || '',
+   341→      s.user?.phone || '',
+   342→      s.district || '',
+   343→      s.province,
+   344→      s.shopType,
+   345→      s.loyaltyTier,
+   346→      s.creditStatus,
+   347→      s.creditLimit,
+   348→      s.creditBalance,
+   349→      s.creditAvailable,
+   350→      s.totalOrders,
+   351→      s.totalGmv,
+   352→      s.createdAt,
+   353→    ]);
+   354→
+   355→    const csv = [headers, ...rows].map((row) => row.map((cell) => `"${cell}"`).join(',')).join('\n');
+   356→    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+   357→    const url = URL.createObjectURL(blob);
+   358→    const link = document.createElement('a');
+   359→    link.href = url;
+   360→    link.download = `aladin-shops-${new Date().toISOString().split('T')[0]}.csv`;
+   361→    link.click();
+   362→    URL.revokeObjectURL(url);
+   363→  };
+   364→
+   365→  return (
+   366→    <div className="flex min-h-screen">
+   367→      <AdminSidebar />
+   368→      <SidebarInset>
+   369→        <AdminHeader />
+   370→
+   371→        <main className="flex-1 p-4 md:p-6 space-y-6">
+   372→          {/* Page Header */}
+   373→          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+   374→            <div>
+   375→              <h1 className="text-2xl font-bold tracking-tight">
+   376→                {t('Shops Management', 'Quan ly Cua hang')}
+   377→              </h1>
+   378→              <p className="text-sm text-muted-foreground mt-1">
+   379→                {t('Manage mom-and-pop shops, track credit, and loyalty tiers', 'Quan ly cua hang tap hoa, theo doi cong no va cap thanh vien')}
+   380→              </p>
+   381→            </div>
+   382→            <div className="flex items-center gap-2">
+   383→              <Button variant="outline" size="sm" onClick={handleRefresh}>
+   384→                <RefreshCw className="h-4 w-4 mr-1" />
+   385→                {t('Refresh', 'Lam moi')}
+   386→              </Button>
+   387→              <Button
+   388→                variant="outline"
+   389→                size="sm"
+   390→                onClick={handleExportCSV}
+   391→                disabled={shops.length === 0}
+   392→              >
+   393→                <Download className="h-4 w-4 mr-1" />
+   394→                {t('Export', 'Xuat')}
+   395→              </Button>
+   396→            </div>
+   397→          </div>
+   398→
+   399→          <Separator />
+   400→
+   401→          {/* Stats Bar */}
+   402→          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+   403→            <StatCardMini
+   404→              title="Total Shops"
+   405→              titleVi="Tong cua hang"
+   406→              value={stats?.totalShops || 0}
+   407→              icon={<Store className="h-4 w-4" />}
+   408→              variant="default"
+   409→              locale={locale}
+   410→            />
+   411→            <StatCardMini
+   412→              title="New This Month"
+   413→              titleVi="Moi trong thang"
+   414→              value={stats?.newThisMonth || 0}
+   415→              icon={<Plus className="h-4 w-4" />}
+   416→              variant="success"
+   417→              locale={locale}
+   418→            />
+   419→            <StatCardMini
+   420→              title="Overdue"
+   421→              titleVi="Qua han"
+   422→              value={stats?.overdueShops || 0}
+   423→              icon={<AlertTriangle className="h-4 w-4" />}
+   424→              variant="danger"
+   425→              locale={locale}
+   426→            />
+   427→            <StatCardMini
+   428→              title="Total GMV"
+   429→              titleVi="Tong GMV"
+   430→              value={stats?.totalGmvFormatted || '0 VND'}
+   431→              icon={<TrendingUp className="h-4 w-4" />}
+   432→              variant="default"
+   433→              locale={locale}
+   434→              isSensitive={true}
+   435→            />
+   436→          </div>
+   437→
+   438→          {/* District Quick Stats */}
+   439→          {stats && stats.topDistricts.length > 0 && (
+   440→            <div className="flex flex-wrap gap-2">
+   441→              {stats.topDistricts.slice(0, 6).map((d) => (
+   442→                <div
+   443→                  key={d.district}
+   444→                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs"
+   445→                >
+   446→                  <MapPin className="h-3 w-3 text-muted-foreground" />
+   447→                  <span className="font-medium">{d.district || t('Unknown', 'Khong ro')}</span>
+   448→                  <span className="text-muted-foreground">({d.count})</span>
+   449→                </div>
+   450→              ))}
+   451→            </div>
+   452→          )}
+   453→
+   454→          {/* Filters Bar */}
+   455→          <Card>
+   456→            <CardContent className="p-4">
+   457→              <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+   458→                {/* Search */}
+   459→                <div className="relative flex-1 min-w-[200px] max-w-sm">
+   460→                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+   461→                  <Input
+   462→                    type="search"
+   463→                    placeholder={t('Search by name, phone, district...', 'Tim theo ten, SDT, quan...')}
+   464→                    className="pl-8 h-9"
+   465→                    value={searchQuery}
+   466→                    onChange={(e) => setSearchQuery(e.target.value)}
+   467→                  />
+   468→                </div>
+   469→
+   470→                {/* Credit Status Filter */}
+   471→                <Select value={creditStatusFilter} onValueChange={(val) => { setCreditStatusFilter(val); setPage(1); }}>
+   472→                  <SelectTrigger className="w-full sm:w-[155px] h-9">
+   473→                    <SelectValue placeholder={t('Credit Status', 'TT cong no')} />
+   474→                  </SelectTrigger>
+   475→                  <SelectContent>
+   476→                    <SelectItem value="all">{t('All Credit', 'Tat ca')}</SelectItem>
+   477→                    <SelectItem value="ACTIVE">
+   478→                      <span className="flex items-center gap-1.5">
+   479→                        <span className="h-2 w-2 rounded-full bg-red-500" />
+   480→                        {t('Active', 'Hoat dong')}
+   481→                      </span>
+   482→                    </SelectItem>
+   483→                    <SelectItem value="LOCKED">
+   484→                      <span className="flex items-center gap-1.5">
+   485→                        <span className="h-2 w-2 rounded-full bg-red-500" />
+   486→                        {t('Locked', 'Bi khoa')}
+   487→                      </span>
+   488→                    </SelectItem>
+   489→                    <SelectItem value="OVERDUE">
+   490→                      <span className="flex items-center gap-1.5">
+   491→                        <span className="h-2 w-2 rounded-full bg-amber-500" />
+   492→                        {t('Overdue', 'Qua han')}
+   493→                      </span>
+   494→                    </SelectItem>
+   495→                  </SelectContent>
+   496→                </Select>
+   497→
+   498→                {/* Loyalty Tier Filter */}
+   499→                <Select value={loyaltyTierFilter} onValueChange={(val) => { setLoyaltyTierFilter(val); setPage(1); }}>
+   500→                  <SelectTrigger className="w-full sm:w-[140px] h-9">
+   501→                    <SelectValue placeholder={t('Loyalty Tier', 'Cap TV')} />
+   502→                  </SelectTrigger>
+   503→                  <SelectContent>
+   504→                    <SelectItem value="all">{t('All Tiers', 'Tat cap')}</SelectItem>
+   505→                    <SelectItem value="BRONZE">
+   506→                      <span className="flex items-center gap-1.5">
+   507→                        <span className="h-2 w-2 rounded-full bg-orange-500" />
+   508→                        {t('Bronze', 'Dong')}
+   509→                      </span>
+   510→                    </SelectItem>
+   511→                    <SelectItem value="SILVER">
+   512→                      <span className="flex items-center gap-1.5">
+   513→                        <span className="h-2 w-2 rounded-full bg-gray-400" />
+   514→                        {t('Silver', 'Bac')}
+   515→                      </span>
+   516→                    </SelectItem>
+   517→                    <SelectItem value="GOLD">
+   518→                      <span className="flex items-center gap-1.5">
+   519→                        <span className="h-2 w-2 rounded-full bg-yellow-500" />
+   520→                        {t('Gold', 'Vang')}
+   521→                      </span>
+   522→                    </SelectItem>
+   523→                    <SelectItem value="PLATINUM">
+   524→                      <span className="flex items-center gap-1.5">
+   525→                        <span className="h-2 w-2 rounded-full bg-purple-500" />
+   526→                        {t('Platinum', 'Bach Kim')}
+   527→                      </span>
+   528→                    </SelectItem>
+   529→                  </SelectContent>
+   530→                </Select>
+   531→
+   532→                {/* Shop Type Filter */}
+   533→                <Select value={shopTypeFilter} onValueChange={(val) => { setShopTypeFilter(val); setPage(1); }}>
+   534→                  <SelectTrigger className="w-full sm:w-[145px] h-9">
+   535→                    <SelectValue placeholder={t('Shop Type', 'Loai CH')} />
+   536→                  </SelectTrigger>
+   537→                  <SelectContent>
+   538→                    <SelectItem value="all">{t('All Types', 'Tat loai')}</SelectItem>
+   539→                    <SelectItem value="TAPHOA">{t('Mom-and-pop', 'Tap hoa')}</SelectItem>
+   540→                    <SelectItem value="CONVENIENCE">{t('Convenience', 'Tien loi')}</SelectItem>
+   541→                    <SelectItem value="FACTORY">{t('Factory', 'Cong nghiep')}</SelectItem>
+   542→                  </SelectContent>
+   543→                </Select>
+   544→
+   545→                {/* Sort */}
+   546→                <Select value={sortBy} onValueChange={setSortBy}>
+   547→                  <SelectTrigger className="w-full sm:w-[140px] h-9">
+   548→                    <SelectValue placeholder={t('Sort by', 'Sap xep')} />
+   549→                  </SelectTrigger>
+   550→                  <SelectContent>
+   551→                    <SelectItem value="createdAt">{t('Newest', 'Moi nhat')}</SelectItem>
+   552→                    <SelectItem value="name">{t('Name', 'Ten')}</SelectItem>
+   553→                    <SelectItem value="totalGmv">{t('Total GMV', 'Tong GMV')}</SelectItem>
+   554→                    <SelectItem value="totalOrders">{t('Orders', 'Don hang')}</SelectItem>
+   555→                    <SelectItem value="creditBalance">{t('Credit Used', 'No da dung')}</SelectItem>
+   556→                    <SelectItem value="avgOrderValue">{t('Avg Order', 'TB don hang')}</SelectItem>
+   557→                  </SelectContent>
+   558→                </Select>
+   559→
+   560→                <Button
+   561→                  variant="ghost"
+   562→                  size="icon"
+   563→                  className="h-9 w-9"
+   564→                  onClick={() => setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
+   565→                  title={sortOrder === 'desc' ? t('Descending', 'Giam dan') : t('Ascending', 'Tang dan')}
+   566→                >
+   567→                  <ArrowUpDown className="h-4 w-4" />
+   568→                </Button>
+   569→
+   570→                {/* Reset */}
+   571→                {hasActiveFilters && (
+   572→                  <Button
+   573→                    variant="ghost"
+   574→                    size="sm"
+   575→                    className="h-9"
+   576→                    onClick={handleResetFilters}
+   577→                  >
+   578→                    <RotateCcw className="h-3.5 w-3.5 mr-1" />
+   579→                    {t('Reset', 'Dat lai')}
+   580→                  </Button>
+   581→                )}
+   582→              </div>
+   583→            </CardContent>
+   584→          </Card>
+   585→
+   586→          {/* Shops Table */}
+   587→          <Card>
+   588→            <CardContent className="p-0">
+   589→              {loading ? (
+   590→                <div className="p-4 space-y-3">
+   591→                  <Skeleton className="h-10 w-full" />
+   592→                  {Array.from({ length: 8 }).map((_, i) => (
+   593→                    <Skeleton key={i} className="h-12 w-full" />
+   594→                  ))}
+   595→                </div>
+   596→              ) : shops.length === 0 ? (
+   597→                /* Empty State */
+   598→                <div className="text-center py-16 px-4">
+   599→                  <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+   600→                    <Store className="h-8 w-8 text-muted-foreground" />
+   601→                  </div>
+   602→                  <h3 className="text-lg font-semibold">
+   603→                    {t('No shops found', 'Khong tim thay cua hang')}
+   604→                  </h3>
+   605→                  <p className="text-sm text-muted-foreground mt-1 max-w-md mx-auto">
+   606→                    {hasActiveFilters
+   607→                      ? t(
+   608→                          'Try adjusting your search or filters to find what you are looking for.',
+   609→                          'Thu thay doi tim kiem hoac bo loc de tim cua hang.'
+   610→                        )
+   611→                      : t(
+   612→                          'Shops will appear here once owners register via Zalo bot.',
+   613→                          'Cua hang se xuat hien o day khi chu cua hang dang ky qua bot Zalo.'
+   614→                        )}
+   615→                  </p>
+   616→                </div>
+   617→              ) : (
+   618→                <div className="w-full">
+   619→                  <Table>
+   620→                    <TableHeader>
+   621→                      <TableRow className="bg-muted/30">
+   622→                        <TableHead>{t('Shop', 'Cua hang')}</TableHead>
+   623→                        <TableHead>{t('Tier', 'Cap')}</TableHead>
+   624→                        <TableHead>{t('Credit', 'Cong no')}</TableHead>
+   625→                        <TableHead className="hidden md:table-cell">{t('Type', 'Loai')}</TableHead>
+   626→                        <TableHead className="hidden sm:table-cell text-center">{t('Orders', 'DH')}</TableHead>
+   627→                        <TableHead className="hidden lg:table-cell text-right">{t('GMV', 'GMV')}</TableHead>
+   628→                        <TableHead className="hidden lg:table-cell">{t('District', 'Quan')}</TableHead>
+   629→                        <TableHead className="hidden xl:table-cell">{t('Joined', 'Ngay TH')}</TableHead>
+   630→                        <TableHead className="text-right">{t('Actions', 'TH')}</TableHead>
+   631→                      </TableRow>
+   632→                    </TableHeader>
+   633→                    <TableBody>
+   634→                      {shops.map((shop) => (
+   635→                        <TableRow
+   636→                          key={shop.id}
+   637→                          className="cursor-pointer hover:bg-muted/50 transition-colors"
+   638→                          onClick={() => handleRowClick(shop.id)}
+   639→                        >
+   640→                          {/* Shop Name + Phone */}
+   641→                          <TableCell>
+   642→                            <div className="space-y-0.5">
+   643→                              <p className="text-sm font-medium truncate max-w-[180px]">
+   644→                                {shop.name}
+   645→                              </p>
+   646→                              {shop.user?.phone && (
+   647→                                <p className="text-[10px] text-muted-foreground">
+   648→                                  <SensitiveValue value={shop.user.phone} maskType="phone" />
+   649→                                </p>
+   650→                              )}
+   651→                            </div>
+   652→                          </TableCell>
+   653→
+   654→                          {/* Loyalty Tier */}
+   655→                          <TableCell>
+   656→                            <LoyaltyTierBadge tier={shop.loyaltyTier} locale={locale} />
+   657→                          </TableCell>
+   658→
+   659→                          {/* Credit Status + Available */}
+   660→                          <TableCell>
+   661→                            <div className="space-y-0.5">
+   662→                              <CreditStatusBadge status={shop.creditStatus} locale={locale} />
+   663→                              <p className="text-[10px] text-muted-foreground">
+   664→                                <SensitiveValue value={shop.creditAvailable} maskType="amount" formatOptions={{ formatCurrency: true }} />
+   665→                                {' '}{t('left', 'con lai')}
+   666→                              </p>
+   667→                            </div>
+   668→                          </TableCell>
+   669→
+   670→                          {/* Shop Type */}
+   671→                          <TableCell className="hidden md:table-cell">
+   672→                            <ShopTypeBadge type={shop.shopType} locale={locale} />
+   673→                          </TableCell>
+   674→
+   675→                          {/* Orders */}
+   676→                          <TableCell className="hidden sm:table-cell text-center">
+   677→                            <span className="text-xs text-muted-foreground">
+   678→                              {shop.totalOrders}
+   679→                            </span>
+   680→                          </TableCell>
+   681→
+   682→                          {/* GMV */}
+   683→                          <TableCell className="hidden lg:table-cell text-right">
+   684→                            <span className="text-xs font-semibold">
+   685→                              <SensitiveValue value={shop.totalGmv} maskType="amount" formatOptions={{ formatCurrency: true }} />
+   686→                            </span>
+   687→                          </TableCell>
+   688→
+   689→                          {/* District */}
+   690→                          <TableCell className="hidden lg:table-cell">
+   691→                            <span className="text-xs text-muted-foreground">
+   692→                              {shop.district || '-'}
+   693→                            </span>
+   694→                          </TableCell>
+   695→
+   696→                          {/* Created */}
+   697→                          <TableCell className="hidden xl:table-cell">
+   698→                            <span className="text-xs text-muted-foreground">
+   699→                              {new Date(shop.createdAt).toLocaleDateString('vi-VN', {
+   700→                                day: '2-digit',
+   701→                                month: '2-digit',
+   702→                                year: 'numeric',
+   703→                              })}
+   704→                            </span>
+   705→                          </TableCell>
+   706→
+   707→                          {/* Actions */}
+   708→                          <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+   709→                            <Button
+   710→                              variant="ghost"
+   711→                              size="sm"
+   712→                              className="h-8 text-xs"
+   713→                              onClick={(e) => handleEdit(e, shop.id)}
+   714→                            >
+   715→                              <Edit className="h-3.5 w-3.5 mr-1" />
+   716→                              {t('Edit', 'Sua')}
+   717→                            </Button>
+   718→                          </TableCell>
+   719→                        </TableRow>
+   720→                      ))}
+   721→                    </TableBody>
+   722→                  </Table>
+   723→
+   724→                  {/* Pagination */}
+   725→                  {totalPages > 1 && (
+   726→                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t">
+   727→                      <p className="text-xs text-muted-foreground">
+   728→                        {t(
+   729→                          `Showing ${(page - 1) * limit + 1}–${Math.min(page * limit, totalShopsCount)} of ${totalShopsCount} shops`,
+   730→                          `Hien thi ${(page - 1) * limit + 1}–${Math.min(page * limit, totalShopsCount)} / ${totalShopsCount} cua hang`
+   731→                        )}
+   732→                      </p>
+   733→                      <div className="flex items-center gap-1">
+   734→                        <Button
+   735→                          variant="outline"
+   736→                          size="icon"
+   737→                          className="h-8 w-8"
+   738→                          disabled={page <= 1}
+   739→                          onClick={() => setPage((p) => Math.max(1, p - 1))}
+   740→                        >
+   741→                          <ChevronLeft className="h-4 w-4" />
+   742→                        </Button>
+   743→                        {getPageNumbers().map((p) => (
+   744→                          <Button
+   745→                            key={p}
+   746→                            variant={p === page ? 'default' : 'outline'}
+   747→                            size="icon"
+   748→                            className={`h-8 w-8 text-xs ${p === page ? 'bg-red-600 hover:bg-red-700 text-white' : ''}`}
+   749→                            onClick={() => setPage(p)}
+   750→                          >
+   751→                            {p}
+   752→                          </Button>
+   753→                        ))}
+   754→                        <Button
+   755→                          variant="outline"
+   756→                          size="icon"
+   757→                          className="h-8 w-8"
+   758→                          disabled={page >= totalPages}
+   759→                          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+   760→                        >
+   761→                          <ChevronRight className="h-4 w-4" />
+   762→                        </Button>
+   763→                      </div>
+   764→                    </div>
+   765→                  )}
+   766→                </div>
+   767→              )}
+   768→            </CardContent>
+   769→          </Card>
+   770→
+   771→          {/* Loyalty Tier Distribution */}
+   772→          {stats && stats.tierDistribution && (
+   773→            <Card>
+   774→              <CardContent className="p-4">
+   775→                <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+   776→                  <Crown className="h-4 w-4" />
+   777→                  {t('Loyalty Tier Distribution', 'Phan bo cap thanh vien')}
+   778→                </h4>
+   779→                <div className="grid grid-cols-4 gap-3">
+   780→                  {[
+   781→                    { tier: 'BRONZE', color: 'bg-orange-500', icon: '&#9679;' },
+   782→                    { tier: 'SILVER', color: 'bg-gray-400', icon: '&#9679;' },
+   783→                    { tier: 'GOLD', color: 'bg-yellow-500', icon: '&#9733;' },
+   784→                    { tier: 'PLATINUM', color: 'bg-purple-500', icon: '&#9670;' },
+   785→                  ].map(({ tier, color }) => {
+   786→                    const count = stats.tierDistribution[tier] || 0;
+   787→                    const pct = stats.totalShops > 0 ? Math.round((count / stats.totalShops) * 100) : 0;
+   788→                    return (
+   789→                      <div key={tier} className="text-center">
+   790→                        <div className="flex items-center justify-center gap-1.5 mb-1">
+   791→                          <span className={`h-2.5 w-2.5 rounded-full ${color}`} />
+   792→                          <LoyaltyTierBadge tier={tier} locale={locale} />
+   793→                        </div>
+   794→                        <p className="text-lg font-bold">{count}</p>
+   795→                        <p className="text-xs text-muted-foreground">{pct}%</p>
+   796→                      </div>
+   797→                    );
+   798→                  })}
+   799→                </div>
+   800→              </CardContent>
+   801→            </Card>
+   802→          )}
+   803→        </main>
+   804→
+   805→        {/* Shop Detail Drawer */}
+   806→        <ShopDetailDrawer
+   807→          open={drawerOpen}
+   808→          onOpenChange={setDrawerOpen}
+   809→          shopId={selectedShopId}
+   810→          locale={locale}
+   811→          onShopUpdated={handleDataChanged}
+   812→        />
+   813→
+   814→        {/* Shop Edit Dialog */}
+   815→        <ShopEditDialog
+   816→          open={editDialogOpen}
+   817→          onOpenChange={setEditDialogOpen}
+   818→          shopId={selectedShopId}
+   819→          locale={locale}
+   820→          onUpdated={handleDataChanged}
+   821→        />
+   822→      </SidebarInset>
+   823→    </div>
+   824→  );
+   825→}
+   826→

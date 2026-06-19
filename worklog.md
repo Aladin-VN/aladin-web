@@ -144,3 +144,21 @@ Stage Summary:
 - URL construction is safer with map lookup + guard clause
 - All admin list/report pages have proper full-width table rendering
 - Consistent main content padding across all admin pages
+---
+Task ID: 1
+Agent: Main Agent
+Task: Fix order detail page "Node cannot be found" error + shop detail page + broker detail drawer
+
+Work Log:
+- Identified root cause: Radix UI Dialog (Sheet) requires SheetTitle and SheetDescription to always render non-null content in the DOM. When loading finished and data was null (API error), the drawer rendered `null` inside these components, causing "Node cannot be found in the current page" error.
+- Fixed order-detail-drawer.tsx: Changed SheetTitle and SheetDescription fallback from `null` to placeholder text ("Order Detail" / "Loading...")
+- Fixed shop-detail-drawer.tsx: Same fix — changed null fallbacks to placeholder text
+- Fixed broker-detail-drawer.tsx: Same fix + fixed invalid `maskType="email"` to `maskType="name"`
+- Fixed order-detail-drawer.tsx: Replaced `AlertDialogAction` (which auto-closes the dialog before the async cancel completes) with a regular `Button` using `e.preventDefault()`
+- Removed unused `AlertDialogAction` import
+- Verified build passes successfully
+
+Stage Summary:
+- Root cause of "Node cannot be found": Radix Dialog accessibility requirement for non-null Title/Description
+- Fixed in 3 files: order-detail-drawer.tsx, shop-detail-drawer.tsx, broker-detail-drawer.tsx
+- Build passes ✓

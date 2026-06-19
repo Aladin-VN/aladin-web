@@ -223,7 +223,9 @@ export function ShopDetailDrawer({
                 <span>{shop.name}</span>
                 <LoyaltyTierBadge tier={shop.loyaltyTier} locale={locale} size="md" />
               </>
-            ) : null}
+            ) : (
+                <span>{t('Shop Detail', 'Chi tiết cửa hàng')}</span>
+              )}
           </SheetTitle>
           <SheetDescription>
             {loading ? (
@@ -233,7 +235,9 @@ export function ShopDetailDrawer({
                 {shop.district && <span>{shop.district}, {shop.province}</span>}
                 <ShopTypeBadge type={shop.shopType} locale={locale} />
               </span>
-            ) : null}
+            ) : (
+              <span>{t('Loading...', 'Đang tải...')}</span>
+            )}
           </SheetDescription>
         </SheetHeader>
 

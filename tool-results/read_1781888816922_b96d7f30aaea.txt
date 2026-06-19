@@ -1,0 +1,599 @@
+     1→'use client';
+     2→import { adminFetch } from '@/lib/admin-fetch';
+     3→
+     4→import { useState, useEffect, useCallback } from 'react';
+     5→import {
+     6→  Sheet,
+     7→  SheetContent,
+     8→  SheetHeader,
+     9→  SheetTitle,
+    10→  SheetDescription,
+    11→} from '@/components/ui/sheet';
+    12→import { Button } from '@/components/ui/button';
+    13→import { Badge } from '@/components/ui/badge';
+    14→import { Separator } from '@/components/ui/separator';
+    15→import { Skeleton } from '@/components/ui/skeleton';
+    16→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+    17→import {
+    18→  Table,
+    19→  TableBody,
+    20→  TableCell,
+    21→  TableHead,
+    22→  TableHeader,
+    23→  TableRow,
+    24→} from '@/components/ui/table';
+    25→import { SensitiveValue } from '@/components/shared/sensitive-value';
+    26→import { LoyaltyTierBadge, CreditStatusBadge, ShopTypeBadge, OrderStatusBadge, PaymentMethodBadge } from './shop-status-badge';
+    27→import { toast } from 'sonner';
+    28→import {
+    29→  Store,
+    30→  Phone,
+    31→  MapPin,
+    32→  Calendar,
+    33→  TrendingUp,
+    34→  ShoppingBag,
+    35→  DollarSign,
+    36→  Clock,
+    37→  User,
+    38→  CreditCard,
+    39→  Zap,
+    40→  BarChart3,
+    41→  Edit,
+    42→} from 'lucide-react';
+    43→
+    44→// ============================================
+    45→// Types
+    46→// ============================================
+    47→
+    48→interface ShopDetail {
+    49→  id: string;
+    50→  name: string;
+    51→  nameEn: string | null;
+    52→  district: string | null;
+    53→  province: string;
+    54→  address: string | null;
+    55→  lat: number | null;
+    56→  lng: number | null;
+    57→  shopType: string;
+    58→  loyaltyTier: string;
+    59→  creditLimit: number;
+    60→  creditLimitFormatted: string;
+    61→  creditBalance: number;
+    62→  creditBalanceFormatted: string;
+    63→  creditAvailable: number;
+    64→  creditAvailableFormatted: string;
+    65→  creditStatus: string;
+    66→  totalOrders: number;
+    67→  totalGmv: number;
+    68→  totalGmvFormatted: string;
+    69→  avgOrderValue: number;
+    70→  avgOrderValueFormatted: string;
+    71→  createdAt: string;
+    72→  updatedAt: string;
+    73→  user: {
+    74→    id: string;
+    75→    phone: string;
+    76→    name: string;
+    77→    email: string | null;
+    78→    status: string;
+    79→    zaloId: string | null;
+    80→    lastLoginAt: string | null;
+    81→    createdAt: string;
+    82→  } | null;
+    83→  ward: {
+    84→    id: string;
+    85→    name: string;
+    86→    nameEn: string | null;
+    87→    district: string;
+    88→    province: string;
+    89→    shopCount: number;
+    90→  } | null;
+    91→  recentOrdersList: {
+    92→    id: string;
+    93→    orderNumber: string;
+    94→    status: string;
+    95→    paymentMethod: string;
+    96→    paymentStatus: string;
+    97→    totalAmount: number;
+    98→    totalAmountFormatted: string;
+    99→    itemCount: number;
+   100→    createdAt: string;
+   101→    deliveredAt: string | null;
+   102→  }[];
+   103→  transactionHistory: {
+   104→    id: string;
+   105→    type: string;
+   106→    amount: number;
+   107→    amountFormatted: string;
+   108→    runningBalance: number | null;
+   109→    runningBalanceFormatted: string | null;
+   110→    description: string | null;
+   111→    collectedBy: string | null;
+   112→    createdAt: string;
+   113→  }[];
+   114→  stats: {
+   115→    totalOrderCount: number;
+   116→    totalGmv: number;
+   117→    totalGmvFormatted: string;
+   118→    avgOrderValue: number;
+   119→    avgOrderValueFormatted: string;
+   120→    pendingOrders: number;
+   121→    deliveredOrders: number;
+   122→    recentOrders30d: number;
+   123→    recentGmv30d: number;
+   124→    recentGmv30dFormatted: string;
+   125→  };
+   126→}
+   127→
+   128→// ============================================
+   129→// Transaction Type Badge
+   130→// ============================================
+   131→
+   132→const TX_TYPE_LABELS_VI: Record<string, string> = {
+   133→  CREDIT_USED: 'Da su dung',
+   134→  REPAYMENT: 'Tra no',
+   135→  CREDIT_LIMIT_INCREASE: 'Tang han muc',
+   136→  CREDIT_LIMIT_DECREASE: 'Giam han muc',
+   137→  ORDER_PAYMENT: 'TT don hang',
+   138→  REFUND: 'Hoan tien',
+   139→};
+   140→
+   141→const TX_TYPE_LABELS_EN: Record<string, string> = {
+   142→  CREDIT_USED: 'Credit Used',
+   143→  REPAYMENT: 'Repayment',
+   144→  CREDIT_LIMIT_INCREASE: 'Limit Up',
+   145→  CREDIT_LIMIT_DECREASE: 'Limit Down',
+   146→  ORDER_PAYMENT: 'Order Payment',
+   147→  REFUND: 'Refund',
+   148→};
+   149→
+   150→const TX_TYPE_COLORS: Record<string, string> = {
+   151→  CREDIT_USED: 'text-red-600',
+   152→  REPAYMENT: 'text-red-600',
+   153→  CREDIT_LIMIT_INCREASE: 'text-blue-600',
+   154→  CREDIT_LIMIT_DECREASE: 'text-orange-600',
+   155→  ORDER_PAYMENT: 'text-purple-600',
+   156→  REFUND: 'text-amber-600',
+   157→};
+   158→
+   159→// ============================================
+   160→// Shop Detail Drawer Component
+   161→// ============================================
+   162→
+   163→interface ShopDetailDrawerProps {
+   164→  open: boolean;
+   165→  onOpenChange: (open: boolean) => void;
+   166→  shopId: string | null;
+   167→  locale: string;
+   168→  onShopUpdated?: () => void;
+   169→}
+   170→
+   171→export function ShopDetailDrawer({
+   172→  open,
+   173→  onOpenChange,
+   174→  shopId,
+   175→  locale,
+   176→  onShopUpdated,
+   177→}: ShopDetailDrawerProps) {
+   178→  const t = (en: string, vi: string) => locale === 'vi' ? vi : en;
+   179→
+   180→  const [shop, setShop] = useState<ShopDetail | null>(null);
+   181→  const [loading, setLoading] = useState(false);
+   182→  const [activeTab, setActiveTab] = useState('overview');
+   183→
+   184→  const fetchShop = useCallback(async () => {
+   185→    if (!shopId) return;
+   186→    try {
+   187→      setLoading(true);
+   188→      const res = await adminFetch(`/api/shops/${shopId}`);
+   189→      const json = await res.json();
+   190→      if (json.success) {
+   191→        setShop(json.data);
+   192→      } else {
+   193→        toast.error(t('Failed to load shop', 'Khong the tai thong tin cua hang'));
+   194→      }
+   195→    } catch (err) {
+   196→      console.error('Fetch shop detail error:', err);
+   197→      toast.error(t('Network error', 'Loi mang'));
+   198→    } finally {
+   199→      setLoading(false);
+   200→    }
+   201→  }, [shopId, t]);
+   202→
+   203→  useEffect(() => {
+   204→    if (open && shopId) {
+   205→      fetchShop();
+   206→      setActiveTab('overview');
+   207→    }
+   208→    if (!open) {
+   209→      setShop(null);
+   210→    }
+   211→  }, [open, shopId, fetchShop]);
+   212→
+   213→  return (
+   214→    <Sheet open={open} onOpenChange={onOpenChange}>
+   215→      <SheetContent side="right" className="sm:max-w-2xl w-full overflow-y-auto">
+   216→        <SheetHeader className="pr-6">
+   217→          <SheetTitle className="flex items-center gap-2 text-base">
+   218→            {loading ? (
+   219→              <Skeleton className="h-5 w-48" />
+   220→            ) : shop ? (
+   221→              <>
+   222→                <Store className="h-4 w-4 text-red-600" />
+   223→                <span>{shop.name}</span>
+   224→                <LoyaltyTierBadge tier={shop.loyaltyTier} locale={locale} size="md" />
+   225→              </>
+   226→            ) : null}
+   227→          </SheetTitle>
+   228→          <SheetDescription>
+   229→            {loading ? (
+   230→              <Skeleton className="h-4 w-32" />
+   231→            ) : shop ? (
+   232→              <span className="flex items-center gap-2">
+   233→                {shop.district && <span>{shop.district}, {shop.province}</span>}
+   234→                <ShopTypeBadge type={shop.shopType} locale={locale} />
+   235→              </span>
+   236→            ) : null}
+   237→          </SheetDescription>
+   238→        </SheetHeader>
+   239→
+   240→        {loading ? (
+   241→          <div className="flex-1 p-4 space-y-4">
+   242→            <Skeleton className="h-24 w-full" />
+   243→            <Skeleton className="h-48 w-full" />
+   244→            <Skeleton className="h-32 w-full" />
+   245→            <Skeleton className="h-40 w-full" />
+   246→          </div>
+   247→        ) : shop ? (
+   248→          <div className="flex-1 px-4 pb-6">
+   249→            <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
+   250→              <TabsList className="grid w-full grid-cols-3">
+   251→                <TabsTrigger value="overview" className="text-xs">
+   252→                  {t('Overview', 'Tong quan')}
+   253→                </TabsTrigger>
+   254→                <TabsTrigger value="orders" className="text-xs">
+   255→                  {t('Orders', 'Don hang')} ({shop.stats.pendingOrders > 0 ? `${shop.stats.pendingOrders}!` : shop.stats.totalOrderCount})
+   256→                </TabsTrigger>
+   257→                <TabsTrigger value="credit" className="text-xs">
+   258→                  {t('Credit', 'Cong no')}
+   259→                </TabsTrigger>
+   260→              </TabsList>
+   261→
+   262→              {/* OVERVIEW TAB */}
+   263→              <TabsContent value="overview" className="space-y-4 mt-4">
+   264→                {/* Quick Stats Grid */}
+   265→                <div className="grid grid-cols-2 gap-3">
+   266→                  <div className="rounded-lg border p-3 space-y-1">
+   267→                    <div className="flex items-center gap-1.5">
+   268→                      <ShoppingBag className="h-3.5 w-3.5 text-muted-foreground" />
+   269→                      <span className="text-[10px] text-muted-foreground uppercase font-medium">
+   270→                        {t('Total Orders', 'Tong don hang')}
+   271→                      </span>
+   272→                    </div>
+   273→                    <p className="text-lg font-bold">{shop.stats.totalOrderCount}</p>
+   274→                    <p className="text-[10px] text-muted-foreground">
+   275→                      {t('Pending', 'Cho XL')}: {shop.stats.pendingOrders} &middot; {t('Delivered', 'Da giao')}: {shop.stats.deliveredOrders}
+   276→                    </p>
+   277→                  </div>
+   278→
+   279→                  <div className="rounded-lg border p-3 space-y-1">
+   280→                    <div className="flex items-center gap-1.5">
+   281→                      <TrendingUp className="h-3.5 w-3.5 text-red-600" />
+   282→                      <span className="text-[10px] text-muted-foreground uppercase font-medium">
+   283→                        {t('Total GMV', 'Tong GMV')}
+   284→                      </span>
+   285→                    </div>
+   286→                    <p className="text-lg font-bold text-red-700">
+   287→                      <SensitiveValue value={shop.stats.totalGmv} maskType="amount" formatOptions={{ formatCurrency: true }} />
+   288→                    </p>
+   289→                    <p className="text-[10px] text-muted-foreground">
+   290→                      {t('Avg', 'TB')}: <SensitiveValue value={shop.stats.avgOrderValue} maskType="amount" formatOptions={{ formatCurrency: true }} />
+   291→                    </p>
+   292→                  </div>
+   293→
+   294→                  <div className="rounded-lg border p-3 space-y-1">
+   295→                    <div className="flex items-center gap-1.5">
+   296→                      <BarChart3 className="h-3.5 w-3.5 text-blue-600" />
+   297→                      <span className="text-[10px] text-muted-foreground uppercase font-medium">
+   298→                        {t('Last 30 Days', '30 ngay qua')}
+   299→                      </span>
+   300→                    </div>
+   301→                    <p className="text-lg font-bold">{shop.stats.recentOrders30d} <span className="text-xs font-normal text-muted-foreground">{t('orders', 'don')}</span></p>
+   302→                    <p className="text-[10px] text-muted-foreground">
+   303→                      <SensitiveValue value={shop.stats.recentGmv30d} maskType="amount" formatOptions={{ formatCurrency: true }} />
+   304→                    </p>
+   305→                  </div>
+   306→
+   307→                  <div className="rounded-lg border p-3 space-y-1">
+   308→                    <div className="flex items-center gap-1.5">
+   309→                      <CreditCard className="h-3.5 w-3.5 text-muted-foreground" />
+   310→                      <span className="text-[10px] text-muted-foreground uppercase font-medium">
+   311→                        {t('Credit', 'Cong no')}
+   312→                      </span>
+   313→                    </div>
+   314→                    <div className="flex items-center gap-1.5">
+   315→                      <CreditStatusBadge status={shop.creditStatus} locale={locale} />
+   316→                    </div>
+   317→                    <p className="text-[10px]">
+   318→                      <span className="text-muted-foreground">{t('Available', 'Con lai')}: </span>
+   319→                      <span className={`font-semibold ${shop.creditAvailable === 0 ? 'text-red-600' : 'text-red-600'}`}>
+   320→                        <SensitiveValue value={shop.creditAvailable} maskType="amount" formatOptions={{ formatCurrency: true }} />
+   321→                      </span>
+   322→                    </p>
+   323→                  </div>
+   324→                </div>
+   325→
+   326→                <Separator />
+   327→
+   328→                {/* Shop Info */}
+   329→                <div className="rounded-lg border p-4 space-y-3">
+   330→                  <h4 className="text-sm font-semibold flex items-center gap-2">
+   331→                    <Store className="h-4 w-4" />
+   332→                    {t('Shop Information', 'Thong tin cua hang')}
+   333→                  </h4>
+   334→                  <div className="grid grid-cols-2 gap-3">
+   335→                    <div className="space-y-1.5">
+   336→                      <div className="flex items-center gap-2">
+   337→                        <User className="h-3.5 w-3.5 text-muted-foreground" />
+   338→                        <span className="text-xs text-muted-foreground">{t('Owner', 'Chu cua hang')}</span>
+   339→                      </div>
+   340→                      <p className="text-sm font-medium pl-5.5">
+   341→                        <SensitiveValue value={shop.user?.name || '-'} maskType="name" />
+   342→                      </p>
+   343→                    </div>
+   344→                    <div className="space-y-1.5">
+   345→                      <div className="flex items-center gap-2">
+   346→                        <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+   347→                        <span className="text-xs text-muted-foreground">{t('Phone', 'Dien thoai')}</span>
+   348→                      </div>
+   349→                      <p className="text-sm font-medium pl-5.5">
+   350→                        <SensitiveValue value={shop.user?.phone || '-'} maskType="phone" />
+   351→                      </p>
+   352→                    </div>
+   353→                    <div className="space-y-1.5 col-span-2">
+   354→                      <div className="flex items-center gap-2">
+   355→                        <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+   356→                        <span className="text-xs text-muted-foreground">{t('Address', 'Dia chi')}</span>
+   357→                      </div>
+   358→                      <p className="text-sm pl-5.5">
+   359→                        {shop.address || '-'}
+   360→                        {shop.district ? `, ${shop.district}` : ''}
+   361→                        {shop.province ? `, ${shop.province}` : ''}
+   362→                      </p>
+   363→                    </div>
+   364→                    {shop.ward && (
+   365→                      <div className="space-y-1.5">
+   366→                        <span className="text-xs text-muted-foreground">{t('Ward', 'Phuong/Xa')}</span>
+   367→                        <p className="text-sm font-medium">{shop.ward.name}</p>
+   368→                      </div>
+   369→                    )}
+   370→                    <div className="space-y-1.5">
+   371→                      <span className="text-xs text-muted-foreground">{t('Zalo ID', 'Zalo ID')}</span>
+   372→                      <p className="text-sm font-medium font-mono">
+   373→                        {shop.user?.zaloId ? <SensitiveValue value={shop.user.zaloId} maskType="id" /> : '-'}
+   374→                      </p>
+   375→                    </div>
+   376→                    <div className="space-y-1.5">
+   377→                      <span className="text-xs text-muted-foreground">{t('Loyalty Tier', 'Cap thanh vien')}</span>
+   378→                      <div className="pl-0">
+   379→                        <LoyaltyTierBadge tier={shop.loyaltyTier} locale={locale} size="md" />
+   380→                      </div>
+   381→                    </div>
+   382→                    <div className="space-y-1.5">
+   383→                      <span className="text-xs text-muted-foreground">{t('Shop Type', 'Loai cua hang')}</span>
+   384→                      <div className="pl-0">
+   385→                        <ShopTypeBadge type={shop.shopType} locale={locale} />
+   386→                      </div>
+   387→                    </div>
+   388→                    <div className="space-y-1.5">
+   389→                      <span className="text-xs text-muted-foreground">{t('Joined', 'Ngay tham gia')}</span>
+   390→                      <p className="text-sm">
+   391→                        <Calendar className="h-3 w-3 inline mr-1" />
+   392→                        {new Date(shop.createdAt).toLocaleDateString('vi-VN', {
+   393→                          day: '2-digit', month: '2-digit', year: 'numeric',
+   394→                        })}
+   395→                      </p>
+   396→                    </div>
+   397→                    {shop.user?.lastLoginAt && (
+   398→                      <div className="space-y-1.5">
+   399→                        <span className="text-xs text-muted-foreground">{t('Last Login', 'Dang nhap gan nhat')}</span>
+   400→                        <p className="text-sm">
+   401→                          <Clock className="h-3 w-3 inline mr-1" />
+   402→                          {new Date(shop.user.lastLoginAt).toLocaleString('vi-VN')}
+   403→                        </p>
+   404→                      </div>
+   405→                    )}
+   406→                  </div>
+   407→                </div>
+   408→              </TabsContent>
+   409→
+   410→              {/* ORDERS TAB */}
+   411→              <TabsContent value="orders" className="space-y-4 mt-4">
+   412→                <div className="rounded-lg border p-4 space-y-3">
+   413→                  <h4 className="text-sm font-semibold flex items-center gap-2">
+   414→                    <ShoppingBag className="h-4 w-4" />
+   415→                    {t('Recent Orders', 'Don hang gan day')}
+   416→                  </h4>
+   417→                  {shop.recentOrdersList.length === 0 ? (
+   418→                    <p className="text-sm text-muted-foreground py-4 text-center">
+   419→                      {t('No orders yet', 'Chua co don hang nao')}
+   420→                    </p>
+   421→                  ) : (
+   422→                    <div className="max-h-[400px] overflow-y-auto">
+   423→                      <Table>
+   424→                        <TableHeader>
+   425→                          <TableRow className="bg-muted/30">
+   426→                            <TableHead className="text-xs">{t('Order #', 'Ma DH')}</TableHead>
+   427→                            <TableHead className="text-xs">{t('Status', 'TT')}</TableHead>
+   428→                            <TableHead className="text-xs hidden sm:table-cell">{t('Payment', 'TT')}</TableHead>
+   429→                            <TableHead className="text-xs text-center hidden sm:table-cell">{t('Items', 'SP')}</TableHead>
+   430→                            <TableHead className="text-xs text-right">{t('Total', 'Tong')}</TableHead>
+   431→                            <TableHead className="text-xs hidden md:table-cell">{t('Date', 'Ngay')}</TableHead>
+   432→                          </TableRow>
+   433→                        </TableHeader>
+   434→                        <TableBody>
+   435→                          {shop.recentOrdersList.map((order) => (
+   436→                            <TableRow key={order.id} className="cursor-pointer hover:bg-muted/50">
+   437→                              <TableCell className="font-mono text-xs">{order.orderNumber}</TableCell>
+   438→                              <TableCell>
+   439→                                <OrderStatusBadge status={order.status} locale={locale} />
+   440→                              </TableCell>
+   441→                              <TableCell className="hidden sm:table-cell">
+   442→                                <PaymentMethodBadge method={order.paymentMethod} locale={locale} />
+   443→                              </TableCell>
+   444→                              <TableCell className="text-center hidden sm:table-cell text-xs">{order.itemCount}</TableCell>
+   445→                              <TableCell className="text-right text-xs font-semibold">
+   446→                                <SensitiveValue value={order.totalAmount} maskType="amount" formatOptions={{ formatCurrency: true }} />
+   447→                              </TableCell>
+   448→                              <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
+   449→                                {new Date(order.createdAt).toLocaleDateString('vi-VN', {
+   450→                                  day: '2-digit', month: '2-digit',
+   451→                                })}
+   452→                              </TableCell>
+   453→                            </TableRow>
+   454→                          ))}
+   455→                        </TableBody>
+   456→                      </Table>
+   457→                    </div>
+   458→                  )}
+   459→                </div>
+   460→              </TabsContent>
+   461→
+   462→              {/* CREDIT TAB */}
+   463→              <TabsContent value="credit" className="space-y-4 mt-4">
+   464→                {/* Credit Summary */}
+   465→                <div className="rounded-lg border p-4 space-y-3">
+   466→                  <h4 className="text-sm font-semibold flex items-center gap-2">
+   467→                    <CreditCard className="h-4 w-4" />
+   468→                    {t('Credit Account', 'Tai khoan tin dung')}
+   469→                  </h4>
+   470→                  <div className="grid grid-cols-3 gap-3">
+   471→                    <div className="text-center p-2 rounded-md bg-muted/30">
+   472→                      <p className="text-[10px] text-muted-foreground uppercase">{t('Limit', 'Han muc')}</p>
+   473→                      <p className="text-sm font-bold mt-1">
+   474→                        <SensitiveValue value={shop.creditLimit} maskType="amount" formatOptions={{ formatCurrency: true }} />
+   475→                      </p>
+   476→                    </div>
+   477→                    <div className="text-center p-2 rounded-md bg-red-50 dark:bg-red-950/20">
+   478→                      <p className="text-[10px] text-red-600 uppercase">{t('Used', 'Da dung')}</p>
+   479→                      <p className="text-sm font-bold mt-1 text-red-600">
+   480→                        <SensitiveValue value={shop.creditBalance} maskType="amount" formatOptions={{ formatCurrency: true }} />
+   481→                      </p>
+   482→                    </div>
+   483→                    <div className="text-center p-2 rounded-md bg-yellow-50 dark:bg-emerald-950/20">
+   484→                      <p className="text-[10px] text-red-600 uppercase">{t('Available', 'Con lai')}</p>
+   485→                      <p className="text-sm font-bold mt-1 text-red-600">
+   486→                        <SensitiveValue value={shop.creditAvailable} maskType="amount" formatOptions={{ formatCurrency: true }} />
+   487→                      </p>
+   488→                    </div>
+   489→                  </div>
+   490→                  <div className="flex items-center justify-between">
+   491→                    <span className="text-xs text-muted-foreground">{t('Status', 'Trang thai')}</span>
+   492→                    <CreditStatusBadge status={shop.creditStatus} locale={locale} />
+   493→                  </div>
+   494→                  {shop.creditBalance > 0 && shop.creditStatus === 'ACTIVE' && (
+   495→                    <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/20 rounded p-2">
+   496→                      <Zap className="h-3.5 w-3.5" />
+   497→                      {t(
+   498→                        'Credit is being used. Payment due within 7 days of order.',
+   499→                        'Dang su dung cong no. Han tra trong 7 ngay ke tu khi dat don.'
+   500→                      )}
+   501→                    </div>
+   502→                  )}
+   503→                  {shop.creditStatus === 'OVERDUE' && (
+   504→                    <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 dark:bg-red-950/20 rounded p-2">
+   505→                      <span>&#9888;</span>
+   506→                      {t(
+   507→                        'Credit is overdue! Shop cannot place new orders until repayment.',
+   508→                        'Cong no qua han! Cua hang khong the dat don moi cho den khi tra no.'
+   509→                      )}
+   510→                    </div>
+   511→                  )}
+   512→                  {shop.creditStatus === 'LOCKED' && (
+   513→                    <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 dark:bg-red-950/20 rounded p-2">
+   514→                      <span>&#128274;</span>
+   515→                      {t(
+   516→                        'Credit account is locked. Contact admin to resolve.',
+   517→                        'Tai khoan tin dung da bi khoa. Lien he quan tri de giai quyet.'
+   518→                      )}
+   519→                    </div>
+   520→                  )}
+   521→                </div>
+   522→
+   523→                {/* Transaction History */}
+   524→                <div className="rounded-lg border p-4 space-y-3">
+   525→                  <h4 className="text-sm font-semibold flex items-center gap-2">
+   526→                    <DollarSign className="h-4 w-4" />
+   527→                    {t('Transaction History', 'Lich su giao dich')}
+   528→                  </h4>
+   529→                  {shop.transactionHistory.length === 0 ? (
+   530→                    <p className="text-sm text-muted-foreground py-4 text-center">
+   531→                      {t('No transactions yet', 'Chua co giao dich nao')}
+   532→                    </p>
+   533→                  ) : (
+   534→                    <div className="max-h-[300px] overflow-y-auto">
+   535→                      <Table>
+   536→                        <TableHeader>
+   537→                          <TableRow className="bg-muted/30">
+   538→                            <TableHead className="text-xs">{t('Type', 'Loai')}</TableHead>
+   539→                            <TableHead className="text-xs text-right">{t('Amount', 'So tien')}</TableHead>
+   540→                            <TableHead className="text-xs text-right hidden sm:table-cell">{t('Balance', 'So du')}</TableHead>
+   541→                            <TableHead className="text-xs hidden md:table-cell">{t('Date', 'Ngay')}</TableHead>
+   542→                          </TableRow>
+   543→                        </TableHeader>
+   544→                        <TableBody>
+   545→                          {shop.transactionHistory.map((tx) => {
+   546→                            const isCredit = tx.type === 'REPAYMENT' || tx.type === 'CREDIT_LIMIT_INCREASE' || tx.type === 'REFUND';
+   547→                            return (
+   548→                              <TableRow key={tx.id}>
+   549→                                <TableCell>
+   550→                                  <span className={`text-xs font-medium ${TX_TYPE_COLORS[tx.type] || ''}`}>
+   551→                                    {locale === 'vi' ? (TX_TYPE_LABELS_VI[tx.type] || tx.type) : (TX_TYPE_LABELS_EN[tx.type] || tx.type)}
+   552→                                  </span>
+   553→                                  {tx.description && (
+   554→                                    <p className="text-[10px] text-muted-foreground mt-0.5 max-w-[200px] truncate">
+   555→                                      {tx.description}
+   556→                                    </p>
+   557→                                  )}
+   558→                                </TableCell>
+   559→                                <TableCell className="text-right">
+   560→                                  <span className={`text-xs font-semibold ${isCredit ? 'text-red-600' : 'text-red-600'}`}>
+   561→                                    {isCredit ? '+' : '-'}
+   562→                                    <SensitiveValue value={tx.amount} maskType="amount" formatOptions={{ formatCurrency: true }} />
+   563→                                  </span>
+   564→                                </TableCell>
+   565→                                <TableCell className="text-right hidden sm:table-cell">
+   566→                                  {tx.runningBalance !== null ? (
+   567→                                    <span className="text-xs text-muted-foreground">
+   568→                                      <SensitiveValue value={tx.runningBalance} maskType="amount" formatOptions={{ formatCurrency: true }} />
+   569→                                    </span>
+   570→                                  ) : '-'}
+   571→                                </TableCell>
+   572→                                <TableCell className="hidden md:table-cell">
+   573→                                  <span className="text-xs text-muted-foreground">
+   574→                                    {new Date(tx.createdAt).toLocaleDateString('vi-VN', {
+   575→                                      day: '2-digit', month: '2-digit', year: 'numeric',
+   576→                                    })}
+   577→                                  </span>
+   578→                                </TableCell>
+   579→                              </TableRow>
+   580→                            );
+   581→                          })}
+   582→                        </TableBody>
+   583→                      </Table>
+   584→                    </div>
+   585→                  )}
+   586→                </div>
+   587→              </TabsContent>
+   588→            </Tabs>
+   589→          </div>
+   590→        ) : (
+   591→          <div className="flex-1 flex items-center justify-center p-8">
+   592→            <p className="text-sm text-muted-foreground">{t('No shop selected', 'Chua chon cua hang')}</p>
+   593→          </div>
+   594→        )}
+   595→      </SheetContent>
+   596→    </Sheet>
+   597→  );
+   598→}
+   599→
