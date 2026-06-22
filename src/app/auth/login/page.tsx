@@ -32,6 +32,19 @@ function LoginForm() {
 
   useEffect(() => {
     setMounted(true);
+
+    // CRITICAL: Unregister any old service worker that may be intercepting requests
+    // The old SW (v1) was breaking admin page navigation with FetchEvent errors
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then((registrations) => {
+        registrations.forEach((reg) => {
+          if (reg.scope === window.location.origin + '/') {
+            reg.unregister().catch(() => {});
+          }
+        });
+      }).catch(() => {});
+    }
+
     const token = localStorage.getItem('aladin-access-token');
     const userData = localStorage.getItem('aladin-user');
     if (token && userData) {
