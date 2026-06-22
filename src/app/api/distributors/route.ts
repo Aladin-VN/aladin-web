@@ -83,7 +83,8 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, nameEn, contactPerson, contactPhone, email, address, lat, lng } = body;
+    const { name, nameEn, contactPerson, contactPhone, email, address, lat, lng,
+            bankName, bankAccount, bankHolder, taxId, commissionRate, deliveryFeeShare } = body;
 
     // Validation
     if (!name || typeof name !== 'string' || name.trim().length < 2) {
@@ -107,6 +108,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate commission rate (0 to 1)
+    let parsedCommissionRate = 0.03; // default 3%
+    if (commissionRate !== undefined) {
+      parsedCommissionRate = parseFloat(commissionRate);
+      if (isNaN(parsedCommissionRate) || parsedCommissionRate < 0 || parsedCommissionRate > 1) {
+        return NextResponse.json(
+          errorResponse('VALIDATION_ERROR', 'Commission rate must be between 0 and 1 (e.g. 0.03 for 3%)'),
+          { status: 400 }
+        );
+      }
+    }
+
+    // Validate delivery fee share (0 to 1)
+    let parsedDeliveryFeeShare = 0.5; // default 50%
+    if (deliveryFeeShare !== undefined) {
+      parsedDeliveryFeeShare = parseFloat(deliveryFeeShare);
+      if (isNaN(parsedDeliveryFeeShare) || parsedDeliveryFeeShare < 0 || parsedDeliveryFeeShare > 1) {
+        return NextResponse.json(
+          errorResponse('VALIDATION_ERROR', 'Delivery fee share must be between 0 and 1'),
+          { status: 400 }
+        );
+      }
+    }
+
     const distributor = await db.distributor.create({
       data: {
         name: name.trim(),
@@ -117,6 +142,12 @@ export async function POST(request: NextRequest) {
         address: address?.trim() || null,
         lat: lat !== undefined ? parseFloat(lat) : null,
         lng: lng !== undefined ? parseFloat(lng) : null,
+        bankName: bankName?.trim() || null,
+        bankAccount: bankAccount?.trim() || null,
+        bankHolder: bankHolder?.trim() || null,
+        taxId: taxId?.trim() || null,
+        commissionRate: parsedCommissionRate,
+        deliveryFeeShare: parsedDeliveryFeeShare,
         isActive: true,
       },
     });

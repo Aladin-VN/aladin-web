@@ -74,7 +74,8 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const { name, nameEn, contactPerson, contactPhone, email, address, lat, lng, isActive } = body;
+    const { name, nameEn, contactPerson, contactPhone, email, address, lat, lng, isActive,
+            bankName, bankAccount, bankHolder, taxId, commissionRate, deliveryFeeShare } = body;
 
     // Validate distributor exists
     const existing = await db.distributor.findUnique({ where: { id } });
@@ -104,6 +105,20 @@ export async function PUT(
       }
     }
 
+    if (commissionRate !== undefined) {
+      const cr = parseFloat(commissionRate);
+      if (isNaN(cr) || cr < 0 || cr > 1) {
+        return NextResponse.json(errorResponse('VALIDATION_ERROR', 'Commission rate must be 0-1'), { status: 400 });
+      }
+    }
+
+    if (deliveryFeeShare !== undefined) {
+      const dfs = parseFloat(deliveryFeeShare);
+      if (isNaN(dfs) || dfs < 0 || dfs > 1) {
+        return NextResponse.json(errorResponse('VALIDATION_ERROR', 'Delivery fee share must be 0-1'), { status: 400 });
+      }
+    }
+
     const updated = await db.distributor.update({
       where: { id },
       data: {
@@ -116,6 +131,12 @@ export async function PUT(
         ...(lat !== undefined ? { lat: parseFloat(lat) } : {}),
         ...(lng !== undefined ? { lng: parseFloat(lng) } : {}),
         ...(isActive !== undefined ? { isActive: Boolean(isActive) } : {}),
+        ...(bankName !== undefined ? { bankName: bankName?.trim() || null } : {}),
+        ...(bankAccount !== undefined ? { bankAccount: bankAccount?.trim() || null } : {}),
+        ...(bankHolder !== undefined ? { bankHolder: bankHolder?.trim() || null } : {}),
+        ...(taxId !== undefined ? { taxId: taxId?.trim() || null } : {}),
+        ...(commissionRate !== undefined ? { commissionRate: parseFloat(commissionRate) } : {}),
+        ...(deliveryFeeShare !== undefined ? { deliveryFeeShare: parseFloat(deliveryFeeShare) } : {}),
       },
     });
 
