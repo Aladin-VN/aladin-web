@@ -3,7 +3,8 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Phone, Lock, Eye, EyeOff, Loader2, ShieldCheck, Store, Truck, Users, BarChart3, Sparkles, Zap } from 'lucide-react';
+import { useAuth } from '@/providers/app-provider';
+import { Phone, Lock, Eye, EyeOff, Loader2, ShieldCheck, Store, Truck, Users, BarChart3, Sparkles, Zap, Warehouse } from 'lucide-react';
 
 // ============================================
 // ALADIN Admin / Desktop Login Page
@@ -16,11 +17,13 @@ const DEMO_ACCOUNTS = [
   { phone: '0911111111', role: 'Sales Rep', icon: Users, desc: 'All shops & payments' },
   { phone: '0922222222', role: 'Driver', icon: Truck, desc: 'Assigned deliveries' },
   { phone: '0933333333', role: 'Broker', icon: BarChart3, desc: 'Referred shops & commission' },
+  { phone: '0944444444', role: 'Distributor', icon: Warehouse, desc: 'Inventory & settlements' },
 ];
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { login: authLogin } = useAuth();
   const redirectPath = searchParams.get('redirect') || '/';
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -80,9 +83,10 @@ function LoginForm() {
       if (json.success && json.data) {
         const { accessToken, refreshToken, user } = json.data;
 
-        localStorage.setItem('aladin-access-token', accessToken);
-        localStorage.setItem('aladin-refresh-token', refreshToken);
-        localStorage.setItem('aladin-user', JSON.stringify({
+        // Use AppProvider's login() to update state + localStorage atomically
+        authLogin({
+          accessToken,
+          refreshToken,
           userId: user.id || user.userId,
           phone: user.phone,
           name: user.name,
@@ -97,7 +101,7 @@ function LoginForm() {
             commissionRate: user.distributor.distributor.commissionRate,
             pendingPayoutAmount: user.distributor.distributor.pendingPayoutAmount,
           } : null,
-        }));
+        });
 
         if (user.role === 'DRIVER' && redirectPath === '/') {
           router.replace('/shipments');

@@ -48,10 +48,23 @@ export async function getAuthUser(request: NextRequest): Promise<AuthUser | null
   const payload = verifyAccessToken(token);
   if (!payload) return null;
 
-  const user = await getCurrentUser(payload.userId);
-  if (!user) return null;
+  const dbUser = await getCurrentUser(payload.userId);
+  if (!dbUser) return null;
 
-  return user as unknown as AuthUser;
+  // Map DB fields (id) to AuthUser fields (userId)
+  const authUser: AuthUser = {
+    userId: dbUser.id as string,
+    phone: dbUser.phone as string,
+    name: dbUser.name as string,
+    role: dbUser.role as string,
+    shopId: (dbUser as Record<string, unknown>).shopId as string | null ?? null,
+    shop: dbUser.shop as AuthUser['shop'],
+    broker: dbUser.broker as AuthUser['broker'],
+    distributorId: (dbUser as Record<string, unknown>).distributorId as string | null ?? null,
+    distributor: dbUser.distributor as AuthUser['distributor'],
+  };
+
+  return authUser;
 }
 
 /**

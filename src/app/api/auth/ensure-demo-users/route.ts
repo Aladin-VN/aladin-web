@@ -15,6 +15,7 @@ const DEMO_USERS = [
   { phone: '0911111111', name: 'Nguyễn Văn An', nameEn: 'Nguyen Van An', role: 'SALES_REP' },
   { phone: '0922222222', name: 'Trần Văn B driver', nameEn: 'Tran Van B driver', role: 'DRIVER' },
   { phone: '0933333333', name: 'Lê Thị C broker', nameEn: 'Le Thi C broker', role: 'BROKER' },
+  { phone: '0944444444', name: 'Nhà phân phối Bình Dương', nameEn: 'Binh Duong Distributor', role: 'DISTRIBUTOR' },
 ];
 
 export async function POST() {
@@ -78,6 +79,28 @@ export async function POST() {
             data: {
               userId: newUser.id,
               tier: 'WARD_LEVEL',
+            },
+          });
+        }
+
+        // For DISTRIBUTOR, create a distributor + DistributorUser link
+        if (demo.role === 'DISTRIBUTOR') {
+          const distributor = await db.distributor.create({
+            data: {
+              name: demo.name,
+              nameEn: demo.nameEn,
+              address: 'Bình Dương, Việt Nam',
+              contactPerson: demo.name,
+              contactPhone: demo.phone,
+              commissionRate: 0.03,
+              deliveryFeeShare: 0.5,
+              isActive: true,
+            },
+          });
+          await db.distributorUser.create({
+            data: {
+              userId: newUser.id,
+              distributorId: distributor.id,
             },
           });
         }

@@ -1,0 +1,802 @@
+     1→'use client';
+     2→import { adminFetch } from '@/lib/admin-fetch';
+     3→import { useLocale } from '@/providers/app-provider';
+     4→
+     5→import { useState, useEffect, useCallback, useRef } from 'react';
+     6→import {
+     7→  CreditCard,
+     8→  AlertTriangle,
+     9→  Lock,
+    10→  Clock,
+    11→  Percent,
+    12→  Search,
+    13→  ChevronLeft,
+    14→  ChevronRight,
+    15→  RefreshCw,
+    16→  ScrollText,
+    17→  SlidersHorizontal,
+    18→  Loader2,
+    19→  ShieldCheck,
+    20→  Zap,
+    21→  Phone,
+    22→  Calendar,
+    23→} from 'lucide-react';
+    24→import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+    25→import { Badge } from '@/components/ui/badge';
+    26→import { Button } from '@/components/ui/button';
+    27→import { Skeleton } from '@/components/ui/skeleton';
+    28→import { Input } from '@/components/ui/input';
+    29→import { Progress } from '@/components/ui/progress';
+    30→import { Separator } from '@/components/ui/separator';
+    31→import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+    32→import {
+    33→  Table,
+    34→  TableBody,
+    35→  TableCell,
+    36→  TableHead,
+    37→  TableHeader,
+    38→  TableRow,
+    39→} from '@/components/ui/table';
+    40→import { AdminSidebar } from '@/components/layout/admin-sidebar';
+    41→import { AdminHeader } from '@/components/layout/admin-header';
+    42→import { SidebarInset } from '@/components/ui/sidebar';
+    43→import { SensitiveValue } from '@/components/shared/sensitive-value';
+    44→import { CreditStatusBadge } from '@/components/credit/credit-status-badge';
+    45→import { CreditAdjustDialog } from '@/components/credit/credit-adjust-dialog';
+    46→import { TransactionLedgerDialog } from '@/components/credit/transaction-ledger-dialog';
+    47→import { formatVND } from '@/lib/security';
+    48→import { toast } from 'sonner';
+    49→
+    50→// ============================================
+    51→// Types
+    52→// ============================================
+    53→
+    54→interface CreditSummary {
+    55→  exposure: {
+    56→    total: number;
+    57→    overdueAmount: number;
+    58→    overdueCount: number;
+    59→    lockedCount: number;
+    60→  };
+    61→  creditLines: {
+    62→    total: number;
+    63→    active: number;
+    64→    overdue: number;
+    65→    locked: number;
+    66→  };
+    67→  collection: {
+    68→    totalUsed: number;
+    69→    totalRepaid: number;
+    70→    collectionRate: number;
+    71→  };
+    72→  thisMonth: {
+    73→    creditExtended: number;
+    74→    totalRepaid: number;
+    75→  };
+    76→}
+    77→
+    78→interface ShopCreditItem {
+    79→  shopId: string;
+    80→  shopName: string;
+    81→  district: string | null;
+    82→  province: string;
+    83→  creditLimit: number;
+    84→  creditUsed: number;
+    85→  creditAvailable: number;
+    86→  creditStatus: string;
+    87→  utilizationPercent: number;
+    88→  daysUntilDue: number | null;
+    89→  lastTransactionDate: string | null;
+    90→  totalOrders: number;
+    91→  loyaltyTier: string;
+    92→}
+    93→
+    94→interface ShopsResponse {
+    95→  items: ShopCreditItem[];
+    96→  pagination: {
+    97→    page: number;
+    98→    limit: number;
+    99→    total: number;
+   100→    totalPages: number;
+   101→  };
+   102→}
+   103→
+   104→type StatusTab = 'all' | 'active' | 'overdue' | 'locked';
+   105→
+   106→// ============================================
+   107→// Main Credit Page
+   108→// ============================================
+   109→
+   110→export default function CreditPage() {
+   111→  const { locale } = useLocale();
+   112→  const t = (en: string, vi: string) => locale === 'vi' ? vi : en;
+   113→
+   114→  // Summary state
+   115→  const [summary, setSummary] = useState<CreditSummary | null>(null);
+   116→  const [summaryLoading, setSummaryLoading] = useState(true);
+   117→
+   118→  // Shops state
+   119→  const [shops, setShops] = useState<ShopCreditItem[]>([]);
+   120→  const [shopsLoading, setShopsLoading] = useState(true);
+   121→  const [page, setPage] = useState(1);
+   122→  const [totalPages, setTotalPages] = useState(1);
+   123→  const [totalShops, setTotalShops] = useState(0);
+   124→  const [statusTab, setStatusTab] = useState<StatusTab>('all');
+   125→  const limit = 15;
+   126→
+   127→  // Search
+   128→  const [searchQuery, setSearchQuery] = useState('');
+   129→  const [debouncedSearch, setDebouncedSearch] = useState('');
+   130→  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+   131→
+   132→  // Dialogs
+   133→  const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
+   134→  const [ledgerDialogOpen, setLedgerDialogOpen] = useState(false);
+   135→  const [selectedShop, setSelectedShop] = useState<ShopCreditItem | null>(null);
+   136→
+   137→  // Process overdue
+   138→  const [processingOverdue, setProcessingOverdue] = useState(false);
+   139→
+   140→  // Debounced search
+   141→  useEffect(() => {
+   142→    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+   143→    searchTimeoutRef.current = setTimeout(() => {
+   144→      setDebouncedSearch(searchQuery);
+   145→      setPage(1);
+   146→    }, 300);
+   147→    return () => { if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current); };
+   148→  }, [searchQuery]);
+   149→
+   150→  // Fetch summary
+   151→  const fetchSummary = useCallback(async () => {
+   152→    try {
+   153→      setSummaryLoading(true);
+   154→      const res = await adminFetch('/api/credit/summary');
+   155→      const json = await res.json();
+   156→      if (json.success) setSummary(json.data);
+   157→    } catch (err) {
+   158→      console.error('Failed to fetch credit summary:', err);
+   159→    } finally {
+   160→      setSummaryLoading(false);
+   161→    }
+   162→  }, []);
+   163→
+   164→  // Fetch shops
+   165→  const fetchShops = useCallback(async () => {
+   166→    try {
+   167→      setShopsLoading(true);
+   168→      const params = new URLSearchParams({
+   169→        page: String(page),
+   170→        limit: String(limit),
+   171→      });
+   172→
+   173→      if (statusTab !== 'all') {
+   174→        params.set('status', statusTab.toUpperCase());
+   175→      }
+   176→
+   177→      const res = await adminFetch(`/api/credit/shops?${params.toString()}`);
+   178→      const json = await res.json();
+   179→      if (json.success) {
+   180→        const data: ShopsResponse = json.data;
+   181→        let items = data.items || [];
+   182→        // Client-side search filter
+   183→        if (debouncedSearch) {
+   184→          const q = debouncedSearch.toLowerCase();
+   185→          items = items.filter((s) =>
+   186→            s.shopName.toLowerCase().includes(q) ||
+   187→            (s.district && s.district.toLowerCase().includes(q)) ||
+   188→            (s.province && s.province.toLowerCase().includes(q))
+   189→          );
+   190→        }
+   191→        setShops(items);
+   192→        setTotalPages(data.pagination.totalPages);
+   193→        setTotalShops(data.pagination.total);
+   194→      }
+   195→    } catch (err) {
+   196→      console.error('Failed to fetch shops:', err);
+   197→    } finally {
+   198→      setShopsLoading(false);
+   199→    }
+   200→  }, [page, statusTab, limit, debouncedSearch]);
+   201→
+   202→  // Initial load
+   203→  useEffect(() => {
+   204→    fetchSummary();
+   205→  }, [fetchSummary]);
+   206→
+   207→  useEffect(() => {
+   208→    fetchShops();
+   209→  }, [fetchShops]);
+   210→
+   211→  // Handlers
+   212→  const handleOpenAdjust = (shop: ShopCreditItem) => {
+   213→    setSelectedShop(shop);
+   214→    setAdjustDialogOpen(true);
+   215→  };
+   216→
+   217→  const handleOpenLedger = (shop: ShopCreditItem) => {
+   218→    setSelectedShop(shop);
+   219→    setLedgerDialogOpen(true);
+   220→  };
+   221→
+   222→  const handleProcessOverdue = async () => {
+   223→    setProcessingOverdue(true);
+   224→    try {
+   225→      const res = await adminFetch('/api/credit/process-overdue', { method: 'POST' });
+   226→      const json = await res.json();
+   227→      if (json.success) {
+   228→        const locked = json.data.lockedCount;
+   229→        const already = json.data.alreadyOverdue;
+   230→        toast.success(
+   231→          locale === 'vi'
+   232→            ? `Da khoa ${locked} cua hang qua han. Tong: ${already + locked} cua hang qua han.`
+   233→            : `Locked ${locked} overdue shops. Total overdue: ${already + locked}.`
+   234→        );
+   235→        fetchSummary();
+   236→        fetchShops();
+   237→      } else {
+   238→        toast.error(json.error?.message || 'Failed to process overdue');
+   239→      }
+   240→    } catch {
+   241→      toast.error(t('Network error', 'Loi mang'));
+   242→    } finally {
+   243→      setProcessingOverdue(false);
+   244→    }
+   245→  };
+   246→
+   247→  // Helpers
+   248→  const getUtilizationColor = (percent: number) => {
+   249→    if (percent >= 80) return '[&>div]:bg-red-500';
+   250→    if (percent >= 50) return '[&>div]:bg-amber-500';
+   251→    return '[&>div]:bg-red-500';
+   252→  };
+   253→
+   254→  const getDaysColor = (days: number | null, status: string) => {
+   255→    if (status === 'OVERDUE') return 'text-red-600 font-bold';
+   256→    if (status === 'LOCKED') return 'text-amber-600 font-medium';
+   257→    if (days === null) return 'text-muted-foreground';
+   258→    if (days <= 0) return 'text-red-600 font-bold';
+   259→    if (days <= 3) return 'text-amber-600 font-medium';
+   260→    return 'text-red-600';
+   261→  };
+   262→
+   263→  const formatLastActivity = (dateStr: string | null) => {
+   264→    if (!dateStr) return '—';
+   265→    const d = new Date(dateStr);
+   266→    return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+   267→  };
+   268→
+   269→  const getPageNumbers = () => {
+   270→    const pages: number[] = [];
+   271→    const maxVisible = 5;
+   272→    let start = Math.max(1, page - Math.floor(maxVisible / 2));
+   273→    const end = Math.min(totalPages, start + maxVisible - 1);
+   274→    if (end - start + 1 < maxVisible) start = Math.max(1, end - maxVisible + 1);
+   275→    for (let i = start; i <= end; i++) pages.push(i);
+   276→    return pages;
+   277→  };
+   278→
+   279→  return (
+   280→    <div className="flex min-h-screen">
+   281→      <AdminSidebar />
+   282→      <SidebarInset>
+   283→        <AdminHeader />
+   284→
+   285→        <main className="flex-1 p-4 md:p-6 space-y-6">
+   286→          {/* Page Header */}
+   287→          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+   288→            <div>
+   289→              <h1 className="text-2xl font-bold tracking-tight">
+   290→                {t('Credit & Finance', 'Cong no & Tai chinh')}
+   291→              </h1>
+   292→              <p className="text-sm text-muted-foreground mt-1">
+   293→                {t(
+   294→                  'Manage 7-day micro-credit system, track exposure, and monitor repayments',
+   295→                  'Quan ly he thong tin dung 7 ngay, theo doi no va giam sat thanh toan'
+   296→                )}
+   297→              </p>
+   298→            </div>
+   299→            <div className="flex items-center gap-2">
+   300→              <Button variant="outline" size="sm" onClick={() => { fetchSummary(); fetchShops(); }}>
+   301→                <RefreshCw className="h-4 w-4 mr-1" />
+   302→                {t('Refresh', 'Lam moi')}
+   303→              </Button>
+   304→            </div>
+   305→          </div>
+   306→
+   307→          <Separator />
+   308→
+   309→          {/* ====== 1. CREDIT SUMMARY CARDS ====== */}
+   310→          {summaryLoading ? (
+   311→            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+   312→              {Array.from({ length: 4 }).map((_, i) => (
+   313→                <Card key={i}>
+   314→                  <CardContent className="p-4">
+   315→                    <Skeleton className="h-4 w-24 mb-2" />
+   316→                    <Skeleton className="h-8 w-32" />
+   317→                  </CardContent>
+   318→                </Card>
+   319→              ))}
+   320→            </div>
+   321→          ) : summary ? (
+   322→            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+   323→              {/* Total Credit Exposure */}
+   324→              <Card className="border-yellow-100 bg-yellow-50/50 dark:border-red-900 dark:bg-emerald-950/30">
+   325→                <CardContent className="p-4">
+   326→                  <div className="flex items-center justify-between">
+   327→                    <div>
+   328→                      <p className="text-xs text-muted-foreground font-medium">
+   329→                        {t('Total Exposure', 'Tong no cong no')}
+   330→                      </p>
+   331→                      <div className="text-xl font-bold mt-1">
+   332→                        <SensitiveValue value={String(summary.exposure.total)} maskType="amount" formatOptions={{ formatCurrency: true }} />
+   333→                      </div>
+   334→                      {summary.exposure.overdueAmount > 0 && (
+   335→                        <p className="text-[11px] text-red-600 mt-1">
+   336→                          <AlertTriangle className="h-3 w-3 inline mr-0.5" />
+   337→                          {t('Overdue', 'Qua han')}: <SensitiveValue value={String(summary.exposure.overdueAmount)} maskType="amount" formatOptions={{ formatCurrency: true }} />
+   338→                        </p>
+   339→                      )}
+   340→                    </div>
+   341→                    <div className="h-9 w-9 rounded-lg bg-yellow-50 text-red-600 dark:bg-red-900/50 dark:text-yellow-500 flex items-center justify-center">
+   342→                      <CreditCard className="h-4 w-4" />
+   343→                    </div>
+   344→                  </div>
+   345→                </CardContent>
+   346→              </Card>
+   347→
+   348→              {/* Active Credit Lines */}
+   349→              <Card>
+   350→                <CardContent className="p-4">
+   351→                  <div className="flex items-center justify-between">
+   352→                    <div>
+   353→                      <p className="text-xs text-muted-foreground font-medium">
+   354→                        {t('Active Credit Lines', 'Han muc dang hoat dong')}
+   355→                      </p>
+   356→                      <p className="text-xl font-bold mt-1">{summary.creditLines.active}</p>
+   357→                      <p className="text-[11px] text-muted-foreground mt-1">
+   358→                        {t(`of ${summary.creditLines.total} shops`, `/ ${summary.creditLines.total} cua hang`)}
+   359→                      </p>
+   360→                    </div>
+   361→                    <div className="h-9 w-9 rounded-lg bg-yellow-50 text-red-600 dark:bg-red-900/50 dark:text-yellow-500 flex items-center justify-center">
+   362→                      <ShieldCheck className="h-4 w-4" />
+   363→                    </div>
+   364→                  </div>
+   365→                </CardContent>
+   366→              </Card>
+   367→
+   368→              {/* Overdue Accounts */}
+   369→              <Card className={summary.creditLines.overdue > 0 ? 'border-red-200 bg-red-50/50 dark:border-red-900 dark:bg-red-950/30' : ''}>
+   370→                <CardContent className="p-4">
+   371→                  <div className="flex items-center justify-between">
+   372→                    <div>
+   373→                      <p className="text-xs text-muted-foreground font-medium">
+   374→                        {t('Overdue Accounts', 'Tai khoan qua han')}
+   375→                      </p>
+   376→                      <p className={`text-xl font-bold mt-1 ${summary.creditLines.overdue > 0 ? 'text-red-600' : ''}`}>
+   377→                        {summary.creditLines.overdue}
+   378→                      </p>
+   379→                      <p className="text-[11px] text-muted-foreground mt-1">
+   380→                        {t(`${summary.creditLines.locked} locked`, `${summary.creditLines.locked} bi khoa`)}
+   381→                      </p>
+   382→                    </div>
+   383→                    <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${
+   384→                      summary.creditLines.overdue > 0
+   385→                        ? 'bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-400'
+   386→                        : 'bg-muted text-muted-foreground'
+   387→                    }`}>
+   388→                      <AlertTriangle className="h-4 w-4" />
+   389→                    </div>
+   390→                  </div>
+   391→                </CardContent>
+   392→              </Card>
+   393→
+   394→              {/* Collection Rate */}
+   395→              <Card>
+   396→                <CardContent className="p-4">
+   397→                  <div className="flex items-center justify-between">
+   398→                    <div>
+   399→                      <p className="text-xs text-muted-foreground font-medium">
+   400→                        {t('Collection Rate', 'Ty thu')}
+   401→                      </p>
+   402→                      <p className={`text-xl font-bold mt-1 ${
+   403→                        summary.collection.collectionRate >= 80 ? 'text-red-600' :
+   404→                        summary.collection.collectionRate >= 50 ? 'text-amber-600' :
+   405→                        'text-red-600'
+   406→                      }`}>
+   407→                        {summary.collection.collectionRate}%
+   408→                      </p>
+   409→                      <p className="text-[11px] text-muted-foreground mt-1">
+   410→                        {t(
+   411→                          `${formatVND(summary.collection.totalRepaid)} / ${formatVND(summary.collection.totalUsed)}`,
+   412→                          `${formatVND(summary.collection.totalRepaid)} / ${formatVND(summary.collection.totalUsed)}`
+   413→                        )}
+   414→                      </p>
+   415→                    </div>
+   416→                    <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${
+   417→                      summary.collection.collectionRate >= 80
+   418→                        ? 'bg-yellow-50 text-red-600 dark:bg-red-900/50 dark:text-yellow-500'
+   419→                        : 'bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400'
+   420→                    }`}>
+   421→                      <Percent className="h-4 w-4" />
+   422→                    </div>
+   423→                  </div>
+   424→                </CardContent>
+   425→              </Card>
+   426→            </div>
+   427→          ) : null}
+   428→
+   429→          {/* ====== 2. AUTOMATION RULES PANEL ====== */}
+   430→          <Card className="border-dashed">
+   431→            <CardHeader className="pb-3">
+   432→              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+   433→                <CardTitle className="text-sm flex items-center gap-2">
+   434→                  <ShieldCheck className="h-4 w-4 text-red-600" />
+   435→                  {t('Automation Rules', 'Quy tac Tu dong hoa')}
+   436→                </CardTitle>
+   437→                <Button
+   438→                  size="sm"
+   439→                  variant="outline"
+   440→                  className="border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950/30"
+   441→                  onClick={handleProcessOverdue}
+   442→                  disabled={processingOverdue}
+   443→                >
+   444→                  {processingOverdue ? (
+   445→                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+   446→                  ) : (
+   447→                    <Lock className="h-4 w-4 mr-1" />
+   448→                  )}
+   449→                  {t('Process Overdue', 'Xu ly qua han')}
+   450→                </Button>
+   451→              </div>
+   452→            </CardHeader>
+   453→            <CardContent>
+   454→              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+   455→                {/* Rule 1: Auto-Lock */}
+   456→                <div className="flex items-start gap-3">
+   457→                  <div className="h-8 w-8 rounded-lg bg-red-100 text-red-600 flex items-center justify-center shrink-0 mt-0.5">
+   458→                    <Lock className="h-4 w-4" />
+   459→                  </div>
+   460→                  <div className="flex-1 min-w-0">
+   461→                    <div className="flex items-center gap-2">
+   462→                      <p className="text-sm font-medium">{t('Credit Auto-Lock (Day 7)', 'Tu khoa Cong no (Ngay 7)')}</p>
+   463→                      <Badge variant="secondary" className="bg-yellow-50 text-red-700 hover:bg-yellow-50 text-[10px] px-1.5 py-0">
+   464→                        {t('Active', 'Hoat dong')}
+   465→                      </Badge>
+   466→                    </div>
+   467→                    <p className="text-xs text-muted-foreground mt-0.5">
+   468→                      {t(
+   469→                        'Shops unpaid after 7 days are auto-locked from placing new orders',
+   470→                        'Cua hang chua tra no sau 7 ngay se bi tu dong khoa khong dat duoc don hang moi'
+   471→                      )}
+   472→                    </p>
+   473→                  </div>
+   474→                </div>
+   475→
+   476→                {/* Rule 2: Day 5 Reminder */}
+   477→                <div className="flex items-start gap-3">
+   478→                  <div className="h-8 w-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center shrink-0 mt-0.5">
+   479→                    <Clock className="h-4 w-4" />
+   480→                  </div>
+   481→                  <div className="flex-1 min-w-0">
+   482→                    <div className="flex items-center gap-2">
+   483→                      <p className="text-sm font-medium">{t('Day 5 Reminder', 'Nhac nho Ngay 5')}</p>
+   484→                      <Badge variant="secondary" className="bg-yellow-50 text-red-700 hover:bg-yellow-50 text-[10px] px-1.5 py-0">
+   485→                        {t('Active', 'Hoat dong')}
+   486→                      </Badge>
+   487→                    </div>
+   488→                    <p className="text-xs text-muted-foreground mt-0.5">
+   489→                      {t(
+   490→                        'Auto Zalo reminder sent on Day 5 for all unpaid credit',
+   491→                        'Tu dong gui nhac nho Zalo vao Ngay 5 cho tat ca no chua tra'
+   492→                      )}
+   493→                    </p>
+   494→                  </div>
+   495→                </div>
+   496→
+   497→                {/* Rule 3: Pay Now Discount */}
+   498→                <div className="flex items-start gap-3">
+   499→                  <div className="h-8 w-8 rounded-lg bg-yellow-50 text-red-600 flex items-center justify-center shrink-0 mt-0.5">
+   500→                    <Zap className="h-4 w-4" />
+   501→                  </div>
+   502→                  <div className="flex-1 min-w-0">
+   503→                    <div className="flex items-center gap-2">
+   504→                      <p className="text-sm font-medium">{t('Pay Now Discount', 'Giam gia Tra ngay')}</p>
+   505→                      <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-100 text-[10px] px-1.5 py-0">
+   506→                        {t('Configured', 'Da cau hinh')}
+   507→                      </Badge>
+   508→                    </div>
+   509→                    <p className="text-xs text-muted-foreground mt-0.5">
+   510→                      {t(
+   511→                        '2% instant discount for digital payment (MoMo/ZaloPay)',
+   512→                        'Giam gia 2% khi thanh toan qua so (MoMo/ZaloPay)'
+   513→                      )}
+   514→                    </p>
+   515→                  </div>
+   516→                </div>
+   517→              </div>
+   518→            </CardContent>
+   519→          </Card>
+   520→
+   521→          {/* ====== 3. SHOP CREDIT OVERVIEW TABLE ====== */}
+   522→          <Card>
+   523→            <CardHeader className="pb-3">
+   524→              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+   525→                <div>
+   526→                  <CardTitle className="text-base">
+   527→                    {t('Shop Credit Overview', 'Tong quan Tin dung Cua hang')}
+   528→                  </CardTitle>
+   529→                  <CardDescription>
+   530→                    {t(`${totalShops} shops total`, `${totalShops} cua hang tong cong`)}
+   531→                  </CardDescription>
+   532→                </div>
+   533→              </div>
+   534→
+   535→              {/* Search */}
+   536→              <div className="flex flex-col sm:flex-row gap-3 mt-3">
+   537→                <div className="relative flex-1 max-w-sm">
+   538→                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+   539→                  <Input
+   540→                    type="search"
+   541→                    placeholder={t('Search by shop name...', 'Tim theo ten cua hang...')}
+   542→                    className="pl-8 h-9"
+   543→                    value={searchQuery}
+   544→                    onChange={(e) => setSearchQuery(e.target.value)}
+   545→                  />
+   546→                </div>
+   547→              </div>
+   548→            </CardHeader>
+   549→
+   550→            <CardContent className="p-0">
+   551→              {/* Status Tabs */}
+   552→              <div className="px-4 pt-2 pb-0">
+   553→                <Tabs value={statusTab} onValueChange={(val) => { setStatusTab(val as StatusTab); setPage(1); }}>
+   554→                  <TabsList>
+   555→                    <TabsTrigger value="all">
+   556→                      {t('All Shops', 'Tat ca')}
+   557→                      {summary && (
+   558→                        <Badge variant="outline" className="ml-1.5 text-[10px] px-1.5 py-0">{summary.creditLines.total}</Badge>
+   559→                      )}
+   560→                    </TabsTrigger>
+   561→                    <TabsTrigger value="active">
+   562→                      {t('Active', 'Hoat dong')}
+   563→                      {summary && (
+   564→                        <Badge variant="outline" className="ml-1.5 text-[10px] px-1.5 py-0 text-red-600">{summary.creditLines.active}</Badge>
+   565→                      )}
+   566→                    </TabsTrigger>
+   567→                    <TabsTrigger value="overdue">
+   568→                      {t('Overdue', 'Qua han')}
+   569→                      {summary && summary.creditLines.overdue > 0 && (
+   570→                        <Badge variant="outline" className="ml-1.5 text-[10px] px-1.5 py-0 text-red-600">{summary.creditLines.overdue}</Badge>
+   571→                      )}
+   572→                    </TabsTrigger>
+   573→                    <TabsTrigger value="locked">
+   574→                      {t('Locked', 'Bi khoa')}
+   575→                      {summary && summary.creditLines.locked > 0 && (
+   576→                        <Badge variant="outline" className="ml-1.5 text-[10px] px-1.5 py-0 text-amber-600">{summary.creditLines.locked}</Badge>
+   577→                      )}
+   578→                    </TabsTrigger>
+   579→                  </TabsList>
+   580→                </Tabs>
+   581→              </div>
+   582→
+   583→              {/* Table */}
+   584→              {shopsLoading ? (
+   585→                <div className="p-4 space-y-3">
+   586→                  <Skeleton className="h-10 w-full" />
+   587→                  {Array.from({ length: 6 }).map((_, i) => (
+   588→                    <Skeleton key={i} className="h-12 w-full" />
+   589→                  ))}
+   590→                </div>
+   591→              ) : shops.length === 0 ? (
+   592→                <div className="text-center py-16 px-4">
+   593→                  <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+   594→                    <CreditCard className="h-8 w-8 text-muted-foreground" />
+   595→                  </div>
+   596→                  <h3 className="text-lg font-semibold">
+   597→                    {t('No shops found', 'Khong tim thay cua hang')}
+   598→                  </h3>
+   599→                  <p className="text-sm text-muted-foreground mt-1 max-w-md mx-auto">
+   600→                    {t(
+   601→                      'No shops match your current filters.',
+   602→                      'Khong co cua hang phu hop voi bo loc hien tai.'
+   603→                    )}
+   604→                  </p>
+   605→                </div>
+   606→              ) : (
+   607→                <div>
+   608→                  <div className="w-full overflow-x-auto">
+   609→                    <Table>
+   610→                      <TableHeader>
+   611→                        <TableRow className="bg-muted/30">
+   612→                          <TableHead>{t('Shop Name', 'Ten Cua hang')}</TableHead>
+   613→                          <TableHead className="text-right hidden sm:table-cell">{t('Credit Limit', 'Han muc')}</TableHead>
+   614→                          <TableHead className="text-right">{t('Credit Used', 'Da dung')}</TableHead>
+   615→                          <TableHead className="text-right hidden md:table-cell">{t('Available', 'Con lai')}</TableHead>
+   616→                          <TableHead className="text-center">{t('Usage', 'Su dung')}</TableHead>
+   617→                          <TableHead className="text-center">{t('Status', 'TT')}</TableHead>
+   618→                          <TableHead className="text-center hidden lg:table-cell">{t('Due In', 'Con han')}</TableHead>
+   619→                          <TableHead className="hidden xl:table-cell">{t('Last Activity', 'Hoat dong cuoi')}</TableHead>
+   620→                          <TableHead className="text-right">{t('Actions', 'TH')}</TableHead>
+   621→                        </TableRow>
+   622→                      </TableHeader>
+   623→                      <TableBody>
+   624→                        {shops.map((shop) => (
+   625→                          <TableRow key={shop.shopId}>
+   626→                            {/* Shop Name */}
+   627→                            <TableCell>
+   628→                              <div className="min-w-0">
+   629→                                <p className="text-sm font-medium truncate max-w-[180px]">
+   630→                                  {shop.shopName}
+   631→                                </p>
+   632→                                <p className="text-[11px] text-muted-foreground">
+   633→                                  {[shop.district, shop.province].filter(Boolean).join(', ')}
+   634→                                </p>
+   635→                              </div>
+   636→                            </TableCell>
+   637→
+   638→                            {/* Credit Limit */}
+   639→                            <TableCell className="text-right hidden sm:table-cell">
+   640→                              <span className="text-sm">
+   641→                                <SensitiveValue value={String(shop.creditLimit)} maskType="amount" formatOptions={{ formatCurrency: true }} />
+   642→                              </span>
+   643→                            </TableCell>
+   644→
+   645→                            {/* Credit Used */}
+   646→                            <TableCell className="text-right">
+   647→                              <span className="text-sm font-medium">
+   648→                                <SensitiveValue value={String(shop.creditUsed)} maskType="amount" formatOptions={{ formatCurrency: true }} />
+   649→                              </span>
+   650→                            </TableCell>
+   651→
+   652→                            {/* Available */}
+   653→                            <TableCell className="text-right hidden md:table-cell">
+   654→                              <span className={`text-sm ${shop.creditAvailable === 0 ? 'text-red-600 font-medium' : ''}`}>
+   655→                                <SensitiveValue value={String(shop.creditAvailable)} maskType="amount" formatOptions={{ formatCurrency: true }} />
+   656→                              </span>
+   657→                            </TableCell>
+   658→
+   659→                            {/* Usage Progress */}
+   660→                            <TableCell className="text-center min-w-[100px]">
+   661→                              <div className="flex flex-col items-center gap-1">
+   662→                                <Progress
+   663→                                  value={shop.utilizationPercent}
+   664→                                  className={`h-1.5 w-16 ${getUtilizationColor(shop.utilizationPercent)}`}
+   665→                                />
+   666→                                <span className="text-[10px] text-muted-foreground">
+   667→                                  {shop.utilizationPercent}%
+   668→                                </span>
+   669→                              </div>
+   670→                            </TableCell>
+   671→
+   672→                            {/* Status */}
+   673→                            <TableCell className="text-center">
+   674→                              <CreditStatusBadge status={shop.creditStatus} locale={locale} />
+   675→                            </TableCell>
+   676→
+   677→                            {/* Days Until Due */}
+   678→                            <TableCell className="text-center hidden lg:table-cell">
+   679→                              {shop.daysUntilDue !== null ? (
+   680→                                <span className={`text-xs ${getDaysColor(shop.daysUntilDue, shop.creditStatus)}`}>
+   681→                                  {shop.creditStatus === 'OVERDUE' ? (
+   682→                                    <>{t('Overdue', 'Qua han')}</>
+   683→                                  ) : shop.creditStatus === 'LOCKED' ? (
+   684→                                    <>{t('Locked', 'Khoa')}</>
+   685→                                  ) : shop.daysUntilDue === 0 ? (
+   686→                                    <>{t('Due today', 'Hom nay')}</>
+   687→                                  ) : (
+   688→                                    <>{shop.daysUntilDue}d</>
+   689→                                  )}
+   690→                                </span>
+   691→                              ) : (
+   692→                                <span className="text-xs text-muted-foreground">—</span>
+   693→                              )}
+   694→                            </TableCell>
+   695→
+   696→                            {/* Last Activity */}
+   697→                            <TableCell className="hidden xl:table-cell">
+   698→                              <span className="text-xs text-muted-foreground">
+   699→                                {formatLastActivity(shop.lastTransactionDate)}
+   700→                              </span>
+   701→                            </TableCell>
+   702→
+   703→                            {/* Actions */}
+   704→                            <TableCell className="text-right">
+   705→                              <div className="flex items-center justify-end gap-1">
+   706→                                <Button
+   707→                                  variant="ghost"
+   708→                                  size="sm"
+   709→                                  className="h-7 text-xs"
+   710→                                  onClick={() => handleOpenLedger(shop)}
+   711→                                >
+   712→                                  <ScrollText className="h-3.5 w-3.5 mr-1" />
+   713→                                  {t('Ledger', 'So cai')}
+   714→                                </Button>
+   715→                                <Button
+   716→                                  variant="ghost"
+   717→                                  size="sm"
+   718→                                  className="h-7 text-xs"
+   719→                                  onClick={() => handleOpenAdjust(shop)}
+   720→                                >
+   721→                                  <SlidersHorizontal className="h-3.5 w-3.5 mr-1" />
+   722→                                  {t('Limit', 'Han muc')}
+   723→                                </Button>
+   724→                              </div>
+   725→                            </TableCell>
+   726→                          </TableRow>
+   727→                        ))}
+   728→                      </TableBody>
+   729→                    </Table>
+   730→                  </div>
+   731→
+   732→                  {/* Pagination */}
+   733→                  {totalPages > 1 && (
+   734→                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t">
+   735→                      <p className="text-xs text-muted-foreground">
+   736→                        {t(
+   737→                          `Showing ${(page - 1) * limit + 1}–${Math.min(page * limit, totalShops)} of ${totalShops} shops`,
+   738→                          `Hien thi ${(page - 1) * limit + 1}–${Math.min(page * limit, totalShops)} / ${totalShops} cua hang`
+   739→                        )}
+   740→                      </p>
+   741→                      <div className="flex items-center gap-1">
+   742→                        <Button
+   743→                          variant="outline"
+   744→                          size="icon"
+   745→                          className="h-8 w-8"
+   746→                          disabled={page <= 1}
+   747→                          onClick={() => setPage((p) => Math.max(1, p - 1))}
+   748→                        >
+   749→                          <ChevronLeft className="h-4 w-4" />
+   750→                        </Button>
+   751→                        {getPageNumbers().map((p) => (
+   752→                          <Button
+   753→                            key={p}
+   754→                            variant={p === page ? 'default' : 'outline'}
+   755→                            size="icon"
+   756→                            className={`h-8 w-8 text-xs ${p === page ? 'bg-red-600 hover:bg-red-700 text-white' : ''}`}
+   757→                            onClick={() => setPage(p)}
+   758→                          >
+   759→                            {p}
+   760→                          </Button>
+   761→                        ))}
+   762→                        <Button
+   763→                          variant="outline"
+   764→                          size="icon"
+   765→                          className="h-8 w-8"
+   766→                          disabled={page >= totalPages}
+   767→                          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+   768→                        >
+   769→                          <ChevronRight className="h-4 w-4" />
+   770→                        </Button>
+   771→                      </div>
+   772→                    </div>
+   773→                  )}
+   774→                </div>
+   775→              )}
+   776→            </CardContent>
+   777→          </Card>
+   778→        </main>
+   779→
+   780→        {/* ====== DIALOGS ====== */}
+   781→        <CreditAdjustDialog
+   782→          open={adjustDialogOpen}
+   783→          onOpenChange={setAdjustDialogOpen}
+   784→          shop={selectedShop}
+   785→          locale={locale}
+   786→          onSuccess={() => {
+   787→            fetchShops();
+   788→            fetchSummary();
+   789→          }}
+   790→        />
+   791→
+   792→        <TransactionLedgerDialog
+   793→          open={ledgerDialogOpen}
+   794→          onOpenChange={setLedgerDialogOpen}
+   795→          shop={selectedShop}
+   796→          locale={locale}
+   797→        />
+   798→      </SidebarInset>
+   799→    </div>
+   800→  );
+   801→}
+   802→
