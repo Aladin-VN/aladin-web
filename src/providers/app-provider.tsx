@@ -37,6 +37,14 @@ interface ShopInfo {
   creditStatus: string;
 }
 
+interface DistributorInfo {
+  id: string;
+  name: string;
+  address?: string;
+  commissionRate: number;
+  pendingPayoutAmount: number;
+}
+
 interface UserInfo {
   userId: string;
   phone: string;
@@ -44,6 +52,8 @@ interface UserInfo {
   role: string;
   shopId?: string;
   shop?: ShopInfo | null;
+  distributorId?: string;
+  distributor?: DistributorInfo | null;
 }
 
 interface AuthContextType {

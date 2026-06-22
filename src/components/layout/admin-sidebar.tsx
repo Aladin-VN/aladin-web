@@ -65,12 +65,43 @@ const navItems: NavItem[] = [
     titleVi: 'Tong quan',
     href: '/',
     icon: <LayoutDashboard className="h-4 w-4" />,
+    roles: [ROLES.ADMIN, ROLES.SALES_REP, ROLES.SHOP_OWNER, ROLES.BROKER],
+  },
+  // Distributor-specific pages
+  {
+    title: 'Distributor Dashboard',
+    titleVi: 'Tong quan NPP',
+    href: '/distributor',
+    icon: <Warehouse className="h-4 w-4" />,
+    roles: [ROLES.DISTRIBUTOR],
+  },
+  {
+    title: 'Orders',
+    titleVi: 'Don hang NPP',
+    href: '/distributor/orders',
+    icon: <ShoppingCart className="h-4 w-4" />,
+    roles: [ROLES.DISTRIBUTOR],
+  },
+  {
+    title: 'Inventory',
+    titleVi: 'Kho hang',
+    href: '/distributor/inventory',
+    icon: <Package className="h-4 w-4" />,
+    roles: [ROLES.DISTRIBUTOR],
+  },
+  {
+    title: 'Settlements',
+    titleVi: 'Quyet toan',
+    href: '/distributor/settlements',
+    icon: <Wallet className="h-4 w-4" />,
+    roles: [ROLES.DISTRIBUTOR],
   },
   {
     title: 'Orders',
     titleVi: 'Don hang',
     href: '/orders',
     icon: <ShoppingCart className="h-4 w-4" />,
+    roles: [ROLES.ADMIN, ROLES.SALES_REP, ROLES.SHOP_OWNER, ROLES.DRIVER, ROLES.BROKER],
   },
   {
     title: 'Products',

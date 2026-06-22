@@ -106,7 +106,7 @@ function LoginForm() {
         if (user.role === 'DRIVER' && redirectPath === '/') {
           router.replace('/shipments');
         } else if (user.role === 'DISTRIBUTOR' && redirectPath === '/') {
-          router.replace('/m/distributor');
+          router.replace('/distributor');
         } else {
           router.replace(redirectPath);
         }
