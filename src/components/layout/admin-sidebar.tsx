@@ -11,6 +11,7 @@ import {
   Users,
   Truck,
   CreditCard,
+  Wallet,
   Tag,
   Gift,
   Warehouse,
@@ -111,6 +112,13 @@ const navItems: NavItem[] = [
     roles: [ROLES.ADMIN, ROLES.DRIVER, ROLES.SHOP_OWNER],
   },
   {
+    title: 'Settlements',
+    titleVi: 'Quyết toán',
+    href: '/settlements',
+    icon: <Wallet className="h-4 w-4" />,
+    roles: [ROLES.ADMIN],
+  },
+  {
     title: 'Supply Chain',
     titleVi: 'Chuoi cung ung',
     href: '/supply-chain',
@@ -178,6 +186,7 @@ const ROLE_LABELS: Record<string, { en: string; vi: string; color: string }> = {
   SALES_REP: { en: 'Sales Rep', vi: 'Nhan vien ban', color: 'bg-orange-100 text-orange-700' },
   DRIVER: { en: 'Driver', vi: 'Tai xe', color: 'bg-blue-100 text-blue-700' },
   BROKER: { en: 'Broker', vi: 'Dai ly', color: 'bg-purple-100 text-purple-700' },
+  DISTRIBUTOR: { en: 'Distributor', vi: 'Nha PP', color: 'bg-emerald-100 text-emerald-700' },
 };
 
 export function AdminSidebar() {

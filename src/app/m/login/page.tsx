@@ -48,8 +48,33 @@ export default function MobileLoginPage() {
       const json = await res.json();
 
       if (json.success && json.data) {
-        login(json.data);
-        router.replace('/m');
+        const { accessToken, refreshToken, user } = json.data;
+        // Transform API data to match AuthStore UserInfo format
+        login({
+          accessToken,
+          refreshToken,
+          userId: user.id || user.userId,
+          phone: user.phone,
+          name: user.name,
+          role: user.role,
+          shopId: user.shop?.id || user.shopId || null,
+          shop: user.shop || null,
+          distributorId: user.distributor?.distributorId || user.distributorId || null,
+          distributor: user.distributor?.distributor ? {
+            id: user.distributor.distributor.id,
+            name: user.distributor.distributor.name,
+            address: user.distributor.distributor.address,
+            commissionRate: user.distributor.distributor.commissionRate,
+            pendingPayoutAmount: user.distributor.distributor.pendingPayoutAmount,
+          } : null,
+        });
+
+        // Role-based redirect
+        if (user.role === 'DISTRIBUTOR') {
+          router.replace('/m/distributor');
+        } else {
+          router.replace('/m');
+        }
       } else {
         const msg = json.error?.message || t('Đăng nhập thất bại', 'Login failed');
         setError(msg);

@@ -89,10 +89,20 @@ function LoginForm() {
           role: user.role,
           shopId: user.shop?.id || user.shopId || null,
           shop: user.shop || null,
+          distributorId: user.distributor?.distributorId || user.distributorId || null,
+          distributor: user.distributor?.distributor ? {
+            id: user.distributor.distributor.id,
+            name: user.distributor.distributor.name,
+            address: user.distributor.distributor.address,
+            commissionRate: user.distributor.distributor.commissionRate,
+            pendingPayoutAmount: user.distributor.distributor.pendingPayoutAmount,
+          } : null,
         }));
 
         if (user.role === 'DRIVER' && redirectPath === '/') {
           router.replace('/shipments');
+        } else if (user.role === 'DISTRIBUTOR' && redirectPath === '/') {
+          router.replace('/m/distributor');
         } else {
           router.replace(redirectPath);
         }

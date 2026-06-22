@@ -1,6 +1,6 @@
 'use client';
 
-import { Shield, Store, Users, Truck, Megaphone } from 'lucide-react';
+import { Shield, Store, Users, Truck, Megaphone, Warehouse } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface UserRoleBadgeProps {
@@ -37,6 +37,11 @@ const roleConfig: Record<string, {
     label: { en: 'Broker', vi: 'Dai ly' },
     color: 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-950 dark:text-purple-400 dark:border-purple-800',
     icon: <Megaphone className="h-3 w-3" />,
+  },
+  DISTRIBUTOR: {
+    label: { en: 'Distributor', vi: 'Nha PP' },
+    color: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800',
+    icon: <Warehouse className="h-3 w-3" />,
   },
 };
 

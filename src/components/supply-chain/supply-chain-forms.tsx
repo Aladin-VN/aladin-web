@@ -252,6 +252,12 @@ interface DistributorFormData {
   address: string;
   lat: string;
   lng: string;
+  bankName: string;
+  bankAccount: string;
+  bankHolder: string;
+  taxId: string;
+  commissionRate: string;
+  deliveryFeeShare: string;
 }
 
 interface DistributorFormDialogProps {
@@ -268,6 +274,12 @@ interface DistributorFormDialogProps {
     lat: number | null;
     lng: number | null;
     isActive: boolean;
+    bankName: string | null;
+    bankAccount: string | null;
+    bankHolder: string | null;
+    taxId: string | null;
+    commissionRate: number;
+    deliveryFeeShare: number;
   } | null;
   locale: string;
   onSaved?: () => void;
@@ -293,6 +305,12 @@ export function DistributorFormDialog({
     address: '',
     lat: '',
     lng: '',
+    bankName: '',
+    bankAccount: '',
+    bankHolder: '',
+    taxId: '',
+    commissionRate: '3',
+    deliveryFeeShare: '50',
   });
 
   useEffect(() => {
@@ -306,9 +324,15 @@ export function DistributorFormDialog({
         address: distributor.address || '',
         lat: distributor.lat !== null ? String(distributor.lat) : '',
         lng: distributor.lng !== null ? String(distributor.lng) : '',
+        bankName: distributor.bankName || '',
+        bankAccount: distributor.bankAccount || '',
+        bankHolder: distributor.bankHolder || '',
+        taxId: distributor.taxId || '',
+        commissionRate: String(Math.round(distributor.commissionRate * 100)),
+        deliveryFeeShare: String(Math.round(distributor.deliveryFeeShare * 100)),
       });
     } else if (open) {
-      setForm({ name: '', nameEn: '', contactPerson: '', contactPhone: '', email: '', address: '', lat: '', lng: '' });
+      setForm({ name: '', nameEn: '', contactPerson: '', contactPhone: '', email: '', address: '', lat: '', lng: '', bankName: '', bankAccount: '', bankHolder: '', taxId: '', commissionRate: '3', deliveryFeeShare: '50' });
     }
   }, [open, distributor]);
 
@@ -318,6 +342,12 @@ export function DistributorFormDialog({
 
   const handleSave = async () => {
     if (!form.name.trim()) return;
+
+    const ratePercent = parseFloat(form.commissionRate);
+    if (isNaN(ratePercent) || ratePercent < 0 || ratePercent > 100) {
+      toast.error(t('Platform fee must be 0-100%', 'Phi nen tang phai 0-100%'));
+      return;
+    }
 
     try {
       setSaving(true);
@@ -336,6 +366,12 @@ export function DistributorFormDialog({
           address: form.address.trim() || null,
           lat: form.lat ? parseFloat(form.lat) : null,
           lng: form.lng ? parseFloat(form.lng) : null,
+          bankName: form.bankName.trim() || null,
+          bankAccount: form.bankAccount.trim() || null,
+          bankHolder: form.bankHolder.trim() || null,
+          taxId: form.taxId.trim() || null,
+          commissionRate: ratePercent / 100,
+          deliveryFeeShare: (parseFloat(form.deliveryFeeShare) || 50) / 100,
         }),
       });
 
@@ -370,13 +406,13 @@ export function DistributorFormDialog({
           </DialogTitle>
           <DialogDescription>
             {t(
-              'Manage distributor information and delivery coordinates',
-              'Quan ly thong tin nha phan phoi va toa do giao hang'
+              'Manage distributor info, financial settings, and bank details',
+              'Quan ly thong tin, cau hinh tai chinh va ngan hang'
             )}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
+        <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto pr-1">
           {/* Name */}
           <div className="space-y-2">
             <Label htmlFor="dist-name">{t('Name', 'Ten')} <span className="text-red-500">*</span></Label>
@@ -426,14 +462,72 @@ export function DistributorFormDialog({
               <Input id="dist-lat" type="number" step="0.0001" min="-90" max="90"
                 value={form.lat} onChange={(e) => updateField('lat', e.target.value)}
                 placeholder="10.9062" />
-              <p className="text-[10px] text-muted-foreground">{t('For smart sourcing', 'Cho tim nguon thong minh')}</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="dist-lng">{t('Longitude', 'Kinh do')}</Label>
               <Input id="dist-lng" type="number" step="0.0001" min="-180" max="180"
                 value={form.lng} onChange={(e) => updateField('lng', e.target.value)}
                 placeholder="106.7186" />
-              <p className="text-[10px] text-muted-foreground">{t('Binh Duong area', 'Khu vuc Binh Duong')}</p>
+            </div>
+          </div>
+
+          {/* Financial Settings */}
+          <div className="border-t pt-4">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+              {t('Financial Settings', 'Cau hinh tai chinh')}
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="dist-commission">{t('Platform Fee (%)', 'Phi nen tang (%)')}</Label>
+                <div className="flex items-center gap-2">
+                  <Input id="dist-commission" type="number" min="0" max="100" step="0.5"
+                    value={form.commissionRate} onChange={(e) => updateField('commissionRate', e.target.value)}
+                    className="w-24 h-9" />
+                  <span className="text-sm text-muted-foreground">%</span>
+                </div>
+                <p className="text-[10px] text-muted-foreground">{t('Default: 3%', 'Mac dinh: 3%')}</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dist-delivery-share">{t('Delivery Fee Share (%)', 'Phi giao hang (%)')}</Label>
+                <div className="flex items-center gap-2">
+                  <Input id="dist-delivery-share" type="number" min="0" max="100" step="5"
+                    value={form.deliveryFeeShare} onChange={(e) => updateField('deliveryFeeShare', e.target.value)}
+                    className="w-24 h-9" />
+                  <span className="text-sm text-muted-foreground">%</span>
+                </div>
+                <p className="text-[10px] text-muted-foreground">{t('Default: 50%', 'Mac dinh: 50%')}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Bank Information */}
+          <div className="border-t pt-4">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+              {t('Bank Information', 'Thong tin ngan hang')}
+            </p>
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="dist-bank-name">{t('Bank Name', 'Ten ngan hang')}</Label>
+                <Input id="dist-bank-name" value={form.bankName} onChange={(e) => updateField('bankName', e.target.value)}
+                  placeholder={t('e.g., Vietcombank', 'VD: Vietcombank')} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="dist-bank-account">{t('Account Number', 'So tai khoan')}</Label>
+                  <Input id="dist-bank-account" value={form.bankAccount} onChange={(e) => updateField('bankAccount', e.target.value)}
+                    placeholder="9876 5432 1098" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="dist-bank-holder">{t('Account Holder', 'Chu tai khoan')}</Label>
+                  <Input id="dist-bank-holder" value={form.bankHolder} onChange={(e) => updateField('bankHolder', e.target.value)}
+                    placeholder={t('Full name', 'Ho ten day du')} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dist-tax-id">{t('Tax ID (MST)', 'Ma so thue (MST)')}</Label>
+                <Input id="dist-tax-id" value={form.taxId} onChange={(e) => updateField('taxId', e.target.value)}
+                  placeholder="0301xxxx" />
+              </div>
             </div>
           </div>
         </div>

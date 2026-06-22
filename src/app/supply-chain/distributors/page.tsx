@@ -74,6 +74,12 @@ interface DistributorListItem {
   lng: number | null;
   isActive: boolean;
   createdAt: string;
+  commissionRate: number;
+  deliveryFeeShare: number;
+  bankName: string | null;
+  bankAccount: string | null;
+  bankHolder: string | null;
+  taxId: string | null;
   _count: { products: number };
 }
 
