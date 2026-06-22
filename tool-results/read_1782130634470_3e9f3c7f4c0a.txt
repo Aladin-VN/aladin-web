@@ -1,0 +1,590 @@
+     1→'use client';
+     2→import { adminFetch } from '@/lib/admin-fetch';
+     3→import { useLocale } from '@/providers/app-provider';
+     4→
+     5→import { useState, useEffect, useCallback, useRef } from 'react';
+     6→import {
+     7→  Warehouse,
+     8→  Plus,
+     9→  Search,
+    10→  ChevronLeft,
+    11→  ChevronRight,
+    12→  RefreshCw,
+    13→  Edit,
+    14→  Trash2,
+    15→  Package,
+    16→  Phone,
+    17→  Mail,
+    18→  MapPin,
+    19→  RotateCcw,
+    20→  MapPinned,
+    21→  Loader2,
+    22→} from 'lucide-react';
+    23→import { Card, CardContent } from '@/components/ui/card';
+    24→import { Button } from '@/components/ui/button';
+    25→import { Skeleton } from '@/components/ui/skeleton';
+    26→import { Input } from '@/components/ui/input';
+    27→import { Badge } from '@/components/ui/badge';
+    28→import {
+    29→  Table,
+    30→  TableBody,
+    31→  TableCell,
+    32→  TableHead,
+    33→  TableHeader,
+    34→  TableRow,
+    35→} from '@/components/ui/table';
+    36→import {
+    37→  Select,
+    38→  SelectContent,
+    39→  SelectItem,
+    40→  SelectTrigger,
+    41→  SelectValue,
+    42→} from '@/components/ui/select';
+    43→import {
+    44→  AlertDialog,
+    45→  AlertDialogAction,
+    46→  AlertDialogCancel,
+    47→  AlertDialogContent,
+    48→  AlertDialogDescription,
+    49→  AlertDialogFooter,
+    50→  AlertDialogHeader,
+    51→  AlertDialogTitle,
+    52→} from '@/components/ui/alert-dialog';
+    53→import { AdminSidebar } from '@/components/layout/admin-sidebar';
+    54→import { AdminHeader } from '@/components/layout/admin-header';
+    55→import { SidebarInset } from '@/components/ui/sidebar';
+    56→import { Separator } from '@/components/ui/separator';
+    57→import { SensitiveValue } from '@/components/shared/sensitive-value';
+    58→import { DistributorFormDialog } from '@/components/supply-chain/supply-chain-forms';
+    59→import { toast } from 'sonner';
+    60→
+    61→// ============================================
+    62→// Types
+    63→// ============================================
+    64→
+    65→interface DistributorListItem {
+    66→  id: string;
+    67→  name: string;
+    68→  nameEn: string | null;
+    69→  contactPerson: string | null;
+    70→  contactPhone: string | null;
+    71→  email: string | null;
+    72→  address: string | null;
+    73→  lat: number | null;
+    74→  lng: number | null;
+    75→  isActive: boolean;
+    76→  createdAt: string;
+    77→  _count: { products: number };
+    78→}
+    79→
+    80→interface DistributorsResponse {
+    81→  items: DistributorListItem[];
+    82→  pagination: { page: number; limit: number; total: number; totalPages: number };
+    83→}
+    84→
+    85→// ============================================
+    86→// Main Distributors Page
+    87→// ============================================
+    88→
+    89→export default function DistributorsPage() {
+    90→  const { locale } = useLocale();
+    91→  const t = (en: string, vi: string) => locale === 'vi' ? vi : en;
+    92→
+    93→  // Data state
+    94→  const [distributors, setDistributors] = useState<DistributorListItem[]>([]);
+    95→  const [loading, setLoading] = useState(true);
+    96→
+    97→  // Filter state
+    98→  const [searchQuery, setSearchQuery] = useState('');
+    99→  const [debouncedSearch, setDebouncedSearch] = useState('');
+   100→  const [statusFilter, setStatusFilter] = useState('all');
+   101→  const [page, setPage] = useState(1);
+   102→  const [totalPages, setTotalPages] = useState(1);
+   103→  const [totalCount, setTotalCount] = useState(0);
+   104→  const limit = 20;
+   105→
+   106→  // Dialog state
+   107→  const [formDialogOpen, setFormDialogOpen] = useState(false);
+   108→  const [selectedDistributor, setSelectedDistributor] = useState<DistributorListItem | null>(null);
+   109→  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+   110→  const [deleting, setDeleting] = useState(false);
+   111→
+   112→  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+   113→
+   114→  // Debounced search
+   115→  useEffect(() => {
+   116→    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+   117→    searchTimeoutRef.current = setTimeout(() => {
+   118→      setDebouncedSearch(searchQuery);
+   119→      setPage(1);
+   120→    }, 300);
+   121→    return () => { if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current); };
+   122→  }, [searchQuery]);
+   123→
+   124→  // Fetch distributors
+   125→  const fetchDistributors = useCallback(async () => {
+   126→    try {
+   127→      setLoading(true);
+   128→      const params = new URLSearchParams({ page: String(page), limit: String(limit), search: debouncedSearch });
+   129→      if (statusFilter !== 'all') params.set('status', statusFilter);
+   130→      const res = await adminFetch(`/api/distributors?${params.toString()}`);
+   131→      const json = await res.json();
+   132→      if (json.success) {
+   133→        const data: DistributorsResponse = json.data;
+   134→        setDistributors(data.items || []);
+   135→        setTotalPages(data.pagination.totalPages);
+   136→        setTotalCount(data.pagination.total);
+   137→      }
+   138→    } catch (err) {
+   139→      console.error('Failed to fetch distributors:', err);
+   140→    } finally {
+   141→      setLoading(false);
+   142→    }
+   143→  }, [page, debouncedSearch, statusFilter, limit]);
+   144→
+   145→  useEffect(() => { fetchDistributors(); }, [fetchDistributors]);
+   146→
+   147→  // Handlers
+   148→  const handleCreate = () => {
+   149→    setSelectedDistributor(null);
+   150→    setFormDialogOpen(true);
+   151→  };
+   152→
+   153→  const handleEdit = (dist: DistributorListItem) => {
+   154→    setSelectedDistributor(dist);
+   155→    setFormDialogOpen(true);
+   156→  };
+   157→
+   158→  const handleDelete = (dist: DistributorListItem) => {
+   159→    setSelectedDistributor(dist);
+   160→    setDeleteDialogOpen(true);
+   161→  };
+   162→
+   163→  const confirmDelete = async () => {
+   164→    if (!selectedDistributor) return;
+   165→    try {
+   166→      setDeleting(true);
+   167→      const res = await adminFetch(`/api/distributors/${selectedDistributor.id}`, { method: 'DELETE' });
+   168→      const json = await res.json();
+   169→      if (json.success) {
+   170→        toast.success(t('Distributor deleted', 'Xoa nha phan phoi thanh cong'));
+   171→        setDeleteDialogOpen(false);
+   172→        setSelectedDistributor(null);
+   173→        fetchDistributors();
+   174→      } else {
+   175→        toast.error(json.error?.message || t('Failed to delete', 'Khong the xoa'));
+   176→      }
+   177→    } catch (err) {
+   178→      console.error('Delete error:', err);
+   179→      toast.error(t('Network error', 'Loi mang'));
+   180→    } finally {
+   181→      setDeleting(false);
+   182→    }
+   183→  };
+   184→
+   185→  const toggleActive = async (dist: DistributorListItem) => {
+   186→    try {
+   187→      const res = await adminFetch(`/api/distributors/${dist.id}`, {
+   188→        method: 'PUT',
+   189→        headers: { 'Content-Type': 'application/json' },
+   190→        body: JSON.stringify({ isActive: !dist.isActive }),
+   191→      });
+   192→      const json = await res.json();
+   193→      if (json.success) {
+   194→        toast.success(dist.isActive
+   195→          ? t('Distributor deactivated', 'Ngung hoat dong nha phan phoi')
+   196→          : t('Distributor activated', 'Kich hoat nha phan phoi')
+   197→        );
+   198→        fetchDistributors();
+   199→      } else {
+   200→        toast.error(json.error?.message || t('Failed to update', 'Khong the cap nhat'));
+   201→      }
+   202→    } catch (err) {
+   203→      console.error('Toggle active error:', err);
+   204→    }
+   205→  };
+   206→
+   207→  const handleSaved = () => { fetchDistributors(); };
+   208→
+   209→  const getPageNumbers = () => {
+   210→    const pages: number[] = [];
+   211→    const maxVisible = 5;
+   212→    let start = Math.max(1, page - Math.floor(maxVisible / 2));
+   213→    const end = Math.min(totalPages, start + maxVisible - 1);
+   214→    if (end - start + 1 < maxVisible) start = Math.max(1, end - maxVisible + 1);
+   215→    for (let i = start; i <= end; i++) pages.push(i);
+   216→    return pages;
+   217→  };
+   218→
+   219→  const activeCount = distributors.filter((d) => d.isActive).length;
+   220→  const hasCoords = distributors.filter((d) => d.lat !== null && d.lng !== null).length;
+   221→  const totalProducts = distributors.reduce((sum, d) => sum + d._count.products, 0);
+   222→
+   223→  return (
+   224→    <div className="flex min-h-screen">
+   225→      <AdminSidebar />
+   226→      <SidebarInset>
+   227→        <AdminHeader />
+   228→
+   229→        <main className="flex-1 p-4 md:p-6 lg:p-8 space-y-6">
+   230→          {/* Header */}
+   231→          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+   232→            <div>
+   233→              <h1 className="text-2xl font-bold tracking-tight">
+   234→                {t('Distributors', 'Nha phan phoi')}
+   235→              </h1>
+   236→              <p className="text-sm text-muted-foreground mt-1">
+   237→                {t('Manage distribution network, coordinates, and smart sourcing', 'Quan ly mang phan phoi, toa do va tim nguon thong minh')}
+   238→              </p>
+   239→            </div>
+   240→            <div className="flex items-center gap-2">
+   241→              <Button variant="outline" size="sm" onClick={fetchDistributors}>
+   242→                <RefreshCw className="h-4 w-4 mr-1" />
+   243→                {t('Refresh', 'Lam moi')}
+   244→              </Button>
+   245→              <Button size="sm" onClick={handleCreate} className="bg-red-600 hover:bg-red-700 text-white">
+   246→                <Plus className="h-4 w-4 mr-1" />
+   247→                {t('Add Distributor', 'Them nha PP')}
+   248→              </Button>
+   249→            </div>
+   250→          </div>
+   251→
+   252→          <Separator />
+   253→
+   254→          {/* Summary Cards */}
+   255→          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+   256→            <Card>
+   257→              <CardContent className="p-4">
+   258→                <div className="flex items-center justify-between">
+   259→                  <div>
+   260→                    <p className="text-xs text-muted-foreground font-medium">{t('Total Distributors', 'Tong nha PP')}</p>
+   261→                    <p className="text-xl font-bold mt-1">{totalCount}</p>
+   262→                  </div>
+   263→                  <div className="h-9 w-9 rounded-lg bg-yellow-50 text-red-600 flex items-center justify-center">
+   264→                    <Warehouse className="h-4 w-4" />
+   265→                  </div>
+   266→                </div>
+   267→              </CardContent>
+   268→            </Card>
+   269→            <Card>
+   270→              <CardContent className="p-4">
+   271→                <div className="flex items-center justify-between">
+   272→                  <div>
+   273→                    <p className="text-xs text-muted-foreground font-medium">{t('Active', 'Hoat dong')}</p>
+   274→                    <p className="text-xl font-bold mt-1 text-red-600">{activeCount}</p>
+   275→                  </div>
+   276→                  <div className="h-9 w-9 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
+   277→                    <MapPinned className="h-4 w-4" />
+   278→                  </div>
+   279→                </div>
+   280→              </CardContent>
+   281→            </Card>
+   282→            <Card>
+   283→              <CardContent className="p-4">
+   284→                <div className="flex items-center justify-between">
+   285→                  <div>
+   286→                    <p className="text-xs text-muted-foreground font-medium">{t('With Coordinates', 'Co toa do')}</p>
+   287→                    <p className="text-xl font-bold mt-1">{hasCoords}</p>
+   288→                  </div>
+   289→                  <div className="h-9 w-9 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center">
+   290→                    <MapPin className="h-4 w-4" />
+   291→                  </div>
+   292→                </div>
+   293→              </CardContent>
+   294→            </Card>
+   295→            <Card>
+   296→              <CardContent className="p-4">
+   297→                <div className="flex items-center justify-between">
+   298→                  <div>
+   299→                    <p className="text-xs text-muted-foreground font-medium">{t('Total Products', 'Tong SP')}</p>
+   300→                    <p className="text-xl font-bold mt-1">{totalProducts}</p>
+   301→                  </div>
+   302→                  <div className="h-9 w-9 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center">
+   303→                    <Package className="h-4 w-4" />
+   304→                  </div>
+   305→                </div>
+   306→              </CardContent>
+   307→            </Card>
+   308→          </div>
+   309→
+   310→          {/* Smart Sourcing Info Banner */}
+   311→          <Card className="border-yellow-100 bg-yellow-50/50 dark:border-red-900 dark:bg-emerald-950/30">
+   312→            <CardContent className="p-4">
+   313→              <div className="flex items-start gap-3">
+   314→                <div className="h-9 w-9 rounded-lg bg-yellow-100 text-red-700 flex items-center justify-center shrink-0">
+   315→                  <MapPinned className="h-4 w-4" />
+   316→                </div>
+   317→                <div>
+   318→                  <h4 className="text-sm font-semibold text-red-700 dark:text-yellow-500">
+   319→                    {t('Smart Sourcing', 'Tim nguon thong minh')}
+   320→                  </h4>
+   321→                  <p className="text-xs text-red-600/80 dark:text-yellow-500/80 mt-0.5">
+   322→                    {t(
+   323→                      'AI auto-selects optimal distributor based on margin + logistics cost. Add latitude/longitude to distributor profiles to enable distance-based routing.',
+   324→                      'AI tu dong chon NPP toi uu dua tren lai nhuong + chi phi van chuyen. Them vi do/kinh do vao ho so NPP de bat dau tuyen duong theo khoang cach.'
+   325→                    )}
+   326→                  </p>
+   327→                </div>
+   328→              </div>
+   329→            </CardContent>
+   330→          </Card>
+   331→
+   332→          {/* Search + Filter */}
+   333→          <Card>
+   334→            <CardContent className="p-4">
+   335→              <div className="flex flex-col sm:flex-row gap-3">
+   336→                <div className="relative flex-1 max-w-sm">
+   337→                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+   338→                  <Input
+   339→                    type="search"
+   340→                    placeholder={t('Search by name, contact, address...', 'Tim theo ten, nguoi LH, dia chi...')}
+   341→                    className="pl-8 h-9"
+   342→                    value={searchQuery}
+   343→                    onChange={(e) => setSearchQuery(e.target.value)}
+   344→                  />
+   345→                </div>
+   346→                <Select value={statusFilter} onValueChange={(val) => { setStatusFilter(val); setPage(1); }}>
+   347→                  <SelectTrigger className="w-full sm:w-[140px] h-9">
+   348→                    <SelectValue placeholder={t('Status', 'Trang thai')} />
+   349→                  </SelectTrigger>
+   350→                  <SelectContent>
+   351→                    <SelectItem value="all">{t('All', 'Tat ca')}</SelectItem>
+   352→                    <SelectItem value="active">
+   353→                      <span className="flex items-center gap-1.5">
+   354→                        <span className="h-2 w-2 rounded-full bg-red-500" />
+   355→                        {t('Active', 'Hoat dong')}
+   356→                      </span>
+   357→                    </SelectItem>
+   358→                    <SelectItem value="inactive">
+   359→                      <span className="flex items-center gap-1.5">
+   360→                        <span className="h-2 w-2 rounded-full bg-gray-400" />
+   361→                        {t('Inactive', 'Ngung hoat dong')}
+   362→                      </span>
+   363→                    </SelectItem>
+   364→                  </SelectContent>
+   365→                </Select>
+   366→                {(debouncedSearch || statusFilter !== 'all') && (
+   367→                  <Button variant="ghost" size="sm" className="h-9" onClick={() => { setSearchQuery(''); setStatusFilter('all'); }}>
+   368→                    <RotateCcw className="h-3.5 w-3.5 mr-1" />
+   369→                    {t('Reset', 'Dat lai')}
+   370→                  </Button>
+   371→                )}
+   372→              </div>
+   373→            </CardContent>
+   374→          </Card>
+   375→
+   376→          {/* Table */}
+   377→          <Card>
+   378→            <CardContent className="p-0">
+   379→              {loading ? (
+   380→                <div className="p-4 space-y-3">
+   381→                  <Skeleton className="h-10 w-full" />
+   382→                  {Array.from({ length: 5 }).map((_, i) => (
+   383→                    <Skeleton key={i} className="h-14 w-full" />
+   384→                  ))}
+   385→                </div>
+   386→              ) : distributors.length === 0 ? (
+   387→                <div className="text-center py-16 px-4">
+   388→                  <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+   389→                    <Warehouse className="h-8 w-8 text-muted-foreground" />
+   390→                  </div>
+   391→                  <h3 className="text-lg font-semibold">{t('No distributors found', 'Khong tim thay nha phan phoi')}</h3>
+   392→                  <p className="text-sm text-muted-foreground mt-1">
+   393→                    {t('Add your first distributor to build the supply chain', 'Them nha phan phoi dau tien de xay dung chuoi cung ung')}
+   394→                  </p>
+   395→                  <Button className="mt-4 bg-red-600 hover:bg-red-700 text-white" onClick={handleCreate}>
+   396→                    <Plus className="h-4 w-4 mr-2" />
+   397→                    {t('Add First Distributor', 'Them nha PP dau tien')}
+   398→                  </Button>
+   399→                </div>
+   400→              ) : (
+   401→                <div className="w-full">
+   402→                  <Table>
+   403→                    <TableHeader>
+   404→                      <TableRow className="bg-muted/30">
+   405→                        <TableHead>{t('Distributor', 'Nha phan phoi')}</TableHead>
+   406→                        <TableHead>{t('Status', 'TT')}</TableHead>
+   407→                        <TableHead className="hidden md:table-cell">{t('Contact', 'Lien he')}</TableHead>
+   408→                        <TableHead className="hidden sm:table-cell text-center">{t('Products', 'SP')}</TableHead>
+   409→                        <TableHead className="hidden lg:table-cell">{t('Location', 'Vi tri')}</TableHead>
+   410→                        <TableHead className="hidden xl:table-cell">{t('Coordinates', 'Toa do')}</TableHead>
+   411→                        <TableHead className="text-right">{t('Actions', 'TH')}</TableHead>
+   412→                      </TableRow>
+   413→                    </TableHeader>
+   414→                    <TableBody>
+   415→                      {distributors.map((dist) => (
+   416→                        <TableRow key={dist.id} className={`hover:bg-muted/50 transition-colors ${!dist.isActive ? 'opacity-60' : ''}`}>
+   417→                          <TableCell>
+   418→                            <div className="flex items-center gap-2">
+   419→                              <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${
+   420→                                dist.isActive
+   421→                                  ? 'bg-yellow-50 text-red-600'
+   422→                                  : 'bg-gray-100 text-gray-400'
+   423→                              }`}>
+   424→                                <Warehouse className="h-4 w-4" />
+   425→                              </div>
+   426→                              <div>
+   427→                                <p className="text-sm font-medium">{dist.name}</p>
+   428→                                {dist.nameEn && (
+   429→                                  <p className="text-[10px] text-muted-foreground">{dist.nameEn}</p>
+   430→                                )}
+   431→                              </div>
+   432→                            </div>
+   433→                          </TableCell>
+   434→
+   435→                          <TableCell>
+   436→                            <Badge variant="secondary" className={
+   437→                              dist.isActive
+   438→                                ? 'bg-yellow-50 text-red-700 hover:bg-yellow-50 text-[10px]'
+   439→                                : 'bg-gray-100 text-gray-500 hover:bg-gray-100 text-[10px]'
+   440→                            }>
+   441→                              {dist.isActive ? t('Active', 'HD') : t('Inactive', 'Ngung')}
+   442→                            </Badge>
+   443→                          </TableCell>
+   444→
+   445→                          <TableCell className="hidden md:table-cell">
+   446→                            <div className="space-y-0.5">
+   447→                              {dist.contactPerson && (
+   448→                                <p className="text-xs">{dist.contactPerson}</p>
+   449→                              )}
+   450→                              {dist.contactPhone && (
+   451→                                <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+   452→                                  <Phone className="h-3 w-3" />
+   453→                                  <SensitiveValue value={dist.contactPhone} maskType="phone" />
+   454→                                </p>
+   455→                              )}
+   456→                              {dist.email && (
+   457→                                <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+   458→                                  <Mail className="h-3 w-3" />
+   459→                                  <SensitiveValue value={dist.email} maskType="email" />
+   460→                                </p>
+   461→                              )}
+   462→                            </div>
+   463→                          </TableCell>
+   464→
+   465→                          <TableCell className="hidden sm:table-cell text-center">
+   466→                            <span className="text-sm font-medium">{dist._count.products}</span>
+   467→                          </TableCell>
+   468→
+   469→                          <TableCell className="hidden lg:table-cell">
+   470→                            {dist.address ? (
+   471→                              <span className="text-xs text-muted-foreground flex items-center gap-1 max-w-[200px] truncate">
+   472→                                <MapPin className="h-3 w-3 shrink-0" />
+   473→                                {dist.address}
+   474→                              </span>
+   475→                            ) : (
+   476→                              <span className="text-xs text-muted-foreground">—</span>
+   477→                            )}
+   478→                          </TableCell>
+   479→
+   480→                          <TableCell className="hidden xl:table-cell">
+   481→                            {dist.lat !== null && dist.lng !== null ? (
+   482→                              <span className="text-xs font-mono text-muted-foreground">
+   483→                                {dist.lat.toFixed(4)}, {dist.lng.toFixed(4)}
+   484→                              </span>
+   485→                            ) : (
+   486→                              <span className="text-xs text-muted-foreground">
+   487→                                {t('Not set', 'Chua dat')}
+   488→                              </span>
+   489→                            )}
+   490→                          </TableCell>
+   491→
+   492→                          <TableCell className="text-right">
+   493→                            <div className="flex items-center justify-end gap-1">
+   494→                              <Button variant="ghost" size="sm" className="h-8 text-xs"
+   495→                                onClick={() => toggleActive(dist)}
+   496→                                title={dist.isActive ? t('Deactivate', 'Ngung HD') : t('Activate', 'Kich hoat')}>
+   497→                                {(dist.isActive
+   498→                                  ? <span key="on" className="h-3.5 w-3.5 rounded-full bg-red-500 inline-block" />
+   499→                                  : <span key="off" className="h-3.5 w-3.5 rounded-full bg-gray-300 inline-block" />
+   500→                                )}
+   501→                              </Button>
+   502→                              <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => handleEdit(dist)}>
+   503→                                <Edit className="h-3.5 w-3.5 mr-1" />
+   504→                                {t('Edit', 'Sua')}
+   505→                              </Button>
+   506→                              <Button variant="ghost" size="sm" className="h-8 text-xs text-red-600 hover:text-red-700" onClick={() => handleDelete(dist)}>
+   507→                                <Trash2 className="h-3.5 w-3.5" />
+   508→                              </Button>
+   509→                            </div>
+   510→                          </TableCell>
+   511→                        </TableRow>
+   512→                      ))}
+   513→                    </TableBody>
+   514→                  </Table>
+   515→
+   516→                  {/* Pagination */}
+   517→                  {totalPages > 1 && (
+   518→                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t">
+   519→                      <p className="text-xs text-muted-foreground">
+   520→                        {t(
+   521→                          `Showing ${(page - 1) * limit + 1}–${Math.min(page * limit, totalCount)} of ${totalCount} distributors`,
+   522→                          `Hien thi ${(page - 1) * limit + 1}–${Math.min(page * limit, totalCount)} / ${totalCount} nha PP`
+   523→                        )}
+   524→                      </p>
+   525→                      <div className="flex items-center gap-1">
+   526→                        <Button variant="outline" size="icon" className="h-8 w-8" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+   527→                          <ChevronLeft className="h-4 w-4" />
+   528→                        </Button>
+   529→                        {getPageNumbers().map((p) => (
+   530→                          <Button key={p} variant={p === page ? 'default' : 'outline'} size="icon"
+   531→                            className={`h-8 w-8 text-xs ${p === page ? 'bg-red-600 hover:bg-red-700 text-white' : ''}`}
+   532→                            onClick={() => setPage(p)}>{p}</Button>
+   533→                        ))}
+   534→                        <Button variant="outline" size="icon" className="h-8 w-8" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+   535→                          <ChevronRight className="h-4 w-4" />
+   536→                        </Button>
+   537→                      </div>
+   538→                    </div>
+   539→                  )}
+   540→                </div>
+   541→              )}
+   542→            </CardContent>
+   543→          </Card>
+   544→        </main>
+   545→
+   546→        {/* Form Dialog */}
+   547→        <DistributorFormDialog
+   548→          open={formDialogOpen}
+   549→          onOpenChange={setFormDialogOpen}
+   550→          distributor={selectedDistributor}
+   551→          locale={locale}
+   552→          onSaved={handleSaved}
+   553→        />
+   554→
+   555→        {/* Delete Confirmation */}
+   556→        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+   557→          <AlertDialogContent>
+   558→            <AlertDialogHeader>
+   559→              <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+   560→                <Trash2 className="h-5 w-5" />
+   561→                {t('Delete Distributor', 'Xoa nha phan phoi')}
+   562→              </AlertDialogTitle>
+   563→              <AlertDialogDescription>
+   564→                {t(
+   565→                  `Are you sure you want to delete "${selectedDistributor?.name || ''}"? This action cannot be undone.`,
+   566→                  `Ban co chac chan muon xoa "${selectedDistributor?.name || ''}"? Hanh dong nay khong the hoan tac.`
+   567→                )}
+   568→              </AlertDialogDescription>
+   569→            </AlertDialogHeader>
+   570→            <p className="text-sm text-amber-600 bg-amber-50 dark:bg-amber-950/20 rounded p-3">
+   571→              {t(
+   572→                `This distributor has ${selectedDistributor?._count.products || 0} product(s). You must unlink all products before deleting.`,
+   573→                `Nha phan phoi nay co ${selectedDistributor?._count.products || 0} san pham. Ban phai ngat lien ket truoc khi xoa.`
+   574→              )}
+   575→            </p>
+   576→            <AlertDialogFooter>
+   577→              <AlertDialogCancel disabled={deleting}>{t('Cancel', 'Huy')}</AlertDialogCancel>
+   578→              <AlertDialogAction onClick={confirmDelete} disabled={deleting}
+   579→                className="bg-red-600 hover:bg-red-700 text-white">
+   580→                {deleting && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+   581→                {t('Delete', 'Xoa')}
+   582→              </AlertDialogAction>
+   583→            </AlertDialogFooter>
+   584→          </AlertDialogContent>
+   585→        </AlertDialog>
+   586→      </SidebarInset>
+   587→    </div>
+   588→  );
+   589→}
+   590→

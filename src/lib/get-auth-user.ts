@@ -27,6 +27,14 @@ export interface AuthUser {
     wardId?: string;
     commissionRate: number;
   } | null;
+  distributorId?: string | null;
+  distributor?: {
+    id: string;
+    name: string;
+    address?: string;
+    commissionRate: number;
+    pendingPayoutAmount: number;
+  } | null;
 }
 
 /**
@@ -88,6 +96,7 @@ export async function requireAdmin(request: NextRequest): Promise<AuthUser | Nex
  * - SALES_REP: see all (territory-wide)
  * - DRIVER: only orders assigned to them
  * - BROKER: orders from their referred shops
+ * - DISTRIBUTOR: only orders assigned to their distributor
  */
 export function getOrderFilter(user: AuthUser) {
   switch (user.role) {
@@ -99,10 +108,9 @@ export function getOrderFilter(user: AuthUser) {
         { shipments: { some: { assignedDriverId: user.userId } } },
       ]};
     case ROLES.BROKER:
-      // Broker sees orders from shops in their assigned ward
-      // Since broker-ward link is indirect, return empty filter
-      // and let the route-level RBAC handle filtering
       return {};
+    case ROLES.DISTRIBUTOR:
+      return { distributorId: user.distributorId };
     default:
       return {}; // ADMIN, SALES_REP see all
   }
@@ -122,6 +130,16 @@ export function getShopFilter(user: AuthUser) {
     default:
       return {}; // ADMIN, SALES_REP, DRIVER see all
   }
+}
+
+/**
+ * Get distributor ID for a user (if they are a DISTRIBUTOR role)
+ */
+export function getDistributorId(user: AuthUser): string | null {
+  if (user.role === ROLES.DISTRIBUTOR) {
+    return user.distributorId || null;
+  }
+  return null;
 }
 
 /**

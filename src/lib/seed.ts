@@ -19,6 +19,8 @@ export async function seedDatabase() {
   // Clean up (reverse dependency order)
   const tables = [
     'chatMessage', 'auditLog', 'platformSetting', 'payment',
+    'settlementLineItem', 'settlement', 'platformFeeConfig',
+    'inventoryMovement', 'distributorInventory', 'distributorUser',
     'promotionItem', 'orderItem', 'transaction', 'shipment',
     'groupDealParticipant', 'order', 'groupDeal',
     'merchandisingAudit', 'promotion',
@@ -155,6 +157,18 @@ export async function seedDatabase() {
     },
   });
 
+  // Distributor user (linked to first distributor)
+  const distUser = await db.user.create({
+    data: {
+      phone: '0944444444', name: 'Anh Tín - Kho Miền Nam', nameEn: 'Tin - South Hub',
+      role: 'DISTRIBUTOR', status: 'ACTIVE',
+      passwordHash: '8fc022ea8c4aa394ddc9115d7f8808e1:6530711c8439cc9fee88067eea16f152fafb06b00242992000d4dc6bc0081098733af4a32f8fd6d15e98838744579c6d7bad7285d9dd8e6715fc7ec900627b01',
+    },
+  });
+  await db.distributorUser.create({
+    data: { userId: distUser.id, distributorId: distributors[0].id },
+  });
+
   const shopDefs = [
     { name: 'Tạp Hóa Hạnh Phúc', nameEn: 'Hanh Phuc Groceries', ward: 0, type: 'TAPHOA', tier: 'GOLD', credit: 5000000, bal: 3380000 },
     { name: 'Tâm An', nameEn: 'Tam An Shop', ward: 1, type: 'TAPHOA', tier: 'PLATINUM', credit: 3000000, bal: 1450000 },
@@ -255,6 +269,36 @@ export async function seedDatabase() {
       })
     )
   );
+
+  // 6b. Distributor Inventory (seed stock for distributor 0)
+  await Promise.all(
+    products
+      .filter((p) => p.distributorId === distributors[0].id)
+      .map((p) =>
+        db.distributorInventory.create({
+          data: {
+            distributorId: distributors[0].id,
+            productId: p.id,
+            quantity: Math.floor(p.stockQuantity * 0.6), // 60% of global stock at distributor
+            reservedQty: 0,
+            minStockLevel: 20,
+            costPrice: Math.floor(p.basePrice * 0.7), // 70% of selling price as cost
+          },
+        })
+      )
+  );
+
+  // 6c. Platform Fee Config (default)
+  await db.platformFeeConfig.create({
+    data: {
+      name: 'Tiêu chuẩn 3%',
+      feeType: 'PERCENTAGE',
+      rate: 0.03,
+      minFee: 0,
+      isActive: true,
+      appliesTo: 'ALL',
+    },
+  });
 
   // 7. PROMOTIONS (3)
   const promotions = await Promise.all([

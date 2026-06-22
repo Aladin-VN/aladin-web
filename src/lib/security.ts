@@ -77,9 +77,9 @@ export function isValidVNDAmount(amount: number): boolean {
   return Number.isInteger(amount) && amount > 0 && amount <= 100_000_000_000; // Max 100 billion VND
 }
 
-/** Validate credit limit range (500K - 10M VND) */
+/** Validate credit limit range (2M - 5M VND starting, up to 10M for upgrades) */
 export function isValidCreditLimit(limit: number): boolean {
-  return Number.isInteger(limit) && limit >= 500_000 && limit <= 10_000_000;
+  return Number.isInteger(limit) && limit >= 2_000_000 && limit <= 10_000_000;
 }
 
 // ============================================
@@ -162,6 +162,7 @@ export const ROLES = {
   SALES_REP: 'SALES_REP',
   DRIVER: 'DRIVER',
   BROKER: 'BROKER',
+  DISTRIBUTOR: 'DISTRIBUTOR',
 } as const;
 
 export const ORDER_STATUS = {
@@ -227,10 +228,35 @@ export const BROKER_TIERS = {
 
 // Credit system constants
 export const CREDIT_CONFIG = {
-  DEFAULT_LIMIT: 1_000_000,       // 1M VND default
-  MIN_LIMIT: 500_000,             // 500K VND minimum
-  MAX_LIMIT: 10_000_000,          // 10M VND maximum
+  DEFAULT_LIMIT: 2_000_000,       // 2M VND default (was 1M)
+  MIN_LIMIT: 2_000_000,           // 2M VND minimum
+  MAX_LIMIT: 5_000_000,           // 5M VND maximum starting
   CREDIT_DAYS: 7,                 // 7-day repayment window
   REMINDER_DAY: 5,               // Remind on Day 5
   PAY_NOW_DISCOUNT: 0.02,         // 2% instant discount for digital payment
+} as const;
+
+// Settlement system constants (Model A + C)
+export const SETTLEMENT_CONFIG = {
+  DEFAULT_PLATFORM_FEE: 0.03,   // 3% platform fee
+  DEFAULT_DELIVERY_FEE: 20000,  // 20K VND per delivery
+  SETTLEMENT_CYCLE_DAYS: 7,     // Weekly settlement
+  MIN_SETTLEMENT_AMOUNT: 100000, // 100K VND minimum to trigger payout
+} as const;
+
+// Inventory movement types
+export const INVENTORY_MOVEMENT_TYPES = {
+  RECEIPT: 'RECEIPT',
+  ADJUSTMENT: 'ADJUSTMENT',
+  ORDER_FULFILLMENT: 'ORDER_FULFILLMENT',
+  RETURN: 'RETURN',
+  DAMAGE: 'DAMAGE',
+} as const;
+
+// Settlement statuses
+export const SETTLEMENT_STATUS = {
+  PENDING: 'PENDING',
+  PROCESSING: 'PROCESSING',
+  PAID: 'PAID',
+  FAILED: 'FAILED',
 } as const;

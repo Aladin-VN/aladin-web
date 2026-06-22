@@ -73,6 +73,7 @@ export interface JwtPayload {
   phone: string;
   role: string;
   shopId?: string;
+  distributorId?: string;
 }
 
 export interface TokenPair {
@@ -211,7 +212,7 @@ export async function loginUser(phone: string, password: string) {
   // Find user
   const user = await db.user.findUnique({
     where: { phone },
-    include: { shop: true, broker: true },
+    include: { shop: true, broker: true, distributor: { include: { distributor: true } } },
   });
 
   if (!user || !user.passwordHash) {
@@ -229,11 +230,15 @@ export async function loginUser(phone: string, password: string) {
   }
 
   // Generate tokens
+  const distributorId = (user as Record<string, unknown>).distributor 
+    ? ((user as Record<string, unknown>).distributor as Record<string, unknown>)?.distributorId 
+    : null;
   const payload: JwtPayload = {
     userId: user.id,
     phone: user.phone,
     role: user.role,
     shopId: user.shop?.id,
+    distributorId: distributorId as string | undefined,
   };
   const tokens = generateTokenPair(payload);
 
@@ -282,7 +287,7 @@ export function sanitizeUser(user: Record<string, unknown>) {
 export async function getCurrentUser(userId: string) {
   const user = await db.user.findUnique({
     where: { id: userId },
-    include: { shop: true, broker: true },
+    include: { shop: true, broker: true, distributor: { include: { distributor: true } } },
   });
 
   if (!user || user.deletedAt) return null;

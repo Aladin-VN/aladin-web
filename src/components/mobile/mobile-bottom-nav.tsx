@@ -9,6 +9,7 @@ import {
   User,
   Truck,
   HandCoins,
+  Warehouse,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useCartStore } from '@/stores/cart.store';
@@ -64,6 +65,13 @@ const tabs: NavTab[] = [
     labelEn: 'Shipments',
     icon: <Truck className="h-5 w-5" />,
     roles: [ROLES.ADMIN, ROLES.DRIVER],
+  },
+  {
+    href: '/m/distributor',
+    labelVi: 'Kho hàng',
+    labelEn: 'Warehouse',
+    icon: <Warehouse className="h-5 w-5" />,
+    roles: [ROLES.ADMIN, ROLES.DISTRIBUTOR],
   },
   {
     href: '/m/broker',

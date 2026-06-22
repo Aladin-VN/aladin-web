@@ -5,7 +5,7 @@
 // USER TYPES
 // ============================================
 
-export type UserRole = 'ADMIN' | 'SHOP_OWNER' | 'SALES_REP' | 'DRIVER' | 'BROKER';
+export type UserRole = 'ADMIN' | 'SHOP_OWNER' | 'SALES_REP' | 'DRIVER' | 'BROKER' | 'DISTRIBUTOR';
 export type UserStatus = 'ACTIVE' | 'SUSPENDED' | 'PENDING_VERIFICATION';
 
 export interface UserSafe {
@@ -23,6 +23,7 @@ export interface UserSafe {
   updatedAt: Date;
   shop?: ShopSummary | null;
   broker?: BrokerSummary | null;
+  distributor?: DistributorSummary | null;
 }
 
 // ============================================
@@ -263,6 +264,66 @@ export interface ShipmentDetail extends ShipmentSummary {
       province: string;
     };
   };
+}
+
+// ============================================
+// DISTRIBUTOR TYPES
+// ============================================
+
+export interface DistributorSummary {
+  id: string;
+  name: string;
+  nameEn?: string | null;
+  contactPerson?: string | null;
+  contactPhone?: string | null;
+  address?: string | null;
+  isActive: boolean;
+  commissionRate: number;
+  totalOrdersFulfilled: number;
+  totalRevenue: number;
+  pendingPayoutAmount: number;
+}
+
+// ============================================
+// INVENTORY TYPES
+// ============================================
+
+export type InventoryMovementType = 'RECEIPT' | 'ADJUSTMENT' | 'ORDER_FULFILLMENT' | 'RETURN' | 'DAMAGE';
+
+export interface DistributorInventoryItem {
+  id: string;
+  productId: string;
+  productName: string;
+  productSku: string;
+  quantity: number;
+  reservedQty: number;
+  availableQty: number;
+  minStockLevel: number;
+  isLowStock: boolean;
+  costPrice?: number | null;
+  basePrice: number;
+  category: string;
+}
+
+// ============================================
+// SETTLEMENT TYPES
+// ============================================
+
+export type SettlementStatus = 'PENDING' | 'PROCESSING' | 'PAID' | 'FAILED';
+
+export interface SettlementSummary {
+  id: string;
+  settlementNumber: string;
+  distributorId: string;
+  distributorName: string;
+  periodStart: Date;
+  periodEnd: Date;
+  totalOrders: number;
+  totalOrderValue: number;
+  totalPlatformFee: number;
+  distributorPayout: number;
+  status: SettlementStatus;
+  paidAt?: Date | null;
 }
 
 // ============================================

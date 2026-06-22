@@ -4,6 +4,14 @@ import { create } from 'zustand';
 // Types
 // ============================================
 
+interface DistributorInfo {
+  id: string;
+  name: string;
+  address?: string;
+  commissionRate: number;
+  pendingPayoutAmount: number;
+}
+
 interface ShopInfo {
   id: string;
   name: string;
@@ -19,11 +27,13 @@ interface UserInfo {
   userId: string;
   phone: string;
   name: string;
-  role: 'ADMIN' | 'SHOP_OWNER' | 'SALES_REP' | 'DRIVER' | 'BROKER';
+  role: 'ADMIN' | 'SHOP_OWNER' | 'SALES_REP' | 'DRIVER' | 'BROKER' | 'DISTRIBUTOR';
   shopId?: string;
+  distributorId?: string;
   email?: string;
   avatarUrl?: string;
   shop?: ShopInfo | null;
+  distributor?: DistributorInfo | null;
 }
 
 interface AuthState {

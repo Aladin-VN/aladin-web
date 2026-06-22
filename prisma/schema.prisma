@@ -24,7 +24,7 @@ datasource db {
 // ============================================================
 
 // User Roles
-// ADMIN, SHOP_OWNER, SALES_REP, DRIVER, BROKER
+// ADMIN, SHOP_OWNER, SALES_REP, DRIVER, BROKER, DISTRIBUTOR
 
 // User Status
 // ACTIVE, SUSPENDED, PENDING_VERIFICATION
@@ -40,9 +40,16 @@ datasource db {
 
 // Transaction Type
 // CREDIT_USED, REPAYMENT, CREDIT_LIMIT_INCREASE, CREDIT_LIMIT_DECREASE, ORDER_PAYMENT, REFUND
+// DISTRIBUTOR_PAYOUT, DRIVER_PAYOUT, PLATFORM_FEE
 
 // Shipment Status
 // PENDING, PICKED_UP, IN_TRANSIT, DELIVERED, FAILED
+
+// Settlement Status
+// PENDING, PROCESSING, PAID, FAILED
+
+// Inventory Movement Type
+// RECEIPT, ADJUSTMENT, ORDER_FULFILLMENT, RETURN, DAMAGE
 
 // Group Deal Status
 // ACTIVE, COMPLETED, CANCELLED, EXPIRED
@@ -59,7 +66,7 @@ model User {
   name          String
   nameEn        String?                                     // English name variant
   avatarUrl     String?
-  role          String   @default("SHOP_OWNER")             // ADMIN, SHOP_OWNER, SALES_REP, DRIVER, BROKER
+  role          String   @default("SHOP_OWNER")             // ADMIN, SHOP_OWNER, SALES_REP, DRIVER, BROKER, DISTRIBUTOR
   status        String   @default("ACTIVE")                 // ACTIVE, SUSPENDED, PENDING_VERIFICATION
   zaloId        String?  @unique                            // Zalo OA user ID for 1-tap login
   lastLoginAt   DateTime?
@@ -68,6 +75,7 @@ model User {
   // Relations
   shop          Shop?
   broker        Broker?
+  distributor   DistributorUser?
   shipments     Shipment[]  @relation("DriverAssignments")
 
   // Metadata
@@ -98,10 +106,11 @@ model Shop {
   shopType      String   @default("TAPHOA")                 // TAPHOA, CONVENIENCE, FACTORY
   loyaltyTier   String   @default("BRONZE")                 // BRONZE, SILVER, GOLD, PLATINUM
 
-  // Credit System (7-day micro-credit)
-  creditLimit   Int      @default(1000000)                  // In VND (default 1M)
+  // Credit System (7-day micro-credit, 2-5M VND starting limits)
+  creditLimit   Int      @default(2000000)                  // In VND (default 2M, range 2-5M)
   creditBalance Int      @default(0)                        // Currently used credit (VND)
   creditStatus  String   @default("ACTIVE")                 // ACTIVE, LOCKED, OVERDUE
+  creditTermsDays Int    @default(7)                        // 7-day repayment terms
   
   // Stats
   totalOrders   Int      @default(0)
@@ -206,6 +215,8 @@ model Product {
   orderItems      OrderItem[]
   promotionItems  PromotionItem[]
   groupDeals      GroupDeal[]
+  inventory       DistributorInventory[]
+  inventoryMovements InventoryMovement[]
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -254,14 +265,47 @@ model Distributor {
   lat           Float?
   lng           Float?                             // For smart sourcing distance calc
   isActive      Boolean  @default(true)
+
+  // Financial: Distributor Settlement
+  bankName      String?                                     // Bank account info for payouts
+  bankAccount   String?
+  bankHolder    String?
+  taxId         String?                                     // MST for invoicing
+  commissionRate Float   @default(0.03)                    // Platform fee % (default 3%)
+  deliveryFeeShare Float @default(1.0)                     // 1.0 = distributor bears 100% of delivery fee
+
+  // Stats
+  totalOrdersFulfilled  Int    @default(0)
+  totalRevenue          Int    @default(0)                 // Total product revenue earned (VND)
+  totalPayouts          Int    @default(0)                 // Total paid out (VND)
+  pendingPayoutAmount   Int    @default(0)                 // Awaiting next settlement
   
   // Relations
+  user          DistributorUser?
   products      Product[]
+  inventory     DistributorInventory[]
+  inventoryMovements InventoryMovement[]
+  settlements   Settlement[]
+  orders        Order[]
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   @@index([isActive])
+}
+
+// Distributor-User link (1:1, like Shop/Broker)
+model DistributorUser {
+  id              String     @id @default(cuid())
+  userId          String     @unique
+  distributorId   String     @unique
+
+  // Relations
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  distributor     Distributor @relation(fields: [distributorId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 // ============================================================
@@ -306,11 +350,15 @@ model Order {
 
   // Relations
   shop              Shop      @relation(fields: [shopId], references: [id])
+  distributor       Distributor? @relation(fields: [distributorId], references: [id])
   items             OrderItem[]
   transactions      Transaction[]
   shipment          Shipment?
   groupDeal         GroupDeal? @relation(fields: [groupDealId], references: [id])
   payments          Payment[]
+
+  // Fulfillment tracking
+  fulfilledByDistributorAt DateTime?                       // When distributor marked order ready
 
   // Metadata
   confirmedAt       DateTime?
@@ -631,6 +679,138 @@ model Payment {
   @@index([orderId])
   @@index([gatewayTxId])
   @@index([status])
+}
+
+// ============================================================
+// DISTRIBUTOR INVENTORY: Per-distributor stock tracking
+// ============================================================
+
+model DistributorInventory {
+  id              String     @id @default(cuid())
+  distributorId   String
+  productId       String
+  
+  quantity        Int        @default(0)                  // Current stock level
+  reservedQty     Int        @default(0)                  // Reserved for pending orders
+  minStockLevel   Int        @default(10)                 // Low-stock alert threshold
+  costPrice       Int?                                   // Cost price per unit (VND)
+
+  // Relations
+  distributor     Distributor @relation(fields: [distributorId], references: [id], onDelete: Cascade)
+  product         Product   @relation(fields: [productId], references: [id])
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([distributorId, productId])               // One stock record per product per distributor
+  @@index([distributorId])
+  @@index([productId])
+}
+
+// Inventory Movement Audit Trail
+model InventoryMovement {
+  id              String   @id @default(cuid())
+  distributorId   String
+  productId       String
+  type            String                                     // RECEIPT, ADJUSTMENT, ORDER_FULFILLMENT, RETURN, DAMAGE
+  quantity        Int                                        // Positive = in, Negative = out
+  previousQty     Int                                        // Stock before movement
+  newQty          Int                                        // Stock after movement
+  reason          String?                                    // Human-readable reason
+  orderId         String?                                    // If from order fulfillment
+  performedBy     String                                     // User ID who made the change
+
+  // Relations
+  distributor     Distributor @relation(fields: [distributorId], references: [id])
+  product         Product   @relation(fields: [productId], references: [id])
+
+  createdAt       DateTime @default(now())
+
+  @@index([distributorId])
+  @@index([productId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+// ============================================================
+// SETTLEMENTS: Platform fee collection & distributor/driver payouts
+// Model A + C: Aladin collects full amount, splits it out
+// ============================================================
+
+model PlatformFeeConfig {
+  id              String   @id @default(cuid())
+  name            String                                     // e.g., "Standard 3%"
+  feeType         String   @default("PERCENTAGE")          // PERCENTAGE, FLAT, TIERED
+  rate            Float    @default(0.03)                   // 3% platform fee
+  flatFee         Int?                                     // For FLAT type (VND per order)
+  minFee          Int      @default(0)                      // Minimum fee (VND)
+  maxFee          Int?                                     // Maximum fee cap (VND, null = unlimited)
+  isActive        Boolean  @default(true)
+  appliesTo       String   @default("ALL")                  // ALL, DISTRIBUTOR, DRIVER
+  effectiveFrom   DateTime @default(now())
+  effectiveTo     DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Settlement {
+  id              String   @id @default(cuid())
+  settlementNumber String  @unique                         // e.g., "STL-20260622-W01"
+  distributorId   String
+  
+  // Period
+  periodStart     DateTime                                   // Start of settlement period
+  periodEnd       DateTime                                   // End of settlement period
+  
+  // Financial Summary
+  totalOrders     Int      @default(0)                     // Number of orders in this settlement
+  totalOrderValue Int      @default(0)                     // Sum of all order amounts (VND)
+  totalPlatformFee Int     @default(0)                     // Aladin's cut (VND)
+  totalDeliveryFee Int     @default(0)                     // Total delivery fees (VND)
+  distributorPayout Int    @default(0)                     // Net payout to distributor (VND)
+  driverPayouts   Int      @default(0)                     // Total paid to drivers (VND)
+  
+  // Status
+  status          String   @default("PENDING")             // PENDING, PROCESSING, PAID, FAILED
+  paidAt          DateTime?
+  paymentRef      String?                                   // Bank transfer reference
+  notes           String?
+
+  // Relations
+  distributor     Distributor @relation(fields: [distributorId], references: [id])
+  lineItems       SettlementLineItem[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([distributorId])
+  @@index([status])
+  @@index([periodStart])
+  @@index([periodEnd])
+}
+
+model SettlementLineItem {
+  id              String   @id @default(cuid())
+  settlementId    String
+  orderId         String
+  orderNumber     String
+  
+  // Financial breakdown per order
+  orderAmount     Int                                       // Full order total (VND)
+  platformFee     Int                                       // Platform fee on this order (VND)
+  deliveryFee     Int                                       // Delivery fee on this order (VND)
+  distributorAmount Int                                     // Net to distributor (VND)
+  driverAmount    Int                                       // Driver payout (VND)
+  driverId        String?                                   // If driver was assigned
+
+  // Relations
+  settlement      Settlement @relation(fields: [settlementId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime @default(now())
+
+  @@index([settlementId])
+  @@index([orderId])
 }
 
 // ============================================================

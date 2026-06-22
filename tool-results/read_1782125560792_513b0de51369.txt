@@ -1,0 +1,694 @@
+     1→     1→// ============================================================
+     2→     2→// ALADIN PLATFORM — Complete Database Schema
+     3→     3→// B2B AI-Powered Commerce Platform for Vietnam
+     4→     4→// ============================================================
+     5→     5→// Architecture: Modular Monolith (Next.js App Router)
+     6→     6→// Database: Neon PostgreSQL (serverless)
+     7→     7→// Local dev:  DATABASE_URL=postgresql://... (Neon)
+     8→     8→// Vercel:      DATABASE_URL=postgresql://... (Neon, same)
+     9→     9→// Conventions: UTC timestamps, append-only ledger, soft deletes
+    10→    10→// ============================================================
+    11→    11→
+    12→    12→generator client {
+    13→    13→  provider = "prisma-client-js"
+    14→    14→}
+    15→    15→
+    16→    16→datasource db {
+    17→    17→  provider = "postgresql"
+    18→    18→  url      = env("DATABASE_URL")
+    19→    19→}
+    20→    20→
+    21→    21→// ============================================================
+    22→    22→// ENUMS (PostgreSQL: defined as String with app-layer validation
+    23→    23→// for flexibility — can migrate to native enums later)
+    24→    24→// ============================================================
+    25→    25→
+    26→    26→// User Roles
+    27→    27→// ADMIN, SHOP_OWNER, SALES_REP, DRIVER, BROKER
+    28→    28→
+    29→    29→// User Status
+    30→    30→// ACTIVE, SUSPENDED, PENDING_VERIFICATION
+    31→    31→
+    32→    32→// Order Status
+    33→    33→// PENDING, CONFIRMED, PROCESSING, PACKED, OUT_FOR_DELIVERY, DELIVERED, CANCELLED, REFUNDED
+    34→    34→
+    35→    35→// Payment Method
+    36→    36→// CREDIT, DIGITAL, COD
+    37→    37→
+    38→    38→// Payment Status
+    39→    39→// PENDING, PAID, FAILED, REFUNDED, PARTIALLY_REFUNDED
+    40→    40→
+    41→    41→// Transaction Type
+    42→    42→// CREDIT_USED, REPAYMENT, CREDIT_LIMIT_INCREASE, CREDIT_LIMIT_DECREASE, ORDER_PAYMENT, REFUND
+    43→    43→
+    44→    44→// Shipment Status
+    45→    45→// PENDING, PICKED_UP, IN_TRANSIT, DELIVERED, FAILED
+    46→    46→
+    47→    47→// Group Deal Status
+    48→    48→// ACTIVE, COMPLETED, CANCELLED, EXPIRED
+    49→    49→
+    50→    50→// ============================================================
+    51→    51→// CORE: USERS & AUTHENTICATION
+    52→    52→// ============================================================
+    53→    53→
+    54→    54→model User {
+    55→    55→  id            String   @id @default(cuid())
+    56→    56→  phone         String   @unique                            // Primary login (Vietnamese phone)
+    57→    57→  email         String?  @unique                            // Optional email
+    58→    58→  passwordHash  String?                                     // Null = Zalo-only login
+    59→    59→  name          String
+    60→    60→  nameEn        String?                                     // English name variant
+    61→    61→  avatarUrl     String?
+    62→    62→  role          String   @default("SHOP_OWNER")             // ADMIN, SHOP_OWNER, SALES_REP, DRIVER, BROKER
+    63→    63→  status        String   @default("ACTIVE")                 // ACTIVE, SUSPENDED, PENDING_VERIFICATION
+    64→    64→  zaloId        String?  @unique                            // Zalo OA user ID for 1-tap login
+    65→    65→  lastLoginAt   DateTime?
+    66→    66→  mustChangePwd Boolean  @default(false)
+    67→    67→  
+    68→    68→  // Relations
+    69→    69→  shop          Shop?
+    70→    70→  broker        Broker?
+    71→    71→  shipments     Shipment[]  @relation("DriverAssignments")
+    72→    72→
+    73→    73→  // Metadata
+    74→    74→  createdAt     DateTime @default(now())
+    75→    75→  updatedAt     DateTime @updatedAt
+    76→    76→  deletedAt     DateTime?                                     // Soft delete
+    77→    77→
+    78→    78→  @@index([phone])
+    79→    79→  @@index([role])
+    80→    80→  @@index([status])
+    81→    81→}
+    82→    82→
+    83→    83→// ============================================================
+    84→    84→// CORE: SHOPS (Mom-and-pop tạp hóa)
+    85→    85→// ============================================================
+    86→    86→
+    87→    87→model Shop {
+    88→    88→  id            String   @id @default(cuid())
+    89→    89→  userId        String   @unique
+    90→    90→  name          String                                       // Shop display name
+    91→    91→  nameEn        String?                                     // English variant
+    92→    92→  wardId        String?                                     // Geographic ward for group buying
+    93→    93→  district      String?                                     // E.g., Thu Dau Mot
+    94→    94→  province      String   @default("Binh Duong")
+    95→    95→  address       String?
+    96→    96→  lat           Float?                                       // GPS for delivery routing
+    97→    97→  lng           Float?
+    98→    98→  shopType      String   @default("TAPHOA")                 // TAPHOA, CONVENIENCE, FACTORY
+    99→    99→  loyaltyTier   String   @default("BRONZE")                 // BRONZE, SILVER, GOLD, PLATINUM
+   100→   100→
+   101→   101→  // Credit System (7-day micro-credit)
+   102→   102→  creditLimit   Int      @default(1000000)                  // In VND (default 1M)
+   103→   103→  creditBalance Int      @default(0)                        // Currently used credit (VND)
+   104→   104→  creditStatus  String   @default("ACTIVE")                 // ACTIVE, LOCKED, OVERDUE
+   105→   105→  
+   106→   106→  // Stats
+   107→   107→  totalOrders   Int      @default(0)
+   108→   108→  totalGmv      Int      @default(0)                        // Lifetime GMV in VND
+   109→   109→  avgOrderValue Int      @default(0)
+   110→   110→  
+   111→   111→  // Relations
+   112→   112→  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+   113→   113→  ward          Ward?    @relation(fields: [wardId], references: [id])
+   114→   114→  orders        Order[]
+   115→   115→  transactions  Transaction[]
+   116→   116→  groupParticipations GroupDealParticipant[]
+   117→   117→
+   118→   118→  // Metadata
+   119→   119→  createdAt     DateTime @default(now())
+   120→   120→  updatedAt     DateTime @updatedAt
+   121→   121→  deletedAt     DateTime?
+   122→   122→
+   123→   123→  @@index([userId])
+   124→   124→  @@index([wardId])
+   125→   125→  @@index([district])
+   126→   126→  @@index([creditStatus])
+   127→   127→}
+   128→   128→
+   129→   129→// ============================================================
+   130→   130→// CORE: WARD / ZONE (Geographic clustering for group buy)
+   131→   131→// ============================================================
+   132→   132→
+   133→   133→model Ward {
+   134→   134→  id          String @id @default(cuid())
+   135→   135→  name        String                                     // E.g., "Phu My Ward"
+   136→   136→  nameEn      String?                                   // English variant
+   137→   137→  district    String                                     // E.g., "Thu Dau Mot"
+   138→   138→  province    String @default("Binh Duong")
+   139→   139→  shopCount   Int    @default(0)                         // Denormalized for performance
+   140→   140→  
+   141→   141→  // Relations
+   142→   142→  shops       Shop[]
+   143→   143→  groupDeals  GroupDeal[]
+   144→   144→  brokers     Broker[]
+   145→   145→
+   146→   146→  createdAt   DateTime @default(now())
+   147→   147→  updatedAt   DateTime @updatedAt
+   148→   148→
+   149→   149→  @@index([district])
+   150→   150→  @@index([province])
+   151→   151→}
+   152→   152→
+   153→   153→// ============================================================
+   154→   154→// PRODUCT CATALOG
+   155→   155→// ============================================================
+   156→   156→
+   157→   157→model Category {
+   158→   158→  id          String     @id @default(cuid())
+   159→   159→  name        String                               // Vietnamese name
+   160→   160→  nameEn      String?                             // English name
+   161→   161→  slug        String     @unique
+   162→   162→  icon        String?                             // Emoji or icon name
+   163→   163→  sortOrder   Int        @default(0)
+   164→   164→  isActive    Boolean    @default(true)
+   165→   165→  
+   166→   166→  // Relations
+   167→   167→  products    Product[]
+   168→   168→  
+   169→   169→  createdAt   DateTime   @default(now())
+   170→   170→  updatedAt   DateTime   @updatedAt
+   171→   171→
+   172→   172→  @@index([slug])
+   173→   173→  @@index([sortOrder])
+   174→   174→}
+   175→   175→
+   176→   176→model Product {
+   177→   177→  id            String   @id @default(cuid())
+   178→   178→  sku           String   @unique
+   179→   179→  name          String                              // Vietnamese name
+   180→   180→  nameEn        String?                            // English name
+   181→   181→  description   String?                            // Vietnamese description
+   182→   182→  descriptionEn String?                            // English description
+   183→   183→  categoryId    String
+   184→   184→  brand         String?                            // E.g., "Hao Hao", "Unilever"
+   185→   185→  unit          String   @default("cai")           // Unit type: bao, chai, thung, goi
+   186→   186→  unitEn        String?                            // English unit
+   187→   187→  basePrice     Int                                 // Base price in VND (smallest unit)
+   188→   188→  groupBuyPrice Int?                               // Discounted price for group deals (VND)
+   189→   189→  stockQuantity Int      @default(0)               // Available inventory
+   190→   190→  minOrderQty   Int      @default(1)
+   191→   191→  maxOrderQty   Int?                               // Null = unlimited
+   192→   192→  weightKg      Float?                              // For delivery cost calculation
+   193→   193→  imageUrl      String?
+   194→   194→  isActive      Boolean  @default(true)
+   195→   195→  isPrivateLabel Boolean @default(false)            // Aladin Select house brand
+   196→   196→  barcode       String?  @unique                    // For OCR scanning
+   197→   197→  
+   198→   198→  // Manufacturer / Supplier
+   199→   199→  manufacturerId String?
+   200→   200→  distributorId   String?
+   201→   201→  
+   202→   202→  // Relations
+   203→   203→  category        Category      @relation(fields: [categoryId], references: [id])
+   204→   204→  manufacturer    Manufacturer?  @relation(fields: [manufacturerId], references: [id])
+   205→   205→  distributor     Distributor?   @relation(fields: [distributorId], references: [id])
+   206→   206→  orderItems      OrderItem[]
+   207→   207→  promotionItems  PromotionItem[]
+   208→   208→  groupDeals      GroupDeal[]
+   209→   209→
+   210→   210→  createdAt       DateTime @default(now())
+   211→   211→  updatedAt       DateTime @updatedAt
+   212→   212→  deletedAt       DateTime?
+   213→   213→
+   214→   214→  @@index([categoryId])
+   215→   215→  @@index([sku])
+   216→   216→  @@index([manufacturerId])
+   217→   217→  @@index([isActive])
+   218→   218→  @@index([name])
+   219→   219→}
+   220→   220→
+   221→   221→// ============================================================
+   222→   222→// SUPPLY CHAIN: MANUFACTURERS & DISTRIBUTORS
+   223→   223→// ============================================================
+   224→   224→
+   225→   225→model Manufacturer {
+   226→   226→  id            String   @id @default(cuid())
+   227→   227→  name          String
+   228→   228→  nameEn        String?
+   229→   229→  contactPerson String?
+   230→   230→  contactPhone  String?
+   231→   231→  email         String?
+   232→   232→  address       String?
+   233→   233→  province      String?
+   234→   234→  commissionRate Float   @default(0.15)           // 15% standard margin
+   235→   235→  
+   236→   236→  // Relations
+   237→   237→  products      Product[]
+   238→   238→  promotions    Promotion[]
+   239→   239→
+   240→   240→  createdAt     DateTime @default(now())
+   241→   241→  updatedAt     DateTime @updatedAt
+   242→   242→
+   243→   243→  @@index([name])
+   244→   244→}
+   245→   245→
+   246→   246→model Distributor {
+   247→   247→  id            String   @id @default(cuid())
+   248→   248→  name          String
+   249→   249→  nameEn        String?
+   250→   250→  contactPerson String?
+   251→   251→  contactPhone  String?
+   252→   252→  email         String?
+   253→   253→  address       String?
+   254→   254→  lat           Float?
+   255→   255→  lng           Float?                             // For smart sourcing distance calc
+   256→   256→  isActive      Boolean  @default(true)
+   257→   257→  
+   258→   258→  // Relations
+   259→   259→  products      Product[]
+   260→   260→
+   261→   261→  createdAt     DateTime @default(now())
+   262→   262→  updatedAt     DateTime @updatedAt
+   263→   263→
+   264→   264→  @@index([isActive])
+   265→   265→}
+   266→   266→
+   267→   267→// ============================================================
+   268→   268→// ORDERS (The core transaction)
+   269→   269→// ============================================================
+   270→   270→
+   271→   271→model Order {
+   272→   272→  id                String    @id @default(cuid())
+   273→   273→  orderNumber       String    @unique                // Human-readable: "ALD-20260418-001"
+   274→   274→  shopId            String
+   275→   275→  shopSnapshot      String                            // JSON: shop details at order time (for audit)
+   276→   276→  
+   277→   277→  // Status
+   278→   278→  status            String    @default("PENDING")     // PENDING → CONFIRMED → PROCESSING → PACKED → OUT_FOR_DELIVERY → DELIVERED
+   279→   279→  
+   280→   280→  // Payment
+   281→   281→  paymentMethod     String    @default("COD")         // CREDIT, DIGITAL, COD
+   282→   282→  paymentStatus     String    @default("PENDING")     // PENDING, PAID, FAILED, REFUNDED
+   283→   283→  subtotalAmount    Int                                // Sum of items (VND)
+   284→   284→  discountAmount    Int      @default(0)              // Promo discounts
+   285→   285→  deliveryFee       Int      @default(0)
+   286→   286→  totalAmount       Int                                // Final amount
+   287→   287→  paidAmount        Int      @default(0)              // Amount actually paid
+   288→   288→  
+   289→   289→  // Credit
+   290→   290→  creditUsed        Int      @default(0)              // If paid via 7-day credit
+   291→   291→  
+   292→   292→  // Group Buy
+   293→   293→  groupDealId       String?                            // If this order is part of a group deal
+   294→   294→  
+   295→   295→  // Fulfillment
+   296→   296→  distributorId     String?                            // Which distributor sourced from
+   297→   297→  assignedDriverId  String?                            // Internal driver assignment
+   298→   298→  thirdPartyOrderId String?                            // Ahamove/Grab tracking ID
+   299→   299→  
+   300→   300→  // Notes
+   301→   301→  customerNotes     String?
+   302→   302→  adminNotes        String?
+   303→   303→  
+   304→   304→  // Idempotency
+   305→   305→  idempotencyKey    String?   @unique                  // Prevent double-order on 3G
+   306→   306→
+   307→   307→  // Relations
+   308→   308→  shop              Shop      @relation(fields: [shopId], references: [id])
+   309→   309→  items             OrderItem[]
+   310→   310→  transactions      Transaction[]
+   311→   311→  shipment          Shipment?
+   312→   312→  groupDeal         GroupDeal? @relation(fields: [groupDealId], references: [id])
+   313→   313→  payments          Payment[]
+   314→   314→
+   315→   315→  // Metadata
+   316→   316→  confirmedAt       DateTime?
+   317→   317→  packedAt          DateTime?
+   318→   318→  deliveredAt       DateTime?
+   319→   319→  cancelledAt       DateTime?
+   320→   320→  cancelReason      String?
+   321→   321→  createdAt         DateTime  @default(now())
+   322→   322→  updatedAt         DateTime  @updatedAt
+   323→   323→
+   324→   324→  @@index([shopId])
+   325→   325→  @@index([status])
+   326→   326→  @@index([paymentMethod])
+   327→   327→  @@index([paymentStatus])
+   328→   328→  @@index([createdAt])
+   329→   329→  @@index([distributorId])
+   330→   330→  @@index([groupDealId])
+   331→   331→}
+   332→   332→
+   333→   333→model OrderItem {
+   334→   334→  id              String   @id @default(cuid())
+   335→   335→  orderId         String
+   336→   336→  productId       String
+   337→   337→  productName     String                             // Snapshot: name at time of order
+   338→   338→  productSku      String                             // Snapshot: SKU at time of order
+   339→   339→  unitPrice       Int                                 // Price at time of order (VND)
+   340→   340→  quantity        Int
+   341→   341→  totalPrice      Int                                 // unitPrice * quantity
+   342→   342→  
+   343→   343→  // Promotion applied to this item
+   344→   344→  promotionId     String?
+   345→   345→  freeQty         Int      @default(0)               // "Buy 10 Get 1" → freeQty = 1
+   346→   346→  
+   347→   347→  // Relations
+   348→   348→  order           Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+   349→   349→  product         Product   @relation(fields: [productId], references: [id])
+   350→   350→  promotion       Promotion? @relation(fields: [promotionId], references: [id])
+   351→   351→
+   352→   352→  createdAt       DateTime @default(now())
+   353→   353→
+   354→   354→  @@index([orderId])
+   355→   355→  @@index([productId])
+   356→   356→}
+   357→   357→
+   358→   358→// ============================================================
+   359→   359→// FINANCIAL: APPEND-ONLY LEDGER (7-Day Credit System)
+   360→   360→// CRITICAL: NEVER mutate credit_balance directly on Shop.
+   361→   361→// Always create Transaction records. Balance = SUM(credit transactions).
+   362→   362→// ============================================================
+   363→   363→
+   364→   364→model Transaction {
+   365→   365→  id              String   @id @default(cuid())
+   366→   366→  shopId          String
+   367→   367→  orderId         String?                             // Related order (if credit used)
+   368→   368→  
+   369→   369→  // Transaction details
+   370→   370→  type            String                              // CREDIT_USED, REPAYMENT, CREDIT_LIMIT_INCREASE, CREDIT_LIMIT_DECREASE, ORDER_PAYMENT, REFUND
+   371→   371→  amount          Int                                 // Amount in VND (positive = debit, negative = credit to shop)
+   372→   372→  runningBalance  Int                                 // Credit balance AFTER this transaction
+   373→   373→  
+   374→   374→  // Payment details
+   375→   375→  paymentMethod   String?                             // DIGITAL, COD
+   376→   376→  paymentRef      String?                             // MoMo/ZaloPay transaction ID
+   377→   377→  collectedBy     String?                             // Rep or Driver user ID (for cash collection)
+   378→   378→  
+   379→   379→  // Metadata
+   380→   380→  description     String?                             // Human-readable description
+   381→   381→  metadata        String?                             // JSON: additional data
+   382→   382→  
+   383→   383→  // Relations
+   384→   384→  shop            Shop      @relation(fields: [shopId], references: [id])
+   385→   385→  order           Order?     @relation(fields: [orderId], references: [id])
+   386→   386→
+   387→   387→  createdAt       DateTime @default(now())
+   388→   388→
+   389→   389→  @@index([shopId])
+   390→   390→  @@index([orderId])
+   391→   391→  @@index([type])
+   392→   392→  @@index([createdAt])
+   393→   393→}
+   394→   394→
+   395→   395→// ============================================================
+   396→   396→// GROUP BUY ENGINE (Mua Chung — Pinduoduo model)
+   397→   397→// ============================================================
+   398→   398→
+   399→   399→model GroupDeal {
+   400→   400→  id              String   @id @default(cuid())
+   401→   401→  title           String                             // Vietnamese: "Gạo ST25 Group Buy Ward 5"
+   402→   402→  titleEn         String?
+   403→   403→  description     String?
+   404→   404→  productId       String                             // The product being grouped
+   405→   405→  
+   406→   406→  // Threshold & Pricing
+   407→   407→  targetQty       Int                                 // Minimum quantity to unlock discount
+   408→   408→  currentQty      Int      @default(0)               // Current committed quantity
+   409→   409→  originalPrice   Int                                 // Normal price per unit
+   410→   410→  discountPrice   Int                                 // Group buy price per unit
+   411→   411→  maxParticipants Int?                                // Cap on number of shops (null = unlimited)
+   412→   412→  
+   413→   413→  // Timing
+   414→   414→  startsAt        DateTime
+   415→   415→  expiresAt       DateTime                            // Auto-cancel if not met
+   416→   416→  
+   417→   417→  // Zone
+   418→   418→  wardId          String?                             // Scoped to ward for local group buying
+   419→   419→  
+   420→   420→  // Status
+   421→   421→  status          String   @default("ACTIVE")         // ACTIVE, COMPLETED, CANCELLED, EXPIRED
+   422→   422→  
+   423→   423→  // When deal is completed, create a bulk order
+   424→   424→  bulkOrderId     String?                            // The consolidated order sent to distributor
+   425→   425→
+   426→   426→  // Relations
+   427→   427→  product         Product   @relation(fields: [productId], references: [id])
+   428→   428→  ward            Ward?     @relation(fields: [wardId], references: [id])
+   429→   429→  participants    GroupDealParticipant[]
+   430→   430→  orders          Order[]
+   431→   431→
+   432→   432→  createdAt       DateTime @default(now())
+   433→   433→  updatedAt       DateTime @updatedAt
+   434→   434→
+   435→   435→  @@index([productId])
+   436→   436→  @@index([wardId])
+   437→   437→  @@index([status])
+   438→   438→  @@index([expiresAt])
+   439→   439→}
+   440→   440→
+   441→   441→model GroupDealParticipant {
+   442→   442→  id              String   @id @default(cuid())
+   443→   443→  groupDealId     String
+   444→   444→  shopId          String
+   445→   445→  committedQty    Int                                 // How many units this shop committed
+   446→   446→  isActive        Boolean  @default(true)             // Can withdraw before deal completes
+   447→   447→  
+   448→   448→  // Relations
+   449→   449→  groupDeal       GroupDeal @relation(fields: [groupDealId], references: [id])
+   450→   450→  shop            Shop      @relation(fields: [shopId], references: [id])
+   451→   451→
+   452→   452→  createdAt       DateTime @default(now())
+   453→   453→
+   454→   454→  @@unique([groupDealId, shopId])                    // One participation per deal per shop
+   455→   455→  @@index([shopId])
+   456→   456→}
+   457→   457→
+   458→   458→// ============================================================
+   459→   459→// LOGISTICS: SHIPMENTS & DELIVERY
+   460→   460→// ============================================================
+   461→   461→
+   462→   462→model Shipment {
+   463→   463→  id              String   @id @default(cuid())
+   464→   464→  orderId         String   @unique
+   465→   465→  type            String   @default("INTERNAL")       // INTERNAL, THIRD_PARTY (Ahamove/Grab)
+   466→   466→  
+   467→   467→  // Status
+   468→   468→  status          String   @default("PENDING")        // PENDING, PICKED_UP, IN_TRANSIT, DELIVERED, FAILED
+   469→   469→  
+   470→   470→  // Driver
+   471→   471→  assignedDriverId String?
+   472→   472→  
+   473→   473→  // Route
+   474→   474→  pickupAddress   String?                            // Distributor/warehouse location
+   475→   475→  pickupLat       Float?
+   476→   476→  pickupLng       Float?
+   477→   477→  dropoffAddress  String                             // Shop address
+   478→   478→  dropoffLat      Float?
+   479→   479→  dropoffLng      Float?
+   480→   480→  
+   481→   481→  // Proof of Delivery
+   482→   482→  deliveredAt     DateTime?
+   483→   483→  podPhotoUrl     String?                             // Proof of delivery photo
+   484→   484→  podSignatureUrl String?                             // Digital signature
+   485→   485→  podOtp          String?                             // OTP confirmed by shop owner
+   486→   486→  
+   487→   487→  // 3rd Party
+   488→   488→  thirdPartyTrackingId String?                       // Ahamove/Grab order ID
+   489→   489→  thirdPartyStatus    String?
+   490→   490→
+   491→   491→  // Relations
+   492→   492→  order           Order     @relation(fields: [orderId], references: [id])
+   493→   493→  assignedDriver  User?     @relation("DriverAssignments", fields: [assignedDriverId], references: [id])
+   494→   494→
+   495→   495→  createdAt       DateTime @default(now())
+   496→   496→  updatedAt       DateTime @updatedAt
+   497→   497→
+   498→   498→  @@index([orderId])
+   499→   499→  @@index([assignedDriverId])
+   500→   500→  @@index([status])
+   501→   501→}
+   502→   502→
+   503→   503→// ============================================================
+   504→   504→// SFA: PROMOTIONS & MERCHANDISING (Trade Marketing)
+   505→   505→// ============================================================
+   506→   506→
+   507→   507→model Promotion {
+   508→   508→  id              String   @id @default(cuid())
+   509→   509→  manufacturerId  String
+   510→   510→  title           String
+   511→   511→  titleEn         String?
+   512→   512→  description     String?
+   513→   513→  
+   514→   514→  // Promotion type
+   515→   515→  promoType       String                              // BUY_X_GET_Y, PERCENT_OFF, FIXED_DISCOUNT
+   516→   516→  buyQty          Int?                                // For BUY_X_GET_Y: buy X
+   517→   517→  getQty          Int?                                // For BUY_X_GET_Y: get Y free
+   518→   518→  discountPercent Float?                              // For PERCENT_OFF
+   519→   519→  discountAmount  Int?                                // For FIXED_DISCOUNT
+   520→   520→  
+   521→   521→  // Validity
+   522→   522→  startsAt        DateTime
+   523→   523→  expiresAt       DateTime
+   524→   524→  
+   525→   525→  // Budget & Tracking
+   526→   526→  totalBudget     Int?                                // Manufacturer's budget (VND)
+   527→   527→  usedBudget      Int      @default(0)
+   528→   528→  totalRedemptions Int     @default(0)
+   529→   529→  
+   530→   530→  isActive        Boolean  @default(true)
+   531→   531→
+   532→   532→  // Relations
+   533→   533→  manufacturer    Manufacturer @relation(fields: [manufacturerId], references: [id])
+   534→   534→  items           PromotionItem[]
+   535→   535→  orderItems      OrderItem[]
+   536→   536→
+   537→   537→  createdAt       DateTime @default(now())
+   538→   538→  updatedAt       DateTime @updatedAt
+   539→   539→
+   540→   540→  @@index([manufacturerId])
+   541→   541→  @@index([isActive])
+   542→   542→  @@index([expiresAt])
+   543→   543→}
+   544→   544→
+   545→   545→model PromotionItem {
+   546→   546→  id              String   @id @default(cuid())
+   547→   547→  promotionId     String
+   548→   548→  productId       String                             // Product this promo applies to
+   549→   549→
+   550→   550→  // Relations
+   551→   551→  promotion       Promotion @relation(fields: [promotionId], references: [id])
+   552→   552→  product         Product   @relation(fields: [productId], references: [id])
+   553→   553→
+   554→   554→  createdAt       DateTime @default(now())
+   555→   555→
+   556→   556→  @@unique([promotionId, productId])
+   557→   557→  @@index([productId])
+   558→   558→}
+   559→   559→
+   560→   560→model MerchandisingAudit {
+   561→   561→  id              String   @id @default(cuid())
+   562→   562→  shopId          String
+   563→   563→  productId       String?
+   564→   564→  promotionId     String?
+   565→   565→  photoUrl        String                             // Shelf photo from shop owner
+   566→   566→  
+   567→   567→  // Audit result
+   568→   568→  status          String   @default("PENDING_REVIEW") // PENDING_REVIEW, APPROVED, REJECTED
+   569→   569→  reviewerId      String?                             // Admin who reviewed
+   570→   570→  reviewNotes     String?
+   571→   571→  reviewedAt      DateTime?
+   572→   572→
+   573→   573→  // Relations
+   574→   574→  
+   575→   575→  createdAt       DateTime @default(now())
+   576→   576→  updatedAt       DateTime @updatedAt
+   577→   577→
+   578→   578→  @@index([shopId])
+   579→   579→  @@index([status])
+   580→   580→}
+   581→   581→
+   582→   582→// ============================================================
+   583→   583→// BROKER NETWORK
+   584→   584→// ============================================================
+   585→   585→
+   586→   586→model Broker {
+   587→   587→  id              String   @id @default(cuid())
+   588→   588→  userId          String   @unique
+   589→   589→  tier            String   @default("WARD_LEVEL")    // WARD_LEVEL, CATEGORY_SPECIALIST, FACTORY_GATE
+   590→   590→  wardId          String?                             // Territory assignment
+   591→   591→  commissionRate  Float    @default(0.03)            // 3% standard commission
+   592→   592→  
+   593→   593→  // Stats
+   594→   594→  totalShopsReferred Int   @default(0)
+   595→   595→  totalCommissionEarned Int @default(0)
+   596→   596→  totalGmvGenerated    Int @default(0)
+   597→   597→
+   598→   598→  // Relations
+   599→   599→  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+   600→   600→  ward            Ward?    @relation(fields: [wardId], references: [id])
+   601→   601→
+   602→   602→  createdAt       DateTime @default(now())
+   603→   603→  updatedAt       DateTime @updatedAt
+   604→   604→
+   605→   605→  @@index([tier])
+   606→   606→  @@index([wardId])
+   607→   607→}
+   608→   608→
+   609→   609→// ============================================================
+   610→   610→// PAYMENT: Digital Payment Gateway Tracking (Sprint 4F)
+   611→   611→// ZaloPay, MoMo, and Mock gateway integration
+   612→   612→// ============================================================
+   613→   613→
+   614→   614→model Payment {
+   615→   615→  id            String   @id @default(cuid())
+   616→   616→  orderId       String
+   617→   617→  order         Order    @relation(fields: [orderId], references: [id])
+   618→   618→  gateway       String                                     // ZALOPAY, MOMO, MOCK
+   619→   619→  gatewayTxId   String?  @unique                            // Gateway transaction ID
+   620→   620→  amount        Int                                        // Amount in VND
+   621→   621→  status        String   @default("PENDING")                // PENDING, SUCCESS, FAILED, EXPIRED
+   622→   622→  paymentUrl    String?                                     // URL for user to pay
+   623→   623→  qrCodeUrl     String?
+   624→   624→  rawRequest    String?                                     // JSON: gateway request for debugging
+   625→   625→  rawCallback   String?                                     // JSON: gateway callback for debugging
+   626→   626→  paidAt        DateTime?
+   627→   627→  expiresAt     DateTime?
+   628→   628→  createdAt     DateTime @default(now())
+   629→   629→  updatedAt     DateTime @updatedAt
+   630→   630→
+   631→   631→  @@index([orderId])
+   632→   632→  @@index([gatewayTxId])
+   633→   633→  @@index([status])
+   634→   634→}
+   635→   635→
+   636→   636→// ============================================================
+   637→   637→// SETTINGS & AUDIT: Platform Config + Audit Trail (Sprint 5H)
+   638→   638→// ============================================================
+   639→   639→
+   640→   640→model AuditLog {
+   641→   641→  id            String   @id @default(cuid())
+   642→   642→  userId        String?                                    // Admin who performed the action (null for system)
+   643→   643→  action        String                                     // e.g., USER_ROLE_CHANGED, ORDER_CANCELLED, PASSWORD_RESET
+   644→   644→  entity        String                                     // e.g., User, Order, Shop, PlatformSetting
+   645→   645→  entityId      String?                                    // ID of the affected entity
+   646→   646→  details       String?                                    // JSON: before/after snapshot, change details
+   647→   647→  ipAddress     String?
+   648→   648→  userAgent     String?
+   649→   649→
+   650→   650→  createdAt     DateTime @default(now())
+   651→   651→
+   652→   652→  @@index([userId])
+   653→   653→  @@index([action])
+   654→   654→  @@index([entity])
+   655→   655→  @@index([entityId])
+   656→   656→  @@index([createdAt])
+   657→   657→}
+   658→   658→
+   659→   659→model PlatformSetting {
+   660→   660→  id            String   @id @default(cuid())
+   661→   661→  key           String   @unique                           // e.g., credit.defaultLimit, platform.name
+   662→   662→  value         String                                     // JSON or plain string value
+   663→   663→  description   String?                                    // Human-readable description
+   664→   664→  category      String   @default("general")               // general, credit, notification, security
+   665→   665→
+   666→   666→  createdAt     DateTime @default(now())
+   667→   667→  updatedAt     DateTime @updatedAt
+   668→   668→}
+   669→   669→
+   670→   670→// ============================================================
+   671→   671→// CHAT: In-app messaging between users and ALADIN support
+   672→   672→// Sprint M7 — Zalo Chat integration layer
+   673→   673→// ============================================================
+   674→   674→
+   675→   675→model ChatMessage {
+   676→   676→  id              String   @id @default(cuid())
+   677→   677→  userId          String                                       // Sender (shop owner / broker)
+   678→   678→  conversationId  String                                       // Thread ID (user-specific, one conversation per user)
+   679→   679→  
+   680→   680→  direction       String   @default("OUTGOING")                // OUTGOING (user → support), INCOMING (support → user)
+   681→   681→  messageType     String   @default("TEXT")                    // TEXT, IMAGE, QUICK_REPLY, SYSTEM
+   682→   682→  content         String                                        // Message text content
+   683→   683→  imageUrl        String?                                       // Image attachment URL
+   684→   684→  metadata        String?                                       // JSON: quick reply options, etc.
+   685→   685→  
+   686→   686→  isRead          Boolean  @default(false)                     // Read by recipient
+   687→   687→  
+   688→   688→  createdAt       DateTime @default(now())
+   689→   689→
+   690→   690→  @@index([userId])
+   691→   691→  @@index([conversationId])
+   692→   692→  @@index([createdAt])
+   693→   693→}
+   694→   694→
