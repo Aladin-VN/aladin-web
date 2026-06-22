@@ -162,3 +162,30 @@ Stage Summary:
 - Root cause of "Node cannot be found": Radix Dialog accessibility requirement for non-null Title/Description
 - Fixed in 3 files: order-detail-drawer.tsx, shop-detail-drawer.tsx, broker-detail-drawer.tsx
 - Build passes ✓
+
+---
+Task ID: 3
+Agent: Main Agent
+Task: Fix distributor web login bug + create web distributor dashboard
+
+Work Log:
+- Diagnosed root cause: AppProvider UserInfo interface missing distributorId/distributor fields
+- Diagnosed redirect bug: Web login sent DISTRIBUTOR to /m/distributor (mobile path)
+- Fixed AppProvider: Added DistributorInfo interface + distributorId/distributor to UserInfo
+- Fixed login redirect: Changed from /m/distributor to /distributor for web login
+- Added 4 DISTRIBUTOR-specific nav items to admin sidebar (role-filtered)
+- Restricted general Orders nav item from DISTRIBUTOR role to avoid duplicates
+- Created 5 web distributor pages (admin-style with sidebar/header/table layout):
+  - /distributor: Dashboard with KPIs, commission banner, recent orders table
+  - /distributor/orders: Order list with status tabs, search, pagination
+  - /distributor/orders/[id]: Order detail with fulfill actions
+  - /distributor/inventory: Inventory table with stock-in dialog, low stock filter
+  - /distributor/settlements: Settlement history with period/fee/payout columns
+- Fixed Separator import in all new pages (was incorrectly from sidebar)
+- Verified mobile distributor pages already working (Zustand store has proper distributor fields)
+- Pushed to GitHub: 79a723e
+
+Stage Summary:
+- Distributor web login now works — redirects to /distributor with full web dashboard
+- Mobile distributor pages already working with /m/distributor/* routes
+- Both web and mobile share the same backend APIs (/api/distributor/*)
