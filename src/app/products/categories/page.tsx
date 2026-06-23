@@ -107,8 +107,7 @@ export default function CategoriesPage() {
   const fetchCategories = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await adminFetch('/api/categories');
-      const json = await res.json();
+      const json = await adminFetch('/api/categories');
       if (json.success) {
         setCategories(json.data.items || []);
       }
@@ -231,8 +230,7 @@ export default function CategoriesPage() {
   const confirmDelete = async () => {
     if (!deletingCategory) return;
     try {
-      const res = await adminFetch(`/api/categories/${deletingCategory.id}`, { method: 'DELETE' });
-      const json = await res.json();
+      const json = await adminFetch(`/api/categories/${deletingCategory.id}`, { method: 'DELETE' });
       if (json.success) {
         setDeleteDialogOpen(false);
         setDeletingCategory(null);

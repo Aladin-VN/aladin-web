@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, getDistributorId } from '@/lib/get-auth-user';
 import { ROLES, SETTLEMENT_CONFIG, successResponse, errorResponse } from '@/lib/security';
 import { db } from '@/lib/db';
+import { notifyOrderStatus } from '@/lib/notifications';
 
 const VALID_ACTIONS = ['CONFIRM', 'PACK', 'READY_FOR_PICKUP'] as const;
 const STATUS_TRANSITIONS: Record<string, string> = {
@@ -44,6 +45,7 @@ export async function POST(
       include: {
         items: { include: { product: true } },
         distributor: true,
+        shop: { select: { userId: true } },
       },
     });
 
@@ -142,6 +144,13 @@ export async function POST(
       where: { id: orderId },
       data: updateData,
     });
+
+    // Send in-app notification to shop owner (async, non-blocking)
+    if (order.shop?.userId) {
+      notifyOrderStatus(orderId, newStatus, order.shop.userId).catch((err) => {
+        console.error('[DISTRIBUTOR FULFILL] In-app notification error (non-blocking):', err);
+      });
+    }
 
     return NextResponse.json(successResponse({
       id: updatedOrder.id,

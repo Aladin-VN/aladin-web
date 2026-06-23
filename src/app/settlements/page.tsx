@@ -228,8 +228,7 @@ export default function SettlementsPage() {
       if (statusFilter !== 'all') params.set('status', statusFilter);
       if (distributorFilter !== 'all') params.set('distributorId', distributorFilter);
 
-      const res = await adminFetch(`/api/settlements?${params}`);
-      const json = await res.json();
+      const json = await adminFetch(`/api/settlements?${params}`);
       if (json.success) {
         const data: SettlementsResponse = json.data;
         setSettlements(data.items);
@@ -248,8 +247,7 @@ export default function SettlementsPage() {
   // Fetch distributors for generate dialog + filter dropdown
   const fetchDistributors = useCallback(async () => {
     try {
-      const res = await adminFetch('/api/distributors?limit=100');
-      const json = await res.json();
+      const json = await adminFetch('/api/distributors?limit=100');
       if (json.success) {
         setDistributors(json.data.items.map((d: { id: string; name: string }) => ({ id: d.id, name: d.name })));
       }

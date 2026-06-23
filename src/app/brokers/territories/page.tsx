@@ -76,8 +76,7 @@ export default function BrokerTerritoriesPage() {
       const params = new URLSearchParams();
       if (districtFilter !== 'all') params.set('district', districtFilter);
 
-      const res = await adminFetch(`/api/brokers/territories?${params.toString()}`);
-      const json = await res.json();
+      const json = await adminFetch(`/api/brokers/territories?${params.toString()}`);
       if (json.success) {
         setTerritories(json.data.territories || []);
         setDistricts(json.data.districts || []);

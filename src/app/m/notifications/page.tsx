@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Bell,
@@ -9,18 +9,47 @@ import {
   CreditCard,
   Tag,
   Settings,
-  Check,
   CheckCheck,
   Filter,
+  Package,
+  Loader2,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
 import { MobileHeader } from '@/components/mobile/mobile-header';
 import { useAppStore } from '@/stores/app.store';
+import { api, type ApiResponse } from '@/lib/mobile/api';
 import { cn } from '@/lib/utils';
-import type { Notification } from '@/stores/app.store';
+
+// ============================================
+// Server notification type
+// ============================================
+
+interface ServerNotification {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  data: Record<string, unknown> | null;
+  isRead: boolean;
+  createdAt: string;
+  readAt: string | null;
+}
+
+// ============================================
+// Map server type → mobile filter key
+// ============================================
+
+const TYPE_TO_FILTER: Record<string, string> = {
+  ORDER_STATUS: 'order',
+  SHIPMENT: 'shipment',
+  CREDIT: 'credit',
+  SETTLEMENT: 'settlement',
+  INVENTORY: 'inventory',
+  PROMOTION: 'promotion',
+  SYSTEM: 'system',
+};
 
 // ============================================
 // Filter tabs
@@ -31,7 +60,8 @@ interface FilterTab {
   labelVi: string;
   labelEn: string;
   icon: React.ReactNode;
-  filter: (n: Notification) => boolean;
+  serverTypes?: string[];
+  filter?: (n: ServerNotification) => boolean;
 }
 
 const filterTabs: FilterTab[] = [
@@ -47,28 +77,32 @@ const filterTabs: FilterTab[] = [
     labelVi: 'Đơn hàng',
     labelEn: 'Orders',
     icon: <ShoppingBag className="h-3.5 w-3.5" />,
-    filter: (n) => n.type === 'order',
+    serverTypes: ['ORDER_STATUS'],
+    filter: (n) => n.type === 'ORDER_STATUS',
   },
   {
     key: 'shipment',
     labelVi: 'Vận chuyển',
     labelEn: 'Shipments',
     icon: <Truck className="h-3.5 w-3.5" />,
-    filter: (n) => n.type === 'shipment',
+    serverTypes: ['SHIPMENT'],
+    filter: (n) => n.type === 'SHIPMENT',
   },
   {
     key: 'credit',
     labelVi: 'Công nợ',
     labelEn: 'Credit',
     icon: <CreditCard className="h-3.5 w-3.5" />,
-    filter: (n) => n.type === 'credit',
+    serverTypes: ['CREDIT'],
+    filter: (n) => n.type === 'CREDIT',
   },
   {
     key: 'promotion',
     labelVi: 'Khuyến mãi',
     labelEn: 'Promos',
     icon: <Tag className="h-3.5 w-3.5" />,
-    filter: (n) => n.type === 'promotion',
+    serverTypes: ['PROMOTION'],
+    filter: (n) => n.type === 'PROMOTION',
   },
 ];
 
@@ -77,11 +111,13 @@ const filterTabs: FilterTab[] = [
 // ============================================
 
 const TYPE_COLORS: Record<string, { bg: string; icon: React.ReactNode }> = {
-  order: { bg: 'bg-blue-100 text-blue-600 dark:bg-blue-900/40', icon: <ShoppingBag className="h-4 w-4" /> },
-  shipment: { bg: 'bg-cyan-100 text-cyan-600 dark:bg-cyan-900/40', icon: <Truck className="h-4 w-4" /> },
-  credit: { bg: 'bg-amber-100 text-amber-600 dark:bg-amber-900/40', icon: <CreditCard className="h-4 w-4" /> },
-  promotion: { bg: 'bg-yellow-50 text-red-600 dark:bg-red-900/40', icon: <Tag className="h-4 w-4" /> },
-  system: { bg: 'bg-gray-100 text-gray-600 dark:bg-gray-800', icon: <Settings className="h-4 w-4" /> },
+  ORDER_STATUS: { bg: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40', icon: <ShoppingBag className="h-4 w-4" /> },
+  SHIPMENT: { bg: 'bg-cyan-100 text-cyan-600 dark:bg-cyan-900/40', icon: <Truck className="h-4 w-4" /> },
+  CREDIT: { bg: 'bg-amber-100 text-amber-600 dark:bg-amber-900/40', icon: <CreditCard className="h-4 w-4" /> },
+  PROMOTION: { bg: 'bg-yellow-50 text-red-600 dark:bg-red-900/40', icon: <Tag className="h-4 w-4" /> },
+  INVENTORY: { bg: 'bg-orange-100 text-orange-600 dark:bg-orange-900/40', icon: <Package className="h-4 w-4" /> },
+  SETTLEMENT: { bg: 'bg-violet-100 text-violet-600 dark:bg-violet-900/40', icon: <Tag className="h-4 w-4" /> },
+  SYSTEM: { bg: 'bg-gray-100 text-gray-600 dark:bg-gray-800', icon: <Settings className="h-4 w-4" /> },
 };
 
 // ============================================
@@ -104,35 +140,106 @@ function formatRelativeTime(dateStr: string): string {
 }
 
 // ============================================
-// Notifications Page
+// Notifications Page (Server-Synced)
 // ============================================
 
 export default function MobileNotificationsPage() {
   const router = useRouter();
   const locale = useAppStore((s) => s.locale);
-  const notifications = useAppStore((s) => s.notifications);
-  const markNotificationRead = useAppStore((s) => s.markNotificationRead);
-  const markAllNotificationsRead = useAppStore((s) => s.markAllNotificationsRead);
-  const [activeFilter, setActiveFilter] = useState('all');
   const t = (vi: string, en: string) => locale === 'vi' ? vi : en;
 
-  const filteredNotifications = useMemo(
-    () => {
-      const tab = filterTabs.find((f) => f.key === activeFilter);
-      if (!tab) return notifications;
-      return notifications.filter(tab.filter);
-    },
-    [notifications, activeFilter]
-  );
+  const [notifications, setNotifications] = useState<ServerNotification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [markingAll, setMarkingAll] = useState(false);
+  const [activeFilter, setActiveFilter] = useState('all');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // Fetch notifications from server
+  const fetchNotifications = useCallback(async (pageNum: number, append = false) => {
+    try {
+      const res = await api.get<ServerNotification[]>('/notifications', {
+        page: String(pageNum),
+        limit: '20',
+      });
+      if (res.success && res.data) {
+        setNotifications((prev) => append ? [...prev, ...res.data!] : res.data!);
+        setTotal(res.meta?.total || 0);
+        setUnreadCount(res.meta?.unreadCount || 0);
+      }
+    } catch {
+      // Silently fail
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchNotifications(1);
+  }, [fetchNotifications]);
+
+  // Load more
+  const hasMore = notifications.length < total;
+  const loadMore = useCallback(() => {
+    if (!hasMore || loading) return;
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchNotifications(nextPage, true);
+  }, [hasMore, loading, page, fetchNotifications]);
+
+  const filteredNotifications = useMemo(() => {
+    const tab = filterTabs.find((f) => f.key === activeFilter);
+    if (!tab || !tab.filter) return notifications;
+    return notifications.filter(tab.filter);
+  }, [notifications, activeFilter]);
 
   const unreadInFilter = useMemo(
-    () => filteredNotifications.filter((n) => !n.read).length,
+    () => filteredNotifications.filter((n) => !n.isRead).length,
     [filteredNotifications]
   );
 
-  const handleNotificationClick = (n: Notification) => {
-    if (!n.read) markNotificationRead(n.id);
-    if (n.actionUrl) router.push(n.actionUrl);
+  // Mark single as read
+  const handleNotificationClick = async (n: ServerNotification) => {
+    if (!n.isRead) {
+      try {
+        await api.patch('/notifications', { ids: [n.id] });
+        setNotifications((prev) =>
+          prev.map((item) =>
+            item.id === n.id ? { ...item, isRead: true, readAt: new Date().toISOString() } : item
+          )
+        );
+        setUnreadCount((prev) => Math.max(0, prev - 1));
+      } catch {
+        // Silently fail
+      }
+    }
+
+    // Navigate based on notification data
+    if (n.data?.orderId) {
+      router.push(`/m/orders/${n.data.orderId}`);
+    } else if (n.data?.shipmentId) {
+      router.push(`/m/shipments`);
+    } else if (n.type === 'CREDIT') {
+      router.push('/m/credit');
+    }
+  };
+
+  // Mark all as read
+  const handleMarkAllRead = async () => {
+    if (markingAll) return;
+    setMarkingAll(true);
+    try {
+      await api.patch('/notifications', { all: true });
+      setNotifications((prev) =>
+        prev.map((n) => ({ ...n, isRead: true, readAt: new Date().toISOString() }))
+      );
+      setUnreadCount(0);
+    } catch {
+      // Silently fail
+    } finally {
+      setMarkingAll(false);
+    }
   };
 
   return (
@@ -145,15 +252,20 @@ export default function MobileNotificationsPage() {
 
       <main className="px-4 pb-4 pt-3 space-y-3">
         {/* Mark all read button */}
-        {notifications.some((n) => !n.read) && (
+        {unreadCount > 0 && (
           <div className="flex justify-end">
             <Button
               variant="ghost"
               size="sm"
               className="h-8 text-xs text-primary"
-              onClick={markAllNotificationsRead}
+              onClick={handleMarkAllRead}
+              disabled={markingAll}
             >
-              <CheckCheck className="h-3.5 w-3.5 mr-1" />
+              {markingAll ? (
+                <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+              ) : (
+                <CheckCheck className="h-3.5 w-3.5 mr-1" />
+              )}
               {t('Đọc tất cả', 'Mark all read')}
             </Button>
           </div>
@@ -164,8 +276,8 @@ export default function MobileNotificationsPage() {
           {filterTabs.map((tab) => {
             const isActive = activeFilter === tab.key;
             const count = tab.key === 'all'
-              ? notifications.filter((n) => !n.read).length
-              : notifications.filter((n) => !n.read && tab.filter(n)).length;
+              ? unreadCount
+              : notifications.filter((n) => !n.isRead && tab.filter?.(n)).length;
 
             return (
               <button
@@ -210,17 +322,21 @@ export default function MobileNotificationsPage() {
         </div>
 
         {/* Notification list */}
-        {filteredNotifications.length > 0 ? (
+        {loading ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : filteredNotifications.length > 0 ? (
           <div className="space-y-2">
             {filteredNotifications.map((n) => {
-              const typeConfig = TYPE_COLORS[n.type] || TYPE_COLORS.system;
+              const typeConfig = TYPE_COLORS[n.type] || TYPE_COLORS.SYSTEM;
 
               return (
                 <Card
                   key={n.id}
                   className={cn(
                     'cursor-pointer active:scale-[0.99] transition-all',
-                    !n.read ? 'border-primary/20 bg-primary/[0.02]' : 'opacity-70'
+                    !n.isRead ? 'border-primary/20 bg-primary/[0.02]' : 'opacity-70'
                   )}
                   onClick={() => handleNotificationClick(n)}
                 >
@@ -234,34 +350,43 @@ export default function MobileNotificationsPage() {
                       {/* Content */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
-                          <p className={cn('text-sm leading-tight', !n.read && 'font-semibold')}>
-                            {locale === 'vi' && n.titleVi ? n.titleVi : n.title}
+                          <p className={cn('text-sm leading-tight', !n.isRead && 'font-semibold')}>
+                            {n.title}
                           </p>
-                          {!n.read && (
+                          {!n.isRead && (
                             <div className="h-2 w-2 rounded-full bg-primary mt-1.5 shrink-0" />
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                          {locale === 'vi' && n.bodyVi ? n.bodyVi : n.body}
+                          {n.message}
                         </p>
                         <p className="text-[10px] text-muted-foreground/70 mt-1.5">
                           {formatRelativeTime(n.createdAt)}
                         </p>
                       </div>
-
-                      {/* Action chevron */}
-                      {n.actionUrl && (
-                        <div className="shrink-0 mt-2 text-muted-foreground/40">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="m9 18 6-6-6-6" />
-                          </svg>
-                        </div>
-                      )}
                     </div>
                   </CardContent>
                 </Card>
               );
             })}
+
+            {/* Load more */}
+            {hasMore && activeFilter === 'all' && (
+              <div className="pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-9 text-xs"
+                  onClick={loadMore}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                  ) : null}
+                  {t('Tải thêm', 'Load more')}
+                </Button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="text-center py-16">

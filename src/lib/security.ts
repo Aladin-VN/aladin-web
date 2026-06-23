@@ -214,10 +214,10 @@ export const SHIPMENT_STATUS = {
 } as const;
 
 export const LOYALTY_TIERS = {
-  BRONZE: { name: 'Bronze', minOrders: 0, discount: 0 },
-  SILVER: { name: 'Silver', minOrders: 6, discount: 0.03 },
-  GOLD: { name: 'Gold', minOrders: 16, discount: 0.05 },
-  PLATINUM: { name: 'Platinum', minOrders: 31, discount: 0.08 },
+  BRONZE: { name: 'Bronze', nameVi: 'Đồng', minOrders: 0, minGmv: 0, discount: 0, creditLimitMax: 2_000_000, benefits: ['2 triệu VND hạn mức công nợ', 'Giao hàng tiêu chuẩn'] },
+  SILVER: { name: 'Silver', nameVi: 'Bạc', minOrders: 6, minGmv: 5_000_000, discount: 0.03, creditLimitMax: 3_500_000, benefits: ['3.5 triệu VND hạn mức công nợ', '3% giảm giá thanh toán số', 'Ưu tiên giao hàng'] },
+  GOLD: { name: 'Gold', nameVi: 'Vàng', minOrders: 16, minGmv: 20_000_000, discount: 0.05, creditLimitMax: 5_000_000, benefits: ['5 triệu VND hạn mức công nợ', '5% giảm giá thanh toán số', 'Giao hàng ưu tiên', 'Hỗ trợ chuyên viên riêng'] },
+  PLATINUM: { name: 'Platinum', nameVi: 'Bạch kim', minOrders: 31, minGmv: 50_000_000, discount: 0.08, creditLimitMax: 10_000_000, benefits: ['10 triệu VND hạn mức công nợ', '8% giảm giá thanh toán số', 'Giao hàng hỏa tốc', 'Chuyên viên tận nơi', 'Tham gia chương trình đối tác'] },
 } as const;
 
 export const BROKER_TIERS = {

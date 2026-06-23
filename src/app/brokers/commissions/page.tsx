@@ -86,8 +86,7 @@ export default function BrokerCommissionsPage() {
       if (tierFilter !== 'all') params.set('tier', tierFilter);
       if (hasEarnings !== 'all') params.set('hasEarnings', hasEarnings);
 
-      const res = await adminFetch(`/api/brokers/commissions?${params.toString()}`);
-      const json = await res.json();
+      const json = await adminFetch(`/api/brokers/commissions?${params.toString()}`);
       if (json.success) {
         setItems(json.data.items || []);
         setTotalPages(json.data.pagination.totalPages);

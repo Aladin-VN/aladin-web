@@ -202,8 +202,7 @@ export default function OrdersPage() {
       if (dateFrom) params.set('dateFrom', dateFrom);
       if (dateTo) params.set('dateTo', dateTo);
 
-      const res = await adminFetch(`/api/orders?${params.toString()}`);
-      const json = await res.json();
+      const json = await adminFetch(`/api/orders?${params.toString()}`);
 
       if (json.success) {
         const data: OrdersResponse = json.data;
@@ -221,8 +220,7 @@ export default function OrdersPage() {
   // Fetch stats
   const fetchStats = useCallback(async () => {
     try {
-      const res = await adminFetch('/api/orders/stats');
-      const json = await res.json();
+      const json = await adminFetch('/api/orders/stats');
       if (json.success) {
         const data = json.data;
         setStats({

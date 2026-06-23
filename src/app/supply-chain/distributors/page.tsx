@@ -133,8 +133,7 @@ export default function DistributorsPage() {
       setLoading(true);
       const params = new URLSearchParams({ page: String(page), limit: String(limit), search: debouncedSearch });
       if (statusFilter !== 'all') params.set('status', statusFilter);
-      const res = await adminFetch(`/api/distributors?${params.toString()}`);
-      const json = await res.json();
+      const json = await adminFetch(`/api/distributors?${params.toString()}`);
       if (json.success) {
         const data: DistributorsResponse = json.data;
         setDistributors(data.items || []);
@@ -170,8 +169,7 @@ export default function DistributorsPage() {
     if (!selectedDistributor) return;
     try {
       setDeleting(true);
-      const res = await adminFetch(`/api/distributors/${selectedDistributor.id}`, { method: 'DELETE' });
-      const json = await res.json();
+      const json = await adminFetch(`/api/distributors/${selectedDistributor.id}`, { method: 'DELETE' });
       if (json.success) {
         toast.success(t('Distributor deleted', 'Xoa nha phan phoi thanh cong'));
         setDeleteDialogOpen(false);

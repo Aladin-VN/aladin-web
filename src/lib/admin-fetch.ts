@@ -1,5 +1,6 @@
 // Shared fetch helper for admin pages — automatically attaches auth token
 // Auto-refreshes expired access tokens using refresh token
+// Returns parsed JSON (not raw Response)
 let refreshPromise: Promise<boolean> | null = null;
 
 async function tryRefreshToken(): Promise<boolean> {
@@ -26,7 +27,7 @@ async function tryRefreshToken(): Promise<boolean> {
   }
 }
 
-export function adminFetch(url: string, options: RequestInit = {}): Promise<Response> {
+export function adminFetch(url: string, options: RequestInit = {}): Promise<any> {
   const token = typeof window !== 'undefined' ? localStorage.getItem('aladin-access-token') : null;
   const headers = new Headers(options.headers);
   if (token) {
@@ -50,9 +51,10 @@ export function adminFetch(url: string, options: RequestInit = {}): Promise<Resp
       if (refreshed) {
         const newToken = localStorage.getItem('aladin-access-token');
         headers.set('Authorization', `Bearer ${newToken}`);
-        return fetch(url, { ...options, headers });
+        const retryRes = await fetch(url, { ...options, headers });
+        return retryRes.json();
       }
     }
-    return res;
+    return res.json();
   });
 }

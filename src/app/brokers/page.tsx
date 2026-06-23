@@ -183,8 +183,7 @@ export default function BrokersPage() {
       if (tierFilter !== 'all') params.set('tier', tierFilter);
       if (wardFilter !== 'all') params.set('wardId', wardFilter);
 
-      const res = await adminFetch(`/api/brokers?${params.toString()}`);
-      const json = await res.json();
+      const json = await adminFetch(`/api/brokers?${params.toString()}`);
       if (json.success) {
         const data: BrokersResponse = json.data;
         setBrokers(data.items || []);
@@ -202,8 +201,7 @@ export default function BrokersPage() {
   // Fetch stats
   const fetchStats = useCallback(async () => {
     try {
-      const res = await adminFetch('/api/brokers/stats?period=month');
-      const json = await res.json();
+      const json = await adminFetch('/api/brokers/stats?period=month');
       if (json.success) setStats(json.data);
     } catch (err) {
       console.error('Failed to fetch stats:', err);

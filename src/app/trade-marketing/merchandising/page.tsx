@@ -118,8 +118,7 @@ export default function MerchandisingPage() {
       });
       if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter);
 
-      const res = await adminFetch(`/api/merchandising?${params.toString()}`);
-      const json = await res.json();
+      const json = await adminFetch(`/api/merchandising?${params.toString()}`);
       if (json.success) {
         const data = json.data;
         setAudits(data.items || []);

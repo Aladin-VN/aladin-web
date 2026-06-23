@@ -7,7 +7,7 @@ import { formatVND } from '@/lib/security';
 import { useAuthStore } from '@/stores/auth.store';
 import {
   ShoppingCart, DollarSign, Wallet, AlertTriangle, Package, CheckCircle,
-  ArrowRight, RefreshCw,
+  ArrowRight, RefreshCw, BarChart3, CreditCard,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -131,7 +131,7 @@ export default function DistributorDashboard() {
       )}
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-3 gap-2 mb-6">
+      <div className="grid grid-cols-2 gap-2 mb-2">
         <Button variant="outline" className="h-auto py-3 flex-col gap-1 text-xs" onClick={() => router.push('/m/distributor/orders')}>
           <ShoppingCart className="h-5 w-5 text-yellow-600" />
           Nhận đơn hàng
@@ -140,9 +140,19 @@ export default function DistributorDashboard() {
           <Package className="h-5 w-5 text-purple-600" />
           Kiểm tra kho
         </Button>
+      </div>
+      <div className="grid grid-cols-3 gap-2 mb-6">
         <Button variant="outline" className="h-auto py-3 flex-col gap-1 text-xs" onClick={() => router.push('/m/distributor/settlements')}>
           <Wallet className="h-5 w-5 text-blue-600" />
           Quyết toán
+        </Button>
+        <Button variant="outline" className="h-auto py-3 flex-col gap-1 text-xs" onClick={() => router.push('/m/distributor/analytics')}>
+          <BarChart3 className="h-5 w-5 text-emerald-600" />
+          Phân tích
+        </Button>
+        <Button variant="outline" className="h-auto py-3 flex-col gap-1 text-xs" onClick={() => router.push('/m/distributor/ar-ledger')}>
+          <CreditCard className="h-5 w-5 text-red-600" />
+          Công nợ
         </Button>
       </div>
 

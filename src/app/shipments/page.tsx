@@ -221,8 +221,7 @@ export default function ShipmentsPage() {
       if (dateFrom) params.set('dateFrom', dateFrom);
       if (dateTo) params.set('dateTo', dateTo);
 
-      const res = await adminFetch(`/api/shipments?${params.toString()}`);
-      const json = await res.json();
+      const json = await adminFetch(`/api/shipments?${params.toString()}`);
 
       if (json.success) {
         const data: ShipmentsResponse = json.data;
@@ -240,8 +239,7 @@ export default function ShipmentsPage() {
   // Fetch stats
   const fetchStats = useCallback(async () => {
     try {
-      const res = await adminFetch('/api/shipments/stats');
-      const json = await res.json();
+      const json = await adminFetch('/api/shipments/stats');
       if (json.success) {
         setStats(json.data);
       }

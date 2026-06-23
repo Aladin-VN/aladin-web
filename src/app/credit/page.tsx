@@ -151,8 +151,7 @@ export default function CreditPage() {
   const fetchSummary = useCallback(async () => {
     try {
       setSummaryLoading(true);
-      const res = await adminFetch('/api/credit/summary');
-      const json = await res.json();
+      const json = await adminFetch('/api/credit/summary');
       if (json.success) setSummary(json.data);
     } catch (err) {
       console.error('Failed to fetch credit summary:', err);
@@ -174,8 +173,7 @@ export default function CreditPage() {
         params.set('status', statusTab.toUpperCase());
       }
 
-      const res = await adminFetch(`/api/credit/shops?${params.toString()}`);
-      const json = await res.json();
+      const json = await adminFetch(`/api/credit/shops?${params.toString()}`);
       if (json.success) {
         const data: ShopsResponse = json.data;
         let items = data.items || [];
@@ -222,8 +220,7 @@ export default function CreditPage() {
   const handleProcessOverdue = async () => {
     setProcessingOverdue(true);
     try {
-      const res = await adminFetch('/api/credit/process-overdue', { method: 'POST' });
-      const json = await res.json();
+      const json = await adminFetch('/api/credit/process-overdue', { method: 'POST' });
       if (json.success) {
         const locked = json.data.lockedCount;
         const already = json.data.alreadyOverdue;

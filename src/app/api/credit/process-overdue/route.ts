@@ -6,6 +6,8 @@ import { extractBearerToken, verifyAccessToken, isAdmin } from '@/lib/auth';
 import { successResponse, errorResponse } from '@/lib/security';
 import { checkAndLockOverdueShops } from '@/lib/credit-engine';
 import { sendCreditLockedNotification } from '@/lib/zalo/notification-engine';
+import { notifyCreditReminder } from '@/lib/notifications';
+import { db } from '@/lib/db';
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,6 +28,19 @@ export async function POST(request: NextRequest) {
       sendCreditLockedNotification(detail.shopId).catch((err) => {
         console.error(`[PROCESS OVERDUE] Notification error for shop ${detail.shopId}:`, err);
       });
+
+      // Send in-app credit reminder notification (async, non-blocking)
+      try {
+        const shop = await db.shop.findUnique({
+          where: { id: detail.shopId },
+          select: { userId: true },
+        });
+        if (shop?.userId) {
+          notifyCreditReminder(detail.shopId, shop.userId).catch(() => {});
+        }
+      } catch {
+        // Non-blocking
+      }
     }
 
     return NextResponse.json(

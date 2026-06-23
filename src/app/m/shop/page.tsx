@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   Award,
   Package,
+  BarChart3,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -370,15 +371,92 @@ export default function MobileShopProfilePage() {
         {/* Loyalty Tier Progress */}
         <Card>
           <CardHeader className="pb-2 pt-4 px-4">
-            <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <Award className="h-4 w-4" />
-              {t('Loyalty Program', 'Chương trình khách hàng thân thiết')}
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <Award className="h-4 w-4" />
+                {t('Loyalty Program', 'Chương trình khách hàng thân thiết')}
+              </CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => router.push('/m/shop/loyalty')}
+              >
+                {t('Details', 'Chi tiết')}
+                <ChevronRight className="h-3.5 w-3.5 ml-0.5" />
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="px-4 pb-4">
             <LoyaltyTierProgress currentTier={shop.loyaltyTier} totalOrders={shop.totalOrders} locale={locale} />
           </CardContent>
         </Card>
+
+        {/* Self-Service Navigation Cards */}
+        <div>
+          <h3 className="text-sm font-semibold mb-3">{t('Self-Service', 'Tự phục vụ')}</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <Card
+              className="p-3 cursor-pointer hover:bg-muted/50 transition-colors active:scale-[0.98]"
+              onClick={() => router.push('/m/shop/analytics')}
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="h-9 w-9 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center shrink-0">
+                  <TrendingUp className="h-4.5 w-4.5 text-red-600 dark:text-red-400" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold truncate">{t('Analytics', 'Phân tích')}</p>
+                  <p className="text-[10px] text-muted-foreground truncate">{t('Spending & trends', 'Chi tiêu & xu hướng')}</p>
+                </div>
+              </div>
+            </Card>
+
+            <Card
+              className="p-3 cursor-pointer hover:bg-muted/50 transition-colors active:scale-[0.98]"
+              onClick={() => router.push('/m/shop/loyalty')}
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="h-9 w-9 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+                  <Award className="h-4.5 w-4.5 text-amber-600 dark:text-amber-400" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold truncate">{t('Loyalty', 'Thân thiết')}</p>
+                  <p className="text-[10px] text-muted-foreground truncate">{t('Tier & benefits', 'Hạng & quyền lợi')}</p>
+                </div>
+              </div>
+            </Card>
+
+            <Card
+              className="p-3 cursor-pointer hover:bg-muted/50 transition-colors active:scale-[0.98]"
+              onClick={() => router.push('/m/shop/reorder')}
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="h-9 w-9 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
+                  <Package className="h-4.5 w-4.5 text-green-600 dark:text-green-400" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold truncate">{t('Reorder', 'Đặt lại')}</p>
+                  <p className="text-[10px] text-muted-foreground truncate">{t('Smart suggestions', 'Gợi ý thông minh')}</p>
+                </div>
+              </div>
+            </Card>
+
+            <Card
+              className="p-3 cursor-pointer hover:bg-muted/50 transition-colors active:scale-[0.98]"
+              onClick={() => router.push('/m/shop/benchmark')}
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="h-9 w-9 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center shrink-0">
+                  <BarChart3 className="h-4.5 w-4.5 text-purple-600 dark:text-purple-400" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold truncate">{t('Benchmark', 'So sánh')}</p>
+                  <p className="text-[10px] text-muted-foreground truncate">{t('You vs average', 'Bạn vs trung bình')}</p>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </div>
 
         {/* Contact & Address */}
         <Card>

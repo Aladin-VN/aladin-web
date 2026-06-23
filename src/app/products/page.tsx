@@ -246,8 +246,7 @@ export default function ProductsPage() {
   // Fetch categories
   const fetchCategories = useCallback(async () => {
     try {
-      const res = await adminFetch('/api/categories');
-      const json = await res.json();
+      const json = await adminFetch('/api/categories');
       if (json.success) {
         setCategories(json.data.items || []);
       }
@@ -275,8 +274,7 @@ export default function ProductsPage() {
       else if (statusFilter === 'lowStock') params.set('lowStock', 'true');
       else if (statusFilter === 'outOfStock') params.set('outOfStock', 'true');
 
-      const res = await adminFetch(`/api/products?${params.toString()}`);
-      const json = await res.json();
+      const json = await adminFetch(`/api/products?${params.toString()}`);
 
       if (json.success) {
         const data: ProductsResponse = json.data;
@@ -369,8 +367,7 @@ export default function ProductsPage() {
   const confirmDelete = async () => {
     if (!deletingProduct) return;
     try {
-      const res = await adminFetch(`/api/products/${deletingProduct.id}`, { method: 'DELETE' });
-      const json = await res.json();
+      const json = await adminFetch(`/api/products/${deletingProduct.id}`, { method: 'DELETE' });
       if (json.success) {
         setDeleteDialogOpen(false);
         setDeletingProduct(null);

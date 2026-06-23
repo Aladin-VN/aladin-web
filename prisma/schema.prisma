@@ -77,6 +77,7 @@ model User {
   broker        Broker?
   distributor   DistributorUser?
   shipments     Shipment[]  @relation("DriverAssignments")
+  notifications Notification[]
 
   // Metadata
   createdAt     DateTime @default(now())
@@ -287,6 +288,8 @@ model Distributor {
   inventoryMovements InventoryMovement[]
   settlements   Settlement[]
   orders        Order[]
+  posShifts     PosShift[]    @relation("DistributorPosShifts")
+  posSaleItems  PosSaleItem[] @relation("DistributorPosSales")
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -848,6 +851,28 @@ model PlatformSetting {
 }
 
 // ============================================================
+// NOTIFICATIONS: In-app notification system
+// Phase 4 — Real-Time & Scale
+// ============================================================
+
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String                                       // ORDER_STATUS, SHIPMENT, CREDIT, SETTLEMENT, INVENTORY, SYSTEM, PROMOTION
+  title       String
+  message     String
+  data        Json?                                        // optional structured data (orderId, shipmentId, etc.)
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  readAt      DateTime?
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+}
+
+// ============================================================
 // CHAT: In-app messaging between users and ALADIN support
 // Sprint M7 — Zalo Chat integration layer
 // ============================================================
@@ -870,4 +895,91 @@ model ChatMessage {
   @@index([userId])
   @@index([conversationId])
   @@index([createdAt])
+}
+
+// ============================================================
+// POS: Point of Sale for distributor walk-in sales
+// Phase 2 — POS Module
+// ============================================================
+
+model PosShift {
+  id                String   @id @default(cuid())
+  distributorId     String
+  
+  // Timing
+  openedAt          DateTime @default(now())
+  closedAt          DateTime?
+  
+  // Financial
+  openingBalance    Int      @default(0)                        // Cash in drawer at shift start (VND)
+  closingBalance    Int?                                       // Cash in drawer at shift end (VND)
+  expectedCash      Int      @default(0)                        // Expected cash based on sales
+  cashDifference    Int?                                       // closingBalance - expectedCash
+  
+  // Totals by payment method
+  cashTotal         Int      @default(0)                        // Total CASH sales (VND)
+  bankTransferTotal Int      @default(0)                        // Total BANK_TRANSFER sales (VND)
+  debtTotal         Int      @default(0)                        // Total DEBT sales (VND)
+  salesCount        Int      @default(0)                        // Number of transactions
+  
+  // Status
+  status            String   @default("OPEN")                   // OPEN, CLOSED
+  
+  // Operator
+  openedBy          String                                      // User who opened the shift
+  closedBy          String?                                     // User who closed the shift
+  
+  // Notes
+  closingNotes      String?
+  
+  // Relations
+  distributor       Distributor @relation("DistributorPosShifts", fields: [distributorId], references: [id])
+  saleItems         PosSaleItem[]
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([distributorId])
+  @@index([status])
+  @@index([openedAt])
+}
+
+model PosSaleItem {
+  id                String   @id @default(cuid())
+  posShiftId        String
+  distributorId     String
+  
+  // Product info (snapshot)
+  productId         String
+  productName       String
+  productSku        String?
+  unitPrice         Int                                         // Selling price per unit (VND)
+  quantity          Int
+  totalPrice        Int                                         // unitPrice * quantity
+  
+  // Payment
+  paymentMethod     String                                      // CASH, BANK_TRANSFER, DEBT
+  saleTotal         Int                                         // Total of entire sale (if multiple items)
+  saleSequence      Int                                         // Sequence number within the sale
+  
+  // Customer (optional)
+  customerName      String?
+  customerPhone     String?
+  
+  // Order link (if sale was linked to a shop order)
+  orderId           String?
+  
+  // Inventory movement
+  movementId        String?                                     // Link to InventoryMovement record
+  
+  createdAt         DateTime @default(now())
+  
+  // Relations
+  posShift          PosShift @relation(fields: [posShiftId], references: [id], onDelete: Cascade)
+  distributor       Distributor @relation("DistributorPosSales", fields: [distributorId], references: [id])
+  
+  @@index([posShiftId])
+  @@index([distributorId])
+  @@index([createdAt])
+  @@index([paymentMethod])
 }

@@ -174,8 +174,7 @@ export default function GroupBuyPage() {
       if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter);
       if (wardFilter && wardFilter !== 'all') params.set('wardId', wardFilter);
 
-      const res = await adminFetch(`/api/group-deals?${params.toString()}`);
-      const json = await res.json();
+      const json = await adminFetch(`/api/group-deals?${params.toString()}`);
       if (json.success) {
         const data: DealsResponse = json.data;
         setDeals(data.items || []);
@@ -193,8 +192,7 @@ export default function GroupBuyPage() {
   // Fetch stats
   const fetchStats = useCallback(async () => {
     try {
-      const res = await adminFetch('/api/group-deals/stats');
-      const json = await res.json();
+      const json = await adminFetch('/api/group-deals/stats');
       if (json.success) {
         setStats(json.data);
       }

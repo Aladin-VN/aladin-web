@@ -1,10 +1,9 @@
 'use client';
 
-import { Bell, Search, Globe, LogOut, User, ChevronRight, Settings } from 'lucide-react';
+import { Search, Globe, LogOut, User, ChevronRight, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -17,6 +16,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { useLocale, useAuth } from '@/providers/app-provider';
 import { useRouter } from 'next/navigation';
+import { NotificationBell } from '@/components/layout/notification-bell';
 
 // ============================================
 // Admin Header — Global top bar
@@ -67,48 +67,8 @@ export function AdminHeader() {
           {locale === 'vi' ? 'VI' : 'EN'}
         </Button>
 
-        {/* Notifications */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-9 w-9 relative">
-              <Bell className="h-4 w-4" />
-              <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[10px] text-white font-bold ring-2 ring-white">
-                3
-              </span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80">
-            <div className="px-3 py-2 border-b">
-              <h3 className="text-sm font-semibold">
-                {t('Notifications', 'Thong bao')}
-              </h3>
-            </div>
-            <DropdownMenuItem className="flex flex-col items-start gap-1 p-3">
-              <span className="text-sm font-medium">
-                {t('3 shops overdue on credit', '3 cua hang qua han no')}
-              </span>
-              <span className="text-xs text-muted-foreground">5 {t('minutes ago', 'phut truoc')}</span>
-              <Badge variant="destructive" className="text-[10px]">
-                {t('Alert', 'Canh bao')}
-              </Badge>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="flex flex-col items-start gap-1 p-3">
-              <span className="text-sm font-medium">
-                {t('Group Buy deal target reached', 'Deal mua chung dat muc tieu')}
-              </span>
-              <span className="text-xs text-muted-foreground">1 {t('hour ago', 'gio truoc')}</span>
-              <Badge className="text-[10px] bg-yellow-50 text-red-700 hover:bg-yellow-50">
-                {t('Success', 'Thanh cong')}
-              </Badge>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="flex flex-col items-start gap-1 p-3">
-              <span className="text-sm font-medium">
-                {t('Order #ALD-001 delivered', 'Don hang #ALD-001 giao thanh cong')}
-              </span>
-              <span className="text-xs text-muted-foreground">2 {t('hours ago', 'gio truoc')}</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {/* Notification Bell (server-synced) */}
+        <NotificationBell />
 
         {/* User Menu with Logout */}
         <DropdownMenu>

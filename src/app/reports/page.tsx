@@ -260,8 +260,7 @@ export default function ReportsPage() {
   const fetchOverview = useCallback(async () => {
     try {
       setOverviewLoading(true);
-      const res = await adminFetch(`/api/reports/overview?period=${period}`);
-      const json = await res.json();
+      const json = await adminFetch(`/api/reports/overview?period=${period}`);
       if (json.success) setOverview(json.data);
     } catch (err) { console.error('Overview fetch error:', err); }
     finally { setOverviewLoading(false); }
@@ -274,8 +273,7 @@ export default function ReportsPage() {
     if (!endpoint) return;
     setLoading(true);
     try {
-      const res = await adminFetch(`/api/reports/${endpoint}?period=${period}`);
-      const json = await res.json();
+      const json = await adminFetch(`/api/reports/${endpoint}?period=${period}`);
       if (json.success) {
         switch (tab) {
           case 'revenue': setRevenue(json.data); break;

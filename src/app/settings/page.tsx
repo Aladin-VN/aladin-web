@@ -75,8 +75,7 @@ export default function SettingsPage() {
   const fetchSettings = useCallback(async () => {
     try {
       setSettingsLoading(true);
-      const res = await adminFetch('/api/settings/platform');
-      const json = await res.json();
+      const json = await adminFetch('/api/settings/platform');
       if (json.success) {
         setSettings(json.data);
         setModifiedSettings({});

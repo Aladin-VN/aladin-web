@@ -7,6 +7,7 @@ import { db } from '@/lib/db';
 import { extractBearerToken, verifyAccessToken, hasRole } from '@/lib/auth';
 import { successResponse, errorResponse, rateLimit, ORDER_STATUS, PAYMENT_METHOD, PAYMENT_STATUS } from '@/lib/security';
 import { notifyOrderStatusChange } from '@/lib/zalo/notification-engine';
+import { notifyOrderStatus } from '@/lib/notifications';
 
 // ============================================
 // Valid status transition map
@@ -60,7 +61,9 @@ export async function PATCH(
     // Fetch current order with shop info
     const order = await db.order.findUnique({
       where: { id },
-      include: { shop: { select: { id: true, totalOrders: true, totalGmv: true } } },
+      include: {
+        shop: { select: { id: true, totalOrders: true, totalGmv: true, userId: true } },
+      },
     });
 
     if (!order) {
@@ -140,6 +143,13 @@ export async function PATCH(
     notifyOrderStatusChange(id, status).catch((err) => {
       console.error('[ORDER STATUS] Notification error (non-blocking):', err);
     });
+
+    // Send in-app notification to shop owner (async, non-blocking)
+    if (order.shop?.userId) {
+      notifyOrderStatus(id, status, order.shop.userId).catch((err) => {
+        console.error('[ORDER STATUS] In-app notification error (non-blocking):', err);
+      });
+    }
 
     return NextResponse.json(successResponse({
       order: {

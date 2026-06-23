@@ -21,6 +21,8 @@ import {
   ChevronRight,
   LogOut,
   User,
+  Monitor,
+  Calculator,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -87,6 +89,41 @@ const navItems: NavItem[] = [
     titleVi: 'Kho hang',
     href: '/distributor/inventory',
     icon: <Package className="h-4 w-4" />,
+    roles: [ROLES.DISTRIBUTOR],
+  },
+  {
+    title: 'Analytics',
+    titleVi: 'Phan tich',
+    href: '/distributor/analytics',
+    icon: <BarChart3 className="h-4 w-4" />,
+    roles: [ROLES.DISTRIBUTOR],
+  },
+  {
+    title: 'AR Ledger',
+    titleVi: 'Cong no',
+    href: '/distributor/ar-ledger',
+    icon: <CreditCard className="h-4 w-4" />,
+    roles: [ROLES.DISTRIBUTOR],
+  },
+  {
+    title: 'POS Terminal',
+    titleVi: 'Ban hang',
+    href: '/distributor/pos',
+    icon: <Monitor className="h-4 w-4" />,
+    roles: [ROLES.DISTRIBUTOR],
+  },
+  {
+    title: 'Shift Recon',
+    titleVi: 'Doi so ca',
+    href: '/distributor/pos/reconciliation',
+    icon: <Calculator className="h-4 w-4" />,
+    roles: [ROLES.DISTRIBUTOR],
+  },
+  {
+    title: 'AI Assistant',
+    titleVi: 'Tro ly AI',
+    href: '/distributor/ai-assistant',
+    icon: <Brain className="h-4 w-4" />,
     roles: [ROLES.DISTRIBUTOR],
   },
   {

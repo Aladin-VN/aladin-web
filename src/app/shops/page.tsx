@@ -231,8 +231,7 @@ export default function ShopsPage() {
       if (loyaltyTierFilter !== 'all') params.set('loyaltyTier', loyaltyTierFilter);
       if (shopTypeFilter !== 'all') params.set('shopType', shopTypeFilter);
 
-      const res = await adminFetch(`/api/shops?${params.toString()}`);
-      const json = await res.json();
+      const json = await adminFetch(`/api/shops?${params.toString()}`);
 
       if (json.success) {
         const data: ShopsResponse = json.data;
@@ -250,8 +249,7 @@ export default function ShopsPage() {
   // Fetch stats
   const fetchStats = useCallback(async () => {
     try {
-      const res = await adminFetch('/api/shops/stats');
-      const json = await res.json();
+      const json = await adminFetch('/api/shops/stats');
       if (json.success) {
         setStats(json.data);
       }

@@ -149,8 +149,7 @@ export default function UsersPage() {
       if (roleFilter !== 'all') params.set('role', roleFilter);
       if (statusFilter !== 'all') params.set('status', statusFilter);
 
-      const res = await adminFetch(`/api/users?${params.toString()}`);
-      const json = await res.json();
+      const json = await adminFetch(`/api/users?${params.toString()}`);
       if (json.success) {
         setUsers(json.data.items || []);
         setTotalPages(json.data.pagination.totalPages);
@@ -166,8 +165,7 @@ export default function UsersPage() {
   // Fetch stats
   const fetchStats = useCallback(async () => {
     try {
-      const res = await adminFetch('/api/users/stats');
-      const json = await res.json();
+      const json = await adminFetch('/api/users/stats');
       if (json.success) setStats(json.data);
     } catch (err) {
       console.error('Failed to fetch stats:', err);

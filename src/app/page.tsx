@@ -360,8 +360,7 @@ export default function DashboardPage() {
   const fetchStats = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await adminFetch('/api/dashboard/stats');
-      const json = await res.json();
+      const json = await adminFetch('/api/dashboard/stats');
       if (json.success) {
         setStats(json.data);
       }

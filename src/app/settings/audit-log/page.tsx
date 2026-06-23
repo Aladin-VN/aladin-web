@@ -178,8 +178,7 @@ export default function AuditLogPage() {
       if (dateFrom) params.set('from', dateFrom);
       if (dateTo) params.set('to', dateTo);
 
-      const res = await adminFetch(`/api/settings/audit-log?${params.toString()}`);
-      const json = await res.json();
+      const json = await adminFetch(`/api/settings/audit-log?${params.toString()}`);
       if (json.success) {
         setLogs(json.data.items || []);
         setTotalPages(json.data.pagination.totalPages);

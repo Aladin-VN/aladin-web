@@ -118,8 +118,7 @@ export default function ManufacturersPage() {
     try {
       setLoading(true);
       const params = new URLSearchParams({ page: String(page), limit: String(limit), search: debouncedSearch });
-      const res = await adminFetch(`/api/manufacturers?${params.toString()}`);
-      const json = await res.json();
+      const json = await adminFetch(`/api/manufacturers?${params.toString()}`);
       if (json.success) {
         const data: ManufacturersResponse = json.data;
         setManufacturers(data.items || []);
@@ -156,8 +155,7 @@ export default function ManufacturersPage() {
     if (!selectedManufacturer) return;
     try {
       setDeleting(true);
-      const res = await adminFetch(`/api/manufacturers/${selectedManufacturer.id}`, { method: 'DELETE' });
-      const json = await res.json();
+      const json = await adminFetch(`/api/manufacturers/${selectedManufacturer.id}`, { method: 'DELETE' });
       if (json.success) {
         toast.success(t('Manufacturer deleted', 'Xoa nha san xuat thanh cong'));
         setDeleteDialogOpen(false);
