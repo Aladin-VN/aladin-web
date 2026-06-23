@@ -4,7 +4,7 @@ import { adminFetch } from '@/lib/admin-fetch';
 import { formatVND } from '@/lib/security';
 import { useAuthStore } from '@/stores/auth.store';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, TrendingUp, CreditCard, Package, BarChart3, RefreshCw } from 'lucide-react';
+import { ArrowLeft, ArrowRight, TrendingUp, CreditCard, Package, BarChart3, RefreshCw } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';

@@ -119,9 +119,8 @@ export function OrderCreateDialog({
       const params = new URLSearchParams({ limit: '50' });
       if (shopSearch) params.set('search', shopSearch);
       const res = await adminFetch(`/api/shops?${params.toString()}`);
-      const json = await res.json();
-      if (json.success) {
-        setShops(json.data.items || []);
+      if (res.success) {
+        setShops(res.data.items || []);
       }
     } catch (err) {
       console.error('Failed to fetch shops:', err);
@@ -137,9 +136,8 @@ export function OrderCreateDialog({
       const params = new URLSearchParams({ limit: '20', isActive: 'true' });
       if (productSearchDebounced) params.set('search', productSearchDebounced);
       const res = await adminFetch(`/api/products?${params.toString()}`);
-      const json = await res.json();
-      if (json.success) {
-        setProducts(json.data.items || []);
+      if (res.success) {
+        setProducts(res.data.items || []);
       }
     } catch (err) {
       console.error('Failed to fetch products:', err);
@@ -256,17 +254,16 @@ export function OrderCreateDialog({
           customerNotes: customerNotes.trim() || undefined,
         }),
       });
-      const json = await res.json();
-      if (json.success) {
+      if (res.success) {
         toast.success(t('Order created successfully!', 'Tạo đơn hàng thành công!'));
         onOpenChange(false);
         onCreated?.();
       } else {
-        const errors = json.error?.details?.errors;
+        const errors = res.error?.details?.errors;
         if (Array.isArray(errors) && errors.length > 0) {
           errors.forEach((err: string) => toast.error(err));
         } else {
-          toast.error(json.error?.message || t('Failed to create order', 'Không thể tạo đơn hàng'));
+          toast.error(res.error?.message || t('Failed to create order', 'Không thể tạo đơn hàng'));
         }
       }
     } catch (err) {

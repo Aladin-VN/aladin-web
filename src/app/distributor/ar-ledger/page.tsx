@@ -48,6 +48,8 @@ export default function DistributorARLedger() {
     setLoading(false);
   }, [aging, page]);
 
+  useEffect(() => { fetchAR(); }, [fetchAR]);
+
   const agingColor = (b: string) =>
     b === 'overdue30' ? 'bg-red-100 text-red-800' :
     b === 'overdue15' ? 'bg-orange-100 text-orange-800' :
@@ -89,13 +91,14 @@ export default function DistributorARLedger() {
                 </CardContent></Card>
                 <Card className="bg-yellow-50 dark:bg-yellow-900/20 border-0"><CardContent className="p-4">
                   <p className="text-xs text-muted-foreground">{t('Qua han (8-30 ngay)', 'Overdue 8-30d')}</p>
-                  <p className="text-xl font-bold text-yellow-700">{formatVND(summary.overdue8 + summary.overdue15)}</p>
+                  <p className="text-xl font-bold text-yellow-700">{formatVND((summary.overdue8 || 0) + (summary.overdue15 || 0))}</p>
                 </CardContent></Card>
                 <Card className="bg-red-50 dark:bg-red-900/20 border-0"><CardContent className="p-4">
                   <p className="text-xs text-muted-foreground">{t('Qua han (>30 ngay)', 'Overdue 30d+')}</p>
                   <p className="text-xl font-bold text-red-700">{formatVND(summary.overdue30)}</p>
                 </CardContent></Card>
               </div>
+            )}
 
             <div className="flex gap-1 flex-wrap">
               {AGING_TABS.map(tab => (
@@ -109,21 +112,33 @@ export default function DistributorARLedger() {
               ) : items.length === 0 ? (
                 <div className="text-center py-12 text-sm text-muted-foreground">{t('Khong co cong no', 'No AR')}</div>
               ) : (
-                <Table><TableHeader><TableRow>
-                  <TableHead><TableHead>{t('Ma don', 'Order#')}</TableHead><TableHead>{t('Cua hang', 'Shop')}</TableHead><TableHead className="text-center">{t('So ngay', 'Days')}</TableHead><TableHead className="text-center">{t('Phan loai', 'Bucket')}</TableHead><TableHead className="text-right">{t('So tien', 'Amount')}</TableHead></TableRow></TableHeader>
-                    <TableBody>{items.map((item: any) => (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t('Ma don', 'Order#')}</TableHead>
+                      <TableHead>{t('Cua hang', 'Shop')}</TableHead>
+                      <TableHead className="text-center">{t('So ngay', 'Days')}</TableHead>
+                      <TableHead className="text-center">{t('Phan loai', 'Bucket')}</TableHead>
+                      <TableHead className="text-right">{t('So tien', 'Amount')}</TableHead>
+                      <TableHead className="text-right">{t('Ngay giao', 'Delivered')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {items.map((item: any) => (
                       <TableRow key={item.id}>
                         <TableCell className="font-medium">{item.orderNumber}</TableCell>
-                          <TableCell>{item.shopName}<br /><span className="text-xs text-muted-foreground">{item.shopDistrict}</span></TableCell>
-                          <TableCell className="text-center"><Badge variant="outline" className={item.agingDays > 14 ? 'border-red-300 text-red-600' : ''}>{item.agingDays}</Badge></TableCell>
-                          <TableCell className="text-center"><Badge variant="secondary" className={agingColor(item.agingBucket)}>{agingLabel(item.agingBucket)}</Badge></TableCell>
-                          <TableCell className="text-right font-semibold">{formatVND(item.amount)}</TableCell>
-                          <TableCell className="text-right text-xs text-muted-foreground">{item.deliveredAt?.slice(0, 10)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody></Table>
-                )}
-              </CardContent></Card>
+                        <TableCell>{item.shopName}<br /><span className="text-xs text-muted-foreground">{item.shopDistrict}</span></TableCell>
+                        <TableCell className="text-center"><Badge variant="outline" className={item.agingDays > 14 ? 'border-red-300 text-red-600' : ''}>{item.agingDays}</Badge></TableCell>
+                        <TableCell className="text-center"><Badge variant="secondary" className={agingColor(item.agingBucket)}>{agingLabel(item.agingBucket)}</Badge></TableCell>
+                        <TableCell className="text-right font-semibold">{formatVND(item.amount)}</TableCell>
+                        <TableCell className="text-right text-xs text-muted-foreground">{item.deliveredAt?.slice(0, 10)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent></Card>
+
             {totalPages > 1 && (
               <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">{t(`Trang ${page}/${totalPages}`, `Page ${page}/${totalPages}`)}</p>

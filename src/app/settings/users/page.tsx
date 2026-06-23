@@ -204,7 +204,6 @@ export default function UsersPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ newPassword }),
       });
-      const json = await res.json();
       if (json.success) {
         toast.success(t('Password reset successfully', 'Dat lai mat khau thanh cong'));
         setResetPwdDialogOpen(false);

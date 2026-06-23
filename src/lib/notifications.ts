@@ -47,6 +47,16 @@ export async function notifyLowStock(userId: string, productNames: string[]) {
   );
 }
 
+export async function notifyCreditReminder(shopId: string, userId: string) {
+  await createNotification(
+    userId,
+    'CREDIT',
+    'Nhắc nhở công nợ',
+    'Cửa hàng của bạn có khoản công nợ quá hạn. Vui lòng thanh toán để tránh bị khóa tín dụng.',
+    { shopId }
+  );
+}
+
 export async function notifySettlement(userId: string, settlementId: string, amount: number) {
   await createNotification(
     userId,

@@ -120,9 +120,8 @@ export function PromotionFormDialog({
     setSearching(true);
     try {
       const res = await adminFetch(`/api/products?search=${encodeURIComponent(query)}&limit=10`);
-      const json = await res.json();
-      if (json.success && json.data?.items) {
-        setProductResults(json.data.items.map((p: { id: string; name: string; sku: string }) => ({
+      if (res.success && res.data?.items) {
+        setProductResults(res.data.items.map((p: { id: string; name: string; sku: string }) => ({
           id: p.id,
           name: p.name,
           sku: p.sku,
@@ -174,9 +173,8 @@ export function PromotionFormDialog({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      const json = await res.json();
 
-      if (json.success) {
+      if (res.success) {
         toast.success(isEditing
           ? t('Promotion updated', 'Cap nhat khuyen mai thanh cong')
           : t('Promotion created', 'Tao khuyen mai thanh cong')
@@ -184,7 +182,7 @@ export function PromotionFormDialog({
         onSaved();
         onOpenChange(false);
       } else {
-        toast.error(json.error?.message || t('Failed to save', 'Khong the luu'));
+        toast.error(res.error?.message || t('Failed to save', 'Khong the luu'));
       }
     } catch (err) {
       toast.error(t('Network error', 'Loi mang'));

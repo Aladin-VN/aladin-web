@@ -81,9 +81,8 @@ export function ShipmentCreateDialog({
     try {
       setLoadingDrivers(true);
       const res = await adminFetch('/api/shipments/drivers');
-      const json = await res.json();
-      if (json.success) {
-        setDrivers(json.data.drivers || []);
+      if (res.success) {
+        setDrivers(res.data.drivers || []);
       }
     } catch {
       console.error('Failed to fetch drivers');
@@ -112,10 +111,9 @@ export function ShipmentCreateDialog({
           status: 'CONFIRMED,PROCESSING,PACKED,OUT_FOR_DELIVERY',
         });
         const res = await adminFetch(`/api/orders?${params.toString()}`);
-        const json = await res.json();
-        if (json.success && json.data?.items) {
+        if (res.success && res.data?.items) {
           setOrderResults(
-            json.data.items
+            res.data.items
               .filter((o: { status: string }) => ['CONFIRMED', 'PROCESSING', 'PACKED', 'OUT_FOR_DELIVERY'].includes(o.status))
               .map((o: { id: string; orderNumber: string; shopName: string; totalAmount: number; status: string }) => ({
                 id: o.id,
@@ -160,7 +158,7 @@ export function ShipmentCreateDialog({
 
     setSaving(true);
     try {
-      const res = await adminFetch('/api/shipments', {
+      const createRes = await adminFetch('/api/shipments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -171,14 +169,13 @@ export function ShipmentCreateDialog({
           dropoffAddress: form.dropoffAddress,
         }),
       });
-      const json = await res.json();
 
-      if (json.success) {
+      if (createRes.success) {
         toast.success(t('Shipment created', 'Tạo chuyến giao hàng thành công'));
         onCreated();
         onOpenChange(false);
       } else {
-        toast.error(json.error?.message || t('Failed to create shipment', 'Không thể tạo chuyến giao hàng'));
+        toast.error(createRes.error?.message || t('Failed to create shipment', 'Không thể tạo chuyến giao hàng'));
       }
     } catch {
       toast.error(t('Network error', 'Lỗi mạng'));

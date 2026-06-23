@@ -5,7 +5,7 @@ import { adminFetch } from '@/lib/admin-fetch';
 import { formatVND } from '@/lib/security';
 import {
   Search, Plus, Minus, Trash2, ShoppingCart,
-  X, CheckCircle2, Loader2, Package, Printer,
+  X, CheckCircle2, Loader2, Package, Printer, ChevronRight,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';

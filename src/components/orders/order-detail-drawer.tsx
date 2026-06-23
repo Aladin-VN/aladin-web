@@ -258,9 +258,8 @@ export function OrderDetailDrawer({
     try {
       setLoading(true);
       const res = await adminFetch(`/api/orders/${orderId}`);
-      const json = await res.json();
-      if (json.success) {
-        setOrder(json.data);
+      if (res.success) {
+        setOrder(res.data);
       } else {
         toast.error(t('Failed to load order', 'Không thể tải đơn hàng'));
       }
@@ -295,8 +294,7 @@ export function OrderDetailDrawer({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: action.nextStatus }),
       });
-      const json = await res.json();
-      if (json.success) {
+      if (res.success) {
         toast.success(t(
           `Order status updated to ${action.nextStatus}`,
           `Cập nhật trạng thái đơn hàng thành ${action.nextStatus}`
@@ -304,7 +302,7 @@ export function OrderDetailDrawer({
         fetchOrder();
         onStatusChanged?.();
       } else {
-        toast.error(json.error?.message || t('Failed to update status', 'Không thể cập nhật trạng thái'));
+        toast.error(res.error?.message || t('Failed to update status', 'Không thể cập nhật trạng thái'));
       }
     } catch (err) {
       console.error('Status update error:', err);
@@ -325,15 +323,14 @@ export function OrderDetailDrawer({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason: cancelReason.trim() }),
       });
-      const json = await res.json();
-      if (json.success) {
+      if (res.success) {
         toast.success(t('Order cancelled successfully', 'Hủy đơn hàng thành công'));
         setCancelDialogOpen(false);
         setCancelReason('');
         fetchOrder();
         onStatusChanged?.();
       } else {
-        toast.error(json.error?.message || t('Failed to cancel', 'Không thể hủy'));
+        toast.error(res.error?.message || t('Failed to cancel', 'Không thể hủy'));
       }
     } catch (err) {
       console.error('Cancel error:', err);

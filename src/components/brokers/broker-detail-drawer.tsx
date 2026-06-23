@@ -105,7 +105,6 @@ export function BrokerDetailDrawer({
     try {
       setLoading(true);
       const res = await adminFetch(`/api/brokers/${brokerId}`);
-      const json = await res.json();
       if (json.success) {
         setBroker(json.data);
       } else {
@@ -138,7 +137,6 @@ export function BrokerDetailDrawer({
     try {
       setDeleting(true);
       const res = await adminFetch(`/api/brokers/${broker.id}`, { method: 'DELETE' });
-      const json = await res.json();
       if (json.success) {
         toast.success(t('Broker removed', 'Xoa dai ly thanh cong'));
         onOpenChange(false);

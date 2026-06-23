@@ -186,9 +186,8 @@ export function ShopDetailDrawer({
     try {
       setLoading(true);
       const res = await adminFetch(`/api/shops/${shopId}`);
-      const json = await res.json();
-      if (json.success) {
-        setShop(json.data);
+      if (res.success) {
+        setShop(res.data);
       } else {
         toast.error(t('Failed to load shop', 'Khong the tai thong tin cua hang'));
       }

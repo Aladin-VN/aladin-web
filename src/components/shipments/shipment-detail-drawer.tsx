@@ -131,9 +131,8 @@ export function ShipmentDetailDrawer({
     try {
       setLoading(true);
       const res = await adminFetch(`/api/shipments/${shipmentId}`);
-      const json = await res.json();
-      if (json.success) {
-        setShipment(json.data);
+      if (res.success) {
+        setShipment(res.data);
       }
     } catch (err) {
       console.error('Failed to fetch shipment:', err);
@@ -161,19 +160,18 @@ export function ShipmentDetailDrawer({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: nextStatus }),
       });
-      const json = await res.json();
 
-      if (json.success) {
+      if (res.success) {
         toast.success(
           locale === 'vi'
-            ? `Cập nhật: ${json.data.previousStatus} → ${json.data.newStatus}`
-            : `Updated: ${json.data.previousStatus} → ${json.data.newStatus}`
+            ? `Cập nhật: ${res.data.previousStatus} → ${res.data.newStatus}`
+            : `Updated: ${res.data.previousStatus} → ${res.data.newStatus}`
         );
         fetchShipment();
         onStatusChanged();
         setNextStatus('all');
       } else {
-        toast.error(json.error?.message || t('Failed to update', 'Không thể cập nhật'));
+        toast.error(res.error?.message || t('Failed to update', 'Không thể cập nhật'));
       }
     } catch {
       toast.error(t('Network error', 'Lỗi mạng'));

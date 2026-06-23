@@ -73,9 +73,8 @@ export function RepaymentDialog({
     try {
       setLoadingOrders(true);
       const res = await adminFetch(`/api/orders?shopId=${shop.shopId}&paymentMethod=CREDIT&paymentStatus=PENDING&limit=50`);
-      const json = await res.json();
-      if (json.success) {
-        setOrders(json.data.items || []);
+      if (res.success) {
+        setOrders(res.data.items || []);
       }
     } catch {
       setOrders([]);
@@ -135,14 +134,12 @@ export function RepaymentDialog({
           collectedBy: collectedBy.trim() || undefined,
         }),
       });
-      const json = await res.json();
-
-      if (json.success) {
-        const isFull = json.data.isFullRepayment;
+      if (res.success) {
+        const isFull = res.data.isFullRepayment;
         toast.success(
           locale === 'vi'
-            ? `Ghi nhan tra no thanh cong: ${formatVND(Math.abs(json.data.transaction.amount))}. So du moi: ${formatVND(json.data.newBalance)}`
-            : `Repayment recorded: ${formatVND(Math.abs(json.data.transaction.amount))}. New balance: ${formatVND(json.data.newBalance)}`
+            ? `Ghi nhan tra no thanh cong: ${formatVND(Math.abs(res.data.transaction.amount))}. So du moi: ${formatVND(res.data.newBalance)}`
+            : `Repayment recorded: ${formatVND(Math.abs(res.data.transaction.amount))}. New balance: ${formatVND(res.data.newBalance)}`
         );
         if (isFull) {
           toast.success(

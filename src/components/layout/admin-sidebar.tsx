@@ -23,6 +23,7 @@ import {
   User,
   Monitor,
   Calculator,
+  Brain,
 } from 'lucide-react';
 import {
   Sidebar,

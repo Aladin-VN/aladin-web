@@ -387,7 +387,6 @@ export default function ProductsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'toggle_active' }),
       });
-      const json = await res.json();
       if (json.success) {
         // Optimistic update
         setProducts((prev) =>

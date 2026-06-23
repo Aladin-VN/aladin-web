@@ -104,15 +104,13 @@ export function BrokerFormDialog({
       // Fetch all users — filter for BROKER role on backend ideally
       // For now, we use the list endpoint
       const res = await adminFetch('/api/brokers?limit=1');
-      const json = await res.json();
       // We'll load all available users via a broader query
       // Since we don't have a dedicated users endpoint, we fetch from the list
       // In practice, use a separate /api/users?role=BROKER endpoint
       const usersRes = await adminFetch('/api/brokers?limit=1000');
-      const usersJson = await usersRes.json();
-      if (usersJson.success) {
+      if (usersRes.success) {
         // Extract unique users from the response (excluding those already brokers)
-        const brokerUserIds = new Set(usersJson.data.items.map((b: { userId: string }) => b.userId));
+        const brokerUserIds = new Set(usersRes.data.items.map((b: { userId: string }) => b.userId));
         // We need a way to get all users. For now, provide a simple approach:
         // The backend already handles duplicate checks, so we just need a userId input
       }
@@ -183,8 +181,7 @@ export function BrokerFormDialog({
         body: JSON.stringify(payload),
       });
 
-      const json = await res.json();
-      if (json.success) {
+      if (res.success) {
         toast.success(isEdit
           ? t('Broker updated', 'Cap nhat dai ly thanh cong')
           : t('Broker created', 'Them dai ly thanh cong')
@@ -192,7 +189,7 @@ export function BrokerFormDialog({
         onOpenChange(false);
         onSaved?.();
       } else {
-        toast.error(json.error?.message || t('Failed to save', 'Khong the luu'));
+        toast.error(res.error?.message || t('Failed to save', 'Khong the luu'));
       }
     } catch (err) {
       console.error('Save broker error:', err);

@@ -79,11 +79,10 @@ export function UserDetailDrawer({
     setLoading(true);
     try {
       const res = await adminFetch(`/api/users/${userId}`);
-      const json = await res.json();
-      if (json.success) {
-        setUser(json.data);
+      if (res.success) {
+        setUser(res.data);
       } else {
-        toast.error(json.error?.message || t('Failed to fetch user', 'Khong tai duoc thong tin'));
+        toast.error(res.error?.message || t('Failed to fetch user', 'Khong tai duoc thong tin'));
       }
     } catch (err) {
       console.error('Fetch user error:', err);
@@ -109,13 +108,12 @@ export function UserDetailDrawer({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
       });
-      const json = await res.json();
-      if (json.success) {
+      if (res.success) {
         toast.success(newStatus === 'ACTIVE' ? t('User reactivated', 'Kich hoat nguoi dung') : t('User suspended', 'Khoa nguoi dung'));
         fetchUser();
         onUserUpdated();
       } else {
-        toast.error(json.error?.message || t('Failed', 'That bai'));
+        toast.error(res.error?.message || t('Failed', 'That bai'));
       }
     } catch (err) {
       toast.error(t('Network error', 'Loi mang'));
@@ -131,13 +129,12 @@ export function UserDetailDrawer({
     setDeleting(true);
     try {
       const res = await adminFetch(`/api/users/${user.id}`, { method: 'DELETE' });
-      const json = await res.json();
-      if (json.success) {
+      if (res.success) {
         toast.success(t('User deleted', 'Xoa nguoi dung thanh cong'));
         onOpenChange(false);
         onUserUpdated();
       } else {
-        toast.error(json.error?.message || t('Failed', 'That bai'));
+        toast.error(res.error?.message || t('Failed', 'That bai'));
       }
     } catch (err) {
       toast.error(t('Network error', 'Loi mang'));

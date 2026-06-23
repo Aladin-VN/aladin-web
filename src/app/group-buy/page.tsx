@@ -235,7 +235,6 @@ export default function GroupBuyPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: statusAction }),
       });
-      const json = await res.json();
       if (json.success) {
         toast.success(
           statusAction === 'COMPLETED'

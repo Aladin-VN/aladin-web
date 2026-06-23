@@ -126,10 +126,9 @@ export function DealFormDialog({
     setSearching(true);
     try {
       const res = await adminFetch(`/api/products?search=${encodeURIComponent(query)}&limit=10`);
-      const json = await res.json();
-      if (json.success && json.data?.items) {
+      if (res.success && res.data?.items) {
         setProductResults(
-          json.data.items.map((p: { id: string; name: string; sku: string; basePrice: number; stockQuantity: number }) => ({
+          res.data.items.map((p: { id: string; name: string; sku: string; basePrice: number; stockQuantity: number }) => ({
             id: p.id,
             name: p.name,
             sku: p.sku,
@@ -208,9 +207,8 @@ export function DealFormDialog({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      const json = await res.json();
 
-      if (json.success) {
+      if (res.success) {
         toast.success(isEditing
           ? t('Deal updated', 'Cập nhật deal thành công')
           : t('Deal created', 'Tạo deal mua chung thành công')
@@ -218,7 +216,7 @@ export function DealFormDialog({
         onSaved();
         onOpenChange(false);
       } else {
-        toast.error(json.error?.message || t('Failed to save', 'Không thể lưu'));
+        toast.error(res.error?.message || t('Failed to save', 'Không thể lưu'));
       }
     } catch {
       toast.error(t('Network error', 'Lỗi mạng'));

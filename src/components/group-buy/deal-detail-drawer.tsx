@@ -98,8 +98,7 @@ export function DealDetailDrawer({ open, onOpenChange, dealId, locale = 'vi' }: 
     (async () => {
       try {
         const res = await adminFetch(`/api/group-deals/${dealId}`, { signal: controller.signal });
-        const json = await res.json();
-        if (!cancelled && json.success) setDetail(json.data);
+        if (!cancelled && res.success) setDetail(res.data);
       } catch (err) {
         if (!cancelled) console.error(err);
       }

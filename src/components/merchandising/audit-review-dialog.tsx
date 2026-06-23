@@ -45,8 +45,7 @@ export function AuditReviewDialog({ open, onOpenChange, audit, locale = 'vi', on
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status, reviewNotes: reviewNotes || undefined }),
       });
-      const json = await res.json();
-      if (json.success) {
+      if (res.success) {
         toast.success(
           status === 'APPROVED'
             ? t('Audit approved', 'Da duyet trung bay')
@@ -57,7 +56,7 @@ export function AuditReviewDialog({ open, onOpenChange, audit, locale = 'vi', on
         setReviewNotes('');
         setAction(null);
       } else {
-        toast.error(json.error?.message || t('Failed to review', 'Khong the duyet'));
+        toast.error(res.error?.message || t('Failed to review', 'Khong the duyet'));
       }
     } catch {
       toast.error(t('Network error', 'Loi mang'));

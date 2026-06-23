@@ -83,9 +83,8 @@ export function ShopEditDialog({
     try {
       setLoading(true);
       const res = await adminFetch(`/api/shops/${shopId}`);
-      const json = await res.json();
-      if (json.success) {
-        const data = json.data;
+      if (res.success) {
+        const data = res.data;
         setShop(data);
         // Populate form
         setName(data.name);
@@ -157,13 +156,12 @@ export function ShopEditDialog({
           creditStatus,
         }),
       });
-      const json = await res.json();
-      if (json.success) {
+      if (res.success) {
         toast.success(t('Shop updated successfully', 'Cap nhat cua hang thanh cong'));
         onOpenChange(false);
         onUpdated?.();
       } else {
-        toast.error(json.error?.message || t('Failed to update shop', 'Khong the cap nhat cua hang'));
+        toast.error(res.error?.message || t('Failed to update shop', 'Khong the cap nhat cua hang'));
       }
     } catch (err) {
       console.error('Update shop error:', err);

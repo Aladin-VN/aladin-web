@@ -108,7 +108,6 @@ export default function SettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ settings: changes }),
       });
-      const json = await res.json();
       if (json.success) {
         toast.success(t(`Saved ${json.data.count} setting(s)`, `Da luu ${json.data.count} cai dat`));
         fetchSettings();

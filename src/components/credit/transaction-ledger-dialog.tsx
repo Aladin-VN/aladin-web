@@ -122,7 +122,6 @@ export function TransactionLedgerDialog({
       if (dateTo) params.set('dateTo', dateTo);
 
       const res = await adminFetch(`/api/credit/transactions?${params.toString()}`);
-      const json = await res.json();
 
       if (json.success) {
         setTransactions(json.data.items || []);

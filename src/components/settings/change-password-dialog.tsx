@@ -87,12 +87,11 @@ export function ChangePasswordDialog({ open, onOpenChange, locale = 'vi' }: Chan
         }),
       });
 
-      const json = await res.json();
-      if (json.success) {
+      if (res.success) {
         toast.success(t('Password changed successfully', 'Doi mat khau thanh cong'));
         handleClose(false);
       } else {
-        toast.error(json.error?.message || t('Failed to change password', 'Doi mat khau that bai'));
+        toast.error(res.error?.message || t('Failed to change password', 'Doi mat khau that bai'));
       }
     } catch (err) {
       console.error('Change password error:', err);

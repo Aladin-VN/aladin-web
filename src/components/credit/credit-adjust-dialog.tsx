@@ -111,7 +111,6 @@ export function CreditAdjustDialog({
           reason: reason.trim(),
         }),
       });
-      const json = await res.json();
 
       if (json.success) {
         toast.success(

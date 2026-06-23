@@ -279,7 +279,6 @@ export default function SettlementsPage() {
           periodEnd: genPeriodEnd,
         }),
       });
-      const json = await res.json();
       if (json.success) {
         toast.success(t('Settlement generated', 'Tạo kỳ đối soát thành công'));
         setShowGenerate(false);
@@ -324,7 +323,6 @@ export default function SettlementsPage() {
         method: 'POST',
         body: JSON.stringify({ paymentRef: payRef.trim() || undefined }),
       });
-      const json = await res.json();
       if (json.success) {
         toast.success(t('Settlement marked as paid', 'Đã đánh dấu thanh toán'));
         setShowPay(false);

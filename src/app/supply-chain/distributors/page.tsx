@@ -193,7 +193,6 @@ export default function DistributorsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isActive: !dist.isActive }),
       });
-      const json = await res.json();
       if (json.success) {
         toast.success(dist.isActive
           ? t('Distributor deactivated', 'Ngung hoat dong nha phan phoi')

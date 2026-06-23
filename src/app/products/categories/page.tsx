@@ -195,7 +195,6 @@ export default function CategoriesPage() {
         }),
       });
 
-      const json = await res.json();
 
       if (json.success) {
         setFormDialogOpen(false);
@@ -250,7 +249,6 @@ export default function CategoriesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'toggle_active' }),
       });
-      const json = await res.json();
       if (json.success) {
         setCategories((prev) =>
           prev.map((c) => (c.id === cat.id ? { ...c, isActive: !c.isActive } : c))
@@ -292,7 +290,6 @@ export default function CategoriesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'reorder', order }),
       });
-      const json = await res.json();
       if (json.success) {
         fetchCategories();
       }
