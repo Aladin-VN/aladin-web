@@ -205,3 +205,26 @@ Stage Summary:
 - Distributor web login now works — redirects to /distributor with full web dashboard
 - Mobile distributor pages already working with /m/distributor/* routes
 - Both web and mobile share the same backend APIs (/api/distributor/*)
+---
+Task ID: 1-6
+Agent: Main
+Task: Fix distributor 400 errors, layout, menus, modernize UI, import Excel data
+
+Work Log:
+- Investigated 400 Bad Request root cause: DistributorUser join table missing, getDistributorId() returns null
+- Fixed get-auth-user.ts: Added JWT distributorId fallback when DB lookup returns null
+- Fixed ensure-demo-users route: Added DistributorUser repair logic for existing distributor users
+- Created distributor/layout.tsx: Shared layout with AuthGuard + flex container + AdminSidebar + SidebarInset
+- Refactored all 10 distributor pages: Removed duplicated AdminSidebar/SidebarInset wrappers, fixed Fragment wrapping
+- Modernized 4 distributor pages (orders, inventory, ar-ledger, settlements) with gradient icons, KPI cards, status badges, progress bars
+- Created import-excel-data.ts: Maps Excel ProductCategory/Customer/Order/OrderDetails to Prisma models
+- Imported 17 categories, 376 products, 376 inventory records, 50 shops, 150 orders, 1259 order items, 8 settlements
+- Build passes, pushed to GitHub
+
+Stage Summary:
+- 400 errors fixed via JWT fallback in get-auth-user.ts
+- Sidebar overlap fixed via shared layout.tsx with flex min-h-screen container
+- Empty menus fixed via AuthGuard in layout providing user role to sidebar
+- All distributor pages now have modern UI with cards, charts, gradient icons
+- Real business data imported: 376 FMCG products, 150 orders (181M VND), 50 active shops
+
