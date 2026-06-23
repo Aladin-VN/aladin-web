@@ -60,8 +60,8 @@ export async function getAuthUser(request: NextRequest): Promise<AuthUser | null
     shopId: (dbUser as Record<string, unknown>).shopId as string | null ?? null,
     shop: dbUser.shop as AuthUser['shop'],
     broker: dbUser.broker as AuthUser['broker'],
-    distributorId: (dbUser as Record<string, unknown>).distributorId as string | null ?? null,
-    distributor: dbUser.distributor as AuthUser['distributor'],
+    distributorId: ((dbUser as any).distributor?.distributorId as string) ?? null,
+    distributor: (dbUser as any).distributor?.distributor as AuthUser['distributor'] ?? null,
   };
 
   return authUser;

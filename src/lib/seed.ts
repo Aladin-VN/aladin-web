@@ -618,6 +618,456 @@ export async function seedDatabase() {
     });
   }
 
+  // 17. SECOND DISTRIBUTOR USER
+  const distUser1 = await db.user.create({
+    data: {
+      phone: '0945555555', name: 'Chị Hạnh - Kho HCM', nameEn: 'Han - HCM Warehouse',
+      role: 'DISTRIBUTOR', status: 'ACTIVE',
+      passwordHash: '8fc022ea8c4aa394ddc9115d7f8808e1:6530711c8439cc9fee88067eea16f152fafb06b00242992000d4dc6bc0081098733af4a32f8fd6d15e98838744579c6d7bad7285d9dd8e6715fc7ec900627b01',
+    },
+  });
+  await db.distributorUser.create({
+    data: { userId: distUser1.id, distributorId: distributors[1].id },
+  });
+
+  // 18. ADDITIONAL INVENTORY (distributor 1 + low-stock items for distributor 0)
+  const additionalInventory = [
+    // Distributor 1 — products with dist:1 (indices 2, 6, 7, 10, 15, 18, 21, 22, 23)
+    { distIdx: 1, prodIdx: 2, qty: 180, minStock: 15, cost: Math.round(products[2].basePrice * 0.70) },
+    { distIdx: 1, prodIdx: 6, qty: 150, minStock: 20, cost: Math.round(products[6].basePrice * 0.70) },
+    { distIdx: 1, prodIdx: 7, qty: 8, minStock: 15, cost: Math.round(products[7].basePrice * 0.70) },   // LOW STOCK
+    { distIdx: 1, prodIdx: 10, qty: 200, minStock: 25, cost: Math.round(products[10].basePrice * 0.70) },
+    { distIdx: 1, prodIdx: 15, qty: 60, minStock: 10, cost: Math.round(products[15].basePrice * 0.70) },
+    { distIdx: 1, prodIdx: 18, qty: 5, minStock: 10, cost: Math.round(products[18].basePrice * 0.70) },   // LOW STOCK
+    { distIdx: 1, prodIdx: 21, qty: 80, minStock: 10, cost: Math.round(products[21].basePrice * 0.70) },
+    { distIdx: 1, prodIdx: 22, qty: 45, minStock: 10, cost: Math.round(products[22].basePrice * 0.70) },
+    { distIdx: 1, prodIdx: 23, qty: 3, minStock: 10, cost: Math.round(products[23].basePrice * 0.70) },   // LOW STOCK
+    // Distributor 0 — extra stock top-ups for products that had 0 global stock
+    { distIdx: 0, prodIdx: 3, qty: 60, minStock: 10, cost: Math.round(products[3].basePrice * 0.70) },
+    { distIdx: 0, prodIdx: 20, qty: 100, minStock: 15, cost: Math.round(products[20].basePrice * 0.70) },
+    { distIdx: 0, prodIdx: 24, qty: 70, minStock: 10, cost: Math.round(products[24].basePrice * 0.70) },
+  ];
+  for (const inv of additionalInventory) {
+    await db.distributorInventory.create({
+      data: {
+        distributorId: distributors[inv.distIdx].id,
+        productId: products[inv.prodIdx].id,
+        quantity: inv.qty,
+        reservedQty: 0,
+        minStockLevel: inv.minStock,
+        costPrice: inv.cost,
+      },
+    });
+  }
+
+  // 19. ADDITIONAL 55 ORDERS (spread over 60 days)
+  // Deterministic pseudo-random helpers
+  const pseudoRand = (seed: number) => {
+    const x = Math.sin(seed * 9301 + 49297) * 233280;
+    return x - Math.floor(x);
+  };
+
+  const dist0Products = productData.map((p, i) => ({ ...p, idx: i })).filter((p) => p.dist === 0);
+  const dist1Products = productData.map((p, i) => ({ ...p, idx: i })).filter((p) => p.dist === 1);
+
+  const statusPool = [
+    'DELIVERED', 'DELIVERED', 'DELIVERED', 'DELIVERED', 'DELIVERED', 'DELIVERED',
+    'DELIVERED', 'DELIVERED', 'DELIVERED', 'DELIVERED',
+    'DELIVERED', 'DELIVERED', // ~60% DELIVERED (12/20 slots)
+    'PROCESSING', 'OUT_FOR_DELIVERY', 'PACKED', // ~15% in-progress (3/20)
+    'PENDING', 'CONFIRMED', // ~10% (2/20)
+    'CANCELLED', // ~5% (1/20)
+    'PACKED', // ~10% PACKED (2/20)
+  ];
+
+  const paymentPool = ['CREDIT', 'CREDIT', 'CREDIT', 'CREDIT', 'CREDIT', // 50%
+    'DIGITAL', 'DIGITAL', 'DIGITAL', // 30%
+    'COD', 'COD', // 20%
+  ];
+
+  const newOrderEntities: Awaited<ReturnType<typeof db.order.create>>[] = [];
+  const newOrderDefs: { shopIdx: number; distIdx: number; prodIndices: number[]; quantities: number[]; status: string; payment: string; daysAgo: number }[] = [];
+
+  for (let i = 0; i < 55; i++) {
+    const r = pseudoRand(i * 7 + 13);
+    const shopIdx = Math.floor(pseudoRand(i * 3 + 7) * 8);
+    const distIdx = i % 2 === 0 ? 0 : 1;
+    const availableProducts = distIdx === 0 ? dist0Products : dist1Products;
+
+    // 1-4 items per order
+    const numItems = 1 + Math.floor(pseudoRand(i * 11 + 5) * 4);
+    const prodIndices: number[] = [];
+    const quantities: number[] = [];
+    const usedSet = new Set<number>();
+    for (let j = 0; j < numItems && j < availableProducts.length; j++) {
+      let pi: number;
+      do { pi = Math.floor(pseudoRand(i * 13 + j * 17 + 3) * availableProducts.length); } while (usedSet.has(pi));
+      usedSet.add(pi);
+      const prod = availableProducts[pi];
+      prodIndices.push(prod.idx);
+      quantities.push(Math.max(prod.min, Math.floor(pseudoRand(i * 19 + j * 23 + 11) * (prod.max - prod.min + 1))));
+    }
+
+    const statusIdx = Math.floor(pseudoRand(i * 29 + 41) * statusPool.length);
+    const status = statusPool[statusIdx];
+    const paymentIdx = Math.floor(pseudoRand(i * 31 + 43) * paymentPool.length);
+    const payment = paymentPool[paymentIdx];
+    const daysAgo = 1 + Math.floor(pseudoRand(i * 37 + 47) * 59);
+
+    newOrderDefs.push({ shopIdx, distIdx, prodIndices, quantities, status, payment, daysAgo });
+  }
+
+  for (let i = 0; i < newOrderDefs.length; i++) {
+    const od = newOrderDefs[i];
+    const sub = od.prodIndices.reduce((s, pi, j) => s + products[pi].basePrice * od.quantities[j], 0);
+    const discount = od.payment === 'DIGITAL' ? Math.round(sub * 0.02) : 0;
+    const delivery = od.payment === 'COD' ? 15000 : 0;
+    const total = sub - discount + delivery;
+
+    let paySt = 'PENDING';
+    let paidAmt = 0;
+    let creditUsed = 0;
+
+    if (od.status === 'DELIVERED') {
+      if (od.payment === 'DIGITAL' || od.payment === 'COD') { paySt = 'PAID'; paidAmt = total; }
+      else { creditUsed = sub; }
+    } else if (od.payment === 'CREDIT' && od.status !== 'CANCELLED') {
+      creditUsed = sub;
+    } else if (od.status === 'CANCELLED') {
+      paySt = 'REFUNDED'; creditUsed = sub;
+    }
+
+    const createdAt = new Date(now - days(od.daysAgo));
+    const order = await db.order.create({
+      data: {
+        orderNumber: nextOrderNum(), shopId: shops[od.shopIdx].id,
+        shopSnapshot: JSON.stringify({ id: shops[od.shopIdx].id, name: shops[od.shopIdx].name, phone: shopUsers[od.shopIdx].phone }),
+        status: od.status, paymentMethod: od.payment, paymentStatus: paySt,
+        subtotalAmount: sub, discountAmount: discount, deliveryFee: delivery,
+        totalAmount: total, paidAmount: paidAmt, creditUsed,
+        idempotencyKey: `seed-extra-${i}-${dateStr}`,
+        customerNotes: 'Đặt qua ALADIN App', createdAt,
+        confirmedAt: od.status !== 'PENDING' ? new Date(createdAt.getTime() + 3600000) : null,
+        packedAt: ['PACKED', 'OUT_FOR_DELIVERY', 'DELIVERED'].includes(od.status) ? new Date(createdAt.getTime() + 7200000) : null,
+        deliveredAt: od.status === 'DELIVERED' ? new Date(createdAt.getTime() + 86400000) : null,
+        cancelledAt: od.status === 'CANCELLED' ? new Date(createdAt.getTime() + 7200000) : null,
+        cancelReason: od.status === 'CANCELLED' ? 'Khách yêu cầu hủy' : null,
+        distributorId: distributors[od.distIdx].id,
+        fulfilledByDistributorAt: od.status === 'DELIVERED' ? new Date(createdAt.getTime() + 5400000) : null,
+      },
+    });
+
+    for (let j = 0; j < od.prodIndices.length; j++) {
+      await db.orderItem.create({
+        data: {
+          orderId: order.id, productId: products[od.prodIndices[j]].id,
+          productName: products[od.prodIndices[j]].name, productSku: products[od.prodIndices[j]].sku,
+          unitPrice: products[od.prodIndices[j]].basePrice, quantity: od.quantities[j],
+          totalPrice: products[od.prodIndices[j]].basePrice * od.quantities[j],
+        },
+      });
+    }
+    newOrderEntities.push(order);
+  }
+
+  // 20. INVENTORY MOVEMENTS for distributor 0 (25 movements)
+  // Use delivered orders from distributor 0 for ORDER_FULFILLMENT movements
+  const dist0DeliveredOrders = newOrderEntities.filter(
+    (o) => o.distributorId === distributors[0].id && o.status === 'DELIVERED'
+  );
+  const dist0AllOriginalDelivered = orderEntities.filter(
+    (o) => o.distributorId === distributors[0].id && o.status === 'DELIVERED'
+  );
+
+  const invMovements: { prodIdx: number; type: string; qty: number; reason: string; orderId?: string; daysAgo: number }[] = [];
+
+  // RECEIPT movements (stock in)
+  invMovements.push(
+    { prodIdx: 0, type: 'RECEIPT', qty: 100, reason: 'Nhập hàng mới từ nhà sản xuất', daysAgo: 45 },
+    { prodIdx: 4, type: 'RECEIPT', qty: 200, reason: 'Nhập hàng mới từ nhà sản xuất', daysAgo: 40 },
+    { prodIdx: 8, type: 'RECEIPT', qty: 300, reason: 'Nhập hàng mới từ nhà sản xuất', daysAgo: 35 },
+    { prodIdx: 5, type: 'RECEIPT', qty: 150, reason: 'Nhập bổ sung', daysAgo: 25 },
+    { prodIdx: 14, type: 'RECEIPT', qty: 80, reason: 'Nhập hàng mới từ nhà sản xuất', daysAgo: 20 },
+    { prodIdx: 16, type: 'RECEIPT', qty: 200, reason: 'Nhập bổ sung', daysAgo: 15 },
+    { prodIdx: 13, type: 'RECEIPT', qty: 250, reason: 'Nhập hàng mới từ nhà sản xuất', daysAgo: 10 },
+    { prodIdx: 1, type: 'RECEIPT', qty: 100, reason: 'Nhập bổ sung', daysAgo: 5 },
+  );
+
+  // ORDER_FULFILLMENT movements (stock out) — reference actual delivered orders
+  const allDist0Delivered = [...dist0AllOriginalDelivered, ...dist0DeliveredOrders];
+  const fulfillOrders = allDist0Delivered.slice(0, 10);
+  for (let i = 0; i < fulfillOrders.length; i++) {
+    const orderItems = await db.orderItem.findMany({ where: { orderId: fulfillOrders[i].id } });
+    for (const item of orderItems) {
+      const prodIdx = products.findIndex((p) => p.id === item.productId);
+      if (prodIdx >= 0) {
+        invMovements.push({
+          prodIdx,
+          type: 'ORDER_FULFILLMENT',
+          qty: -item.quantity,
+          reason: `Xuất hàng cho đơn ${fulfillOrders[i].orderNumber}`,
+          orderId: fulfillOrders[i].id,
+          daysAgo: Math.floor((now - fulfillOrders[i].createdAt.getTime()) / (24 * 60 * 60 * 1000)),
+        });
+      }
+    }
+  }
+
+  // ADJUSTMENT movements
+  invMovements.push(
+    { prodIdx: 9, type: 'ADJUSTMENT', qty: -15, reason: 'Kiểm kho: thiếu 15 đơn vị', daysAgo: 12 },
+    { prodIdx: 12, type: 'ADJUSTMENT', qty: 10, reason: 'Kiểm kho: thừa 10 đơn vị', daysAgo: 8 },
+    { prodIdx: 0, type: 'ADJUSTMENT', qty: -5, reason: 'Hàng hư hỏng, loại bỏ', daysAgo: 6 },
+    { prodIdx: 19, type: 'ADJUSTMENT', qty: -8, reason: 'Hàng hết hạn sử dụng', daysAgo: 3 },
+  );
+
+  // Create inventory movements
+  for (const mov of invMovements) {
+    const currentInv = await db.distributorInventory.findFirst({
+      where: { distributorId: distributors[0].id, productId: products[mov.prodIdx].id },
+    });
+    const prevQty = currentInv?.quantity ?? 0;
+    const newQty = prevQty + mov.qty;
+    await db.inventoryMovement.create({
+      data: {
+        distributorId: distributors[0].id,
+        productId: products[mov.prodIdx].id,
+        type: mov.type,
+        quantity: mov.qty,
+        previousQty: prevQty,
+        newQty: Math.max(0, newQty),
+        reason: mov.reason,
+        orderId: mov.orderId ?? null,
+        performedBy: distUser.id,
+        createdAt: new Date(now - days(mov.daysAgo)),
+      },
+    });
+    // Update the inventory quantity
+    if (currentInv) {
+      await db.distributorInventory.update({
+        where: { id: currentInv.id },
+        data: { quantity: Math.max(0, newQty) },
+      });
+    }
+  }
+
+  // 21. SETTLEMENTS (2 per distributor, past 4 weeks)
+  // Collect all delivered orders per distributor from both original and new orders
+  const allOrders = [...orderEntities, ...newOrderEntities];
+
+  // Week boundaries (4 weeks ago to now)
+  const weekStarts = [
+    new Date(now - days(28)), // 4 weeks ago
+    new Date(now - days(21)), // 3 weeks ago
+    new Date(now - days(14)), // 2 weeks ago
+    new Date(now - days(7)),  // 1 week ago
+  ];
+  const weekEnds = [
+    new Date(now - days(21)),
+    new Date(now - days(14)),
+    new Date(now - days(7)),
+    new Date(now),
+  ];
+
+  const settlementStatuses = ['PAID', 'PAID', 'PROCESSING', 'PENDING'];
+
+  for (let distIdx = 0; distIdx < 2; distIdx++) {
+    for (let w = 0; w < 2; w++) {
+      const weekIdx = distIdx * 2 + w; // 0,1 for dist0; 2,3 for dist1
+      const periodStart = weekStarts[weekIdx];
+      const periodEnd = weekEnds[weekIdx];
+
+      const deliveredInPeriod = allOrders.filter((o) =>
+        o.distributorId === distributors[distIdx].id &&
+        o.status === 'DELIVERED' &&
+        o.deliveredAt &&
+        o.deliveredAt >= periodStart &&
+        o.deliveredAt < periodEnd
+      );
+
+      if (deliveredInPeriod.length === 0) continue;
+
+      const totalOrderValue = deliveredInPeriod.reduce((s, o) => s + o.totalAmount, 0);
+      const totalPlatformFee = Math.round(totalOrderValue * 0.03);
+      const totalDeliveryFee = deliveredInPeriod.reduce((s, o) => s + o.deliveryFee, 0);
+      const distributorPayout = totalOrderValue - totalPlatformFee;
+
+      const status = settlementStatuses[weekIdx];
+      const settlementNum = `STL-${dateStr.slice(0, 6)}-D${distIdx + 1}W${w + 1}`;
+
+      const settlement = await db.settlement.create({
+        data: {
+          settlementNumber: settlementNum,
+          distributorId: distributors[distIdx].id,
+          periodStart,
+          periodEnd,
+          totalOrders: deliveredInPeriod.length,
+          totalOrderValue,
+          totalPlatformFee,
+          totalDeliveryFee,
+          distributorPayout,
+          driverPayouts: Math.round(totalDeliveryFee * 0.3), // 30% to drivers
+          status,
+          paidAt: status === 'PAID' ? new Date(periodEnd.getTime() + 2 * 86400000) : null,
+          paymentRef: status === 'PAID' ? `BANK-${settlementNum}-${Math.random().toString(36).slice(2, 8).toUpperCase()}` : null,
+          notes: status === 'PAID' ? 'Thanh toán theo kỳ' : status === 'PROCESSING' ? 'Đang xử lý' : 'Chờ xử lý',
+        },
+      });
+
+      // Settlement line items
+      for (const order of deliveredInPeriod) {
+        const orderPlatformFee = Math.round(order.totalAmount * 0.03);
+        const orderDeliveryFee = order.deliveryFee;
+        await db.settlementLineItem.create({
+          data: {
+            settlementId: settlement.id,
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            orderAmount: order.totalAmount,
+            platformFee: orderPlatformFee,
+            deliveryFee: orderDeliveryFee,
+            distributorAmount: order.totalAmount - orderPlatformFee,
+            driverAmount: Math.round(orderDeliveryFee * 0.3),
+            driverId: order.assignedDriverId,
+          },
+        });
+      }
+    }
+  }
+
+  // 22. ADDITIONAL TRANSACTIONS FOR NEW ORDERS
+  let txRunningBalances: Record<string, number> = {};
+  // Initialize from existing transactions for each shop
+  for (const shop of shops) {
+    const existingTx = await db.transaction.findMany({
+      where: { shopId: shop.id, type: { in: ['CREDIT_USED', 'REPAYMENT', 'REFUND'] } },
+      select: { amount: true },
+    });
+    txRunningBalances[shop.id] = existingTx.reduce((s, t) => s + t.amount, 0);
+  }
+
+  for (let i = 0; i < newOrderDefs.length; i++) {
+    const od = newOrderDefs[i];
+    const order = newOrderEntities[i];
+    const shopId = shops[od.shopIdx].id;
+
+    if (od.payment === 'CREDIT') {
+      // CREDIT_USED transaction
+      txRunningBalances[shopId] = (txRunningBalances[shopId] || 0) + order.subtotalAmount;
+      await db.transaction.create({
+        data: {
+          shopId,
+          orderId: order.id,
+          type: 'CREDIT_USED',
+          amount: order.subtotalAmount,
+          runningBalance: txRunningBalances[shopId],
+          paymentMethod: 'CREDIT',
+          description: `Công nợ ${order.orderNumber}`,
+          createdAt: order.createdAt,
+        },
+      });
+
+      // If CANCELLED, add a REFUND
+      if (od.status === 'CANCELLED') {
+        txRunningBalances[shopId] -= order.subtotalAmount;
+        await db.transaction.create({
+          data: {
+            shopId,
+            orderId: order.id,
+            type: 'REFUND',
+            amount: -order.subtotalAmount,
+            runningBalance: txRunningBalances[shopId],
+            description: `Hoàn tiền ${order.orderNumber} (đã hủy)`,
+            metadata: JSON.stringify({ reason: 'Khách yêu cầu hủy' }),
+            createdAt: new Date(order.createdAt.getTime() + 7200000),
+          },
+        });
+      }
+    } else if ((od.payment === 'DIGITAL' || od.payment === 'COD') && od.status === 'DELIVERED') {
+      // ORDER_PAYMENT transaction
+      await db.transaction.create({
+        data: {
+          shopId,
+          orderId: order.id,
+          type: 'ORDER_PAYMENT',
+          amount: -order.totalAmount,
+          runningBalance: txRunningBalances[shopId] || 0,
+          paymentMethod: od.payment,
+          paymentRef: od.payment === 'DIGITAL'
+            ? `${od.payment === 'DIGITAL' ? 'ZALOPAY' : 'COD'}-${Math.random().toString(36).slice(2, 10).toUpperCase()}`
+            : undefined,
+          description: `Thanh toán ${order.orderNumber} qua ${od.payment === 'DIGITAL' ? 'chuyển khoản' : 'COD'}`,
+          createdAt: order.createdAt,
+        },
+      });
+    }
+  }
+
+  // DISTRIBUTOR_PAYOUT transactions (one per PAID settlement)
+  const paidSettlements = await db.settlement.findMany({ where: { status: 'PAID' } });
+  for (const stl of paidSettlements) {
+    await db.transaction.create({
+      data: {
+        shopId: shops[0].id, // proxy shop for distributor payout records
+        type: 'DISTRIBUTOR_PAYOUT',
+        amount: stl.distributorPayout,
+        runningBalance: 0,
+        paymentMethod: 'BANK_TRANSFER',
+        paymentRef: stl.paymentRef,
+        description: `Thanh toán cho ${distributors.find((d) => d.id === stl.distributorId)?.name ?? 'Distributor'} — ${stl.settlementNumber}`,
+        metadata: JSON.stringify({ settlementId: stl.id, distributorId: stl.distributorId, periodStart: stl.periodStart, periodEnd: stl.periodEnd }),
+        createdAt: stl.paidAt ?? stl.createdAt,
+      },
+    });
+  }
+
+  // 23. UPDATE DISTRIBUTOR STATS
+  // Distributor 0 stats
+  const dist0AllOrders = allOrders.filter((o) => o.distributorId === distributors[0].id);
+  const dist0Fulfilled = dist0AllOrders.filter((o) => o.status === 'DELIVERED');
+  const dist0Revenue = dist0Fulfilled.reduce((s, o) => s + o.totalAmount, 0);
+  const dist0PaidSettlements = await db.settlement.findMany({
+    where: { distributorId: distributors[0].id, status: 'PAID' },
+  });
+  const dist0TotalPayouts = dist0PaidSettlements.reduce((s, stl) => s + stl.distributorPayout, 0);
+  const dist0PendingSettlements = await db.settlement.findMany({
+    where: { distributorId: distributors[0].id, status: { in: ['PENDING', 'PROCESSING'] } },
+  });
+  const dist0PendingPayout = dist0PendingSettlements.reduce((s, stl) => s + stl.distributorPayout, 0);
+
+  await db.distributor.update({
+    where: { id: distributors[0].id },
+    data: {
+      totalOrdersFulfilled: dist0Fulfilled.length,
+      totalRevenue: dist0Revenue,
+      totalPayouts: dist0TotalPayouts,
+      pendingPayoutAmount: dist0PendingPayout,
+    },
+  });
+
+  // Distributor 1 stats
+  const dist1AllOrders = allOrders.filter((o) => o.distributorId === distributors[1].id);
+  const dist1Fulfilled = dist1AllOrders.filter((o) => o.status === 'DELIVERED');
+  const dist1Revenue = dist1Fulfilled.reduce((s, o) => s + o.totalAmount, 0);
+  const dist1PaidSettlements = await db.settlement.findMany({
+    where: { distributorId: distributors[1].id, status: 'PAID' },
+  });
+  const dist1TotalPayouts = dist1PaidSettlements.reduce((s, stl) => s + stl.distributorPayout, 0);
+  const dist1PendingSettlements = await db.settlement.findMany({
+    where: { distributorId: distributors[1].id, status: { in: ['PENDING', 'PROCESSING'] } },
+  });
+  const dist1PendingPayout = dist1PendingSettlements.reduce((s, stl) => s + stl.distributorPayout, 0);
+
+  await db.distributor.update({
+    where: { id: distributors[1].id },
+    data: {
+      totalOrdersFulfilled: dist1Fulfilled.length,
+      totalRevenue: dist1Revenue,
+      totalPayouts: dist1TotalPayouts,
+      pendingPayoutAmount: dist1PendingPayout,
+    },
+  });
+
   // RECALCULATE SHOP CREDIT BALANCES
   for (const shop of shops) {
     const creditTx = await db.transaction.findMany({
@@ -628,17 +1078,22 @@ export async function seedDatabase() {
     await db.shop.update({ where: { id: shop.id }, data: { creditBalance: computed } });
   }
 
+  const totalSettlements = await db.settlement.count();
+  const totalInvMovements = await db.inventoryMovement.count();
+
   return {
     categories: categories.length,
     wards: wards.length,
     manufacturers: manufacturers.length,
     distributors: distributors.length,
-    users: 1 + 1 + 2 + 1 + shopUsers.length,
+    users: 1 + 1 + 2 + 1 + 1 + shopUsers.length, // +1 for second distributor user
     shops: shops.length,
     products: products.length,
     promotions: promotions.length,
     groupDeals: groupDeals.length,
-    orders: orderEntities.length,
+    orders: orderEntities.length + newOrderEntities.length,
     shipments: shipmentEntities.length,
+    settlements: totalSettlements,
+    inventoryMovements: totalInvMovements,
   };
 }
