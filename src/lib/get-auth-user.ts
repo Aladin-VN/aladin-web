@@ -52,6 +52,9 @@ export async function getAuthUser(request: NextRequest): Promise<AuthUser | null
   if (!dbUser) return null;
 
   // Map DB fields (id) to AuthUser fields (userId)
+  // For distributorId: prefer DB lookup, fall back to JWT payload (handles missing DistributorUser join)
+  const dbDistId = ((dbUser as any).distributor?.distributorId as string) ?? null;
+  const dbDist = (dbUser as any).distributor?.distributor as AuthUser['distributor'] ?? null;
   const authUser: AuthUser = {
     userId: dbUser.id as string,
     phone: dbUser.phone as string,
@@ -60,8 +63,8 @@ export async function getAuthUser(request: NextRequest): Promise<AuthUser | null
     shopId: (dbUser as Record<string, unknown>).shopId as string | null ?? null,
     shop: dbUser.shop as AuthUser['shop'],
     broker: dbUser.broker as AuthUser['broker'],
-    distributorId: ((dbUser as any).distributor?.distributorId as string) ?? null,
-    distributor: (dbUser as any).distributor?.distributor as AuthUser['distributor'] ?? null,
+    distributorId: dbDistId || (payload as any).distributorId || null,
+    distributor: dbDist,
   };
 
   return authUser;

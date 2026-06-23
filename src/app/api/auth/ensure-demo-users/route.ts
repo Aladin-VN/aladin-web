@@ -26,6 +26,7 @@ export async function POST() {
       const existing = await db.user.findUnique({ where: { phone: demo.phone } });
 
       if (existing) {
+        let action = 'already exists (OK)';
         // Fix password hash if it's not scrypt format (must contain ':')
         if (!existing.passwordHash || !existing.passwordHash.includes(':')) {
           await db.user.update({
@@ -35,16 +36,43 @@ export async function POST() {
               status: 'ACTIVE',
             },
           });
-          results.push({ ...demo, action: 'updated (fixed password hash)' });
+          action = 'updated (fixed password hash)';
         } else if (existing.status !== 'ACTIVE') {
           await db.user.update({
             where: { phone: demo.phone },
             data: { status: 'ACTIVE' },
           });
-          results.push({ ...demo, action: 'activated' });
-        } else {
-          results.push({ ...demo, action: 'already exists (OK)' });
+          action = 'activated';
         }
+
+        // For DISTRIBUTOR users: ensure DistributorUser join exists
+        if (demo.role === 'DISTRIBUTOR') {
+          const distUser = await db.distributorUser.findUnique({ where: { userId: existing.id } });
+          if (!distUser) {
+            // Find or create a distributor to link to
+            let dist = await db.distributor.findFirst({ where: { contactPhone: demo.phone } });
+            if (!dist) {
+              dist = await db.distributor.create({
+                data: {
+                  name: demo.name,
+                  nameEn: demo.nameEn,
+                  address: 'Bình Dương, Việt Nam',
+                  contactPerson: demo.name,
+                  contactPhone: demo.phone,
+                  commissionRate: 0.03,
+                  deliveryFeeShare: 0.5,
+                  isActive: true,
+                },
+              });
+            }
+            await db.distributorUser.create({
+              data: { userId: existing.id, distributorId: dist.id },
+            });
+            action = 'repaired DistributorUser link';
+          }
+        }
+
+        results.push({ ...demo, action });
       } else {
         // Create the user with correct scrypt hash
         const newUser = await db.user.create({

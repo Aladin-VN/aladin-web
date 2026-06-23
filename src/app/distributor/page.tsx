@@ -31,9 +31,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AdminSidebar } from '@/components/layout/admin-sidebar';
 import { AdminHeader } from '@/components/layout/admin-header';
-import { SidebarInset } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
 import {
   Table,
@@ -374,11 +372,9 @@ export default function DistributorDashboard() {
 
   return (
     <>
-      <AdminSidebar />
-      <SidebarInset>
-        <AdminHeader />
+      <AdminHeader />
 
-        <main className="flex-1 p-4 md:p-6 space-y-6">
+      <main className="flex-1 p-4 md:p-6 space-y-6">
 
           {/* ===== Page Header ===== */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -894,7 +890,6 @@ export default function DistributorDashboard() {
           </Card>
 
         </main>
-      </SidebarInset>
     </>
   );
 }

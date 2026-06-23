@@ -15,9 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { AdminSidebar } from '@/components/layout/admin-sidebar';
 import { AdminHeader } from '@/components/layout/admin-header';
-import { SidebarInset } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
 
 const statusColor = (s: string) => {
@@ -91,29 +89,19 @@ export default function DistributorOrderDetail({ params }: { params: Promise<{ i
 
   if (loading) {
     return (
-      <>
-        <AdminSidebar />
-        <SidebarInset>
-          <div className="p-6 space-y-4">
-            <Skeleton className="h-8 w-40" />
-            <Skeleton className="h-40 rounded-xl" />
-            <Skeleton className="h-60 rounded-xl" />
-          </div>
-        </SidebarInset>
-      </>
+      <div className="p-6 space-y-4">
+        <Skeleton className="h-8 w-40" />
+        <Skeleton className="h-40 rounded-xl" />
+        <Skeleton className="h-60 rounded-xl" />
+      </div>
     );
   }
 
   if (!order) {
     return (
-      <>
-        <AdminSidebar />
-        <SidebarInset>
-          <div className="p-6 text-center text-muted-foreground py-16">
-            {t('Không tìm thấy đơn hàng', 'Order not found')}
-          </div>
-        </SidebarInset>
-      </>
+      <div className="p-6 text-center text-muted-foreground py-16">
+        {t('Không tìm thấy đơn hàng', 'Order not found')}
+      </div>
     );
   }
 
@@ -121,10 +109,8 @@ export default function DistributorOrderDetail({ params }: { params: Promise<{ i
 
   return (
     <>
-      <AdminSidebar />
-      <SidebarInset>
-        <AdminHeader />
-        <div className="flex flex-1 flex-col">
+      <AdminHeader />
+      <div className="flex flex-1 flex-col">
           <div className="flex items-center justify-between px-6 py-4">
             <div className="flex items-center gap-3">
               <Button variant="ghost" size="sm" onClick={() => router.back()}>
@@ -234,7 +220,6 @@ export default function DistributorOrderDetail({ params }: { params: Promise<{ i
             </Card>
           </div>
         </div>
-      </SidebarInset>
     </>
   );
 }

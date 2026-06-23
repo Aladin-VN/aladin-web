@@ -9,9 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { AdminSidebar } from '@/components/layout/admin-sidebar';
 import { AdminHeader } from '@/components/layout/admin-header';
-import { SidebarInset } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
 
 export default function DistributorAnalytics() {
@@ -39,10 +37,8 @@ export default function DistributorAnalytics() {
 
   return (
     <>
-      <AdminSidebar />
-      <SidebarInset>
-        <AdminHeader />
-        <div className="flex flex-1 flex-col">
+      <AdminHeader />
+      <div className="flex flex-1 flex-col">
           <div className="flex items-center justify-between px-6 py-4">
             <div>
               <h1 className="text-2xl font-bold tracking-tight">{t('Phân tích', 'Analytics')}</h1>
@@ -197,7 +193,6 @@ export default function DistributorAnalytics() {
             </div>
           </div>
         </div>
-      </SidebarInset>
     </>
   );
 }

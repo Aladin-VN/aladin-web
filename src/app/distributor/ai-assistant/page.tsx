@@ -9,9 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AdminSidebar } from '@/components/layout/admin-sidebar';
 import { AdminHeader } from '@/components/layout/admin-header';
-import { SidebarInset } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
 
 export default function AIAssistant() {
@@ -57,8 +55,8 @@ export default function AIAssistant() {
 
   return (
     <>
-      <AdminSidebar /><SidebarInset><AdminHeader />
-        <div className="flex flex-1 flex-col">
+      <AdminHeader />
+      <div className="flex flex-1 flex-col">
           <div className="px-6 py-4">
             <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2"><Brain className="text-yellow-500" /> {t('Trợ lý AI', 'AI Assistant')}</h1>
             <p className="text-sm text-muted-foreground">{t('Đặt hàng bằng văn bản, dự báo nhu cầu, gợi ý nhập hàng', 'Order by text, forecast demand, restock suggestions')}</p>
@@ -134,7 +132,6 @@ export default function AIAssistant() {
             </Card>
           </div>
         </div>
-      </SidebarInset>
     </>
   );
 }

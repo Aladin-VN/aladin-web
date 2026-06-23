@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { adminFetch } from '@/lib/admin-fetch';
 import { formatVND } from '@/lib/security';
 import { useLocale } from '@/providers/app-provider';
 import {
   Search, AlertTriangle, Plus, RefreshCw, ChevronLeft, ChevronRight, Package,
+  Warehouse, BarChart3, DollarSign,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,9 +21,7 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { AdminSidebar } from '@/components/layout/admin-sidebar';
 import { AdminHeader } from '@/components/layout/admin-header';
-import { SidebarInset } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
 
 export default function DistributorInventory() {
@@ -85,14 +84,34 @@ export default function DistributorInventory() {
     setSubmitting(false);
   };
 
+  // Computed KPIs from items data
+  const kpis = useMemo(() => {
+    const totalSkus = items.length;
+    const lowStock = items.filter((i: any) => i.isLowStock).length;
+    const totalValue = items.reduce((sum: number, i: any) => sum + ((i.quantity || 0) * (i.costPrice || 0)), 0);
+    return { totalSkus, lowStock, totalValue };
+  }, [items]);
+
+  const getStockLevel = (item: any) => {
+    const qty = item.quantity || 0;
+    const min = item.minStockLevel || 0;
+    if (qty === 0) return { level: 0, color: 'bg-red-500', label: 'critical' };
+    if (qty <= min * 0.5) return { level: Math.min((qty / min) * 100, 100), color: 'bg-red-500', label: 'critical' };
+    if (qty <= min) return { level: (qty / min) * 100, color: 'bg-amber-500', label: 'low' };
+    return { level: Math.min((qty / Math.max(min * 3, 1)) * 100, 100), color: 'bg-emerald-500', label: 'good' };
+  };
+
   return (
     <>
-      <AdminSidebar />
-      <SidebarInset>
-        <AdminHeader />
-        <div className="flex flex-1 flex-col">
-          <div className="flex items-center justify-between px-6 py-4">
-            <div>
+      <AdminHeader />
+      <div className="flex flex-1 flex-col">
+        {/* Page Header */}
+        <div className="px-4 md:px-6 py-6">
+          <div className="flex items-center gap-4">
+            <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-700 flex items-center justify-center shadow-lg shadow-emerald-600/20">
+              <Warehouse className="h-5 w-5 text-white" />
+            </div>
+            <div className="flex-1">
               <h1 className="text-2xl font-bold tracking-tight">{t('Quản lý kho hàng', 'Inventory Management')}</h1>
               <p className="text-sm text-muted-foreground">
                 {t('Kiểm tra và cập nhật tồn kho', 'Check and update stock levels')}
@@ -103,143 +122,248 @@ export default function DistributorInventory() {
               {t('Làm mới', 'Refresh')}
             </Button>
           </div>
-          <Separator />
+        </div>
+        <Separator />
 
-          <div className="flex-1 px-6 py-4 space-y-4">
-            {/* Filters */}
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex gap-2">
-                <Button
-                  variant={lowStockOnly ? 'destructive' : 'outline'}
-                  size="sm"
-                  onClick={() => { setLowStockOnly(!lowStockOnly); setPage(1); }}
-                >
-                  <AlertTriangle className="h-4 w-4 mr-1" />
-                  {t('Cảnh báo tồn kho', 'Low Stock Only')}
-                </Button>
-              </div>
-              <div className="relative w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder={t('Tìm sản phẩm...', 'Search products...')}
-                  className="pl-9 h-9 text-sm"
-                  value={search}
-                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                />
-              </div>
+        <div className="flex-1 px-4 md:px-6 py-4 space-y-6">
+          {/* KPI Summary Cards */}
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-24 rounded-xl" />
+              ))}
             </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <Card className="shadow-sm rounded-xl border-0 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/20">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">{t('Tổng SKU', 'Total SKUs')}</p>
+                      <p className="text-2xl font-bold mt-1 text-blue-700 dark:text-blue-400">{kpis.totalSkus}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">{t('sản phẩm trong kho', 'products in warehouse')}</p>
+                    </div>
+                    <div className="h-10 w-10 rounded-xl bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center">
+                      <BarChart3 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="shadow-sm rounded-xl border-0 bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-950/30 dark:to-orange-950/20">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">{t('Cảnh báo tồn kho', 'Low Stock Alerts')}</p>
+                      <p className="text-2xl font-bold mt-1 text-red-700 dark:text-red-400">{kpis.lowStock}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">{t('sản phẩm dưới mức tối thiểu', 'items below minimum')}</p>
+                    </div>
+                    <div className="h-10 w-10 rounded-xl bg-red-100 dark:bg-red-900/50 flex items-center justify-center">
+                      <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="shadow-sm rounded-xl border-0 bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-950/30 dark:to-green-950/20">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">{t('Tổng giá trị', 'Total Value')}</p>
+                      <p className="text-2xl font-bold mt-1 text-emerald-700 dark:text-emerald-400">{formatVND(kpis.totalValue)}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">{t('giá vốn hàng tồn', 'at cost price')}</p>
+                    </div>
+                    <div className="h-10 w-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
+                      <DollarSign className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
-            {/* Inventory Table */}
-            <Card>
-              <CardContent className="p-0">
-                {loading ? (
-                  <div className="p-6 space-y-2">
-                    {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-12 rounded-lg" />)}
+          {/* Filters */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex gap-2">
+              <Button
+                variant={lowStockOnly ? 'destructive' : 'outline'}
+                size="sm"
+                onClick={() => { setLowStockOnly(!lowStockOnly); setPage(1); }}
+                className={lowStockOnly ? 'shadow-sm rounded-full px-4' : 'rounded-full px-4 text-muted-foreground hover:text-foreground'}
+              >
+                <AlertTriangle className="h-4 w-4 mr-1" />
+                {t('Cảnh báo tồn kho', 'Low Stock Only')}
+              </Button>
+            </div>
+            <div className="relative w-full sm:w-72">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder={t('Tìm sản phẩm...', 'Search products...')}
+                className="pl-9 h-9 text-sm rounded-lg"
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              />
+            </div>
+          </div>
+
+          {/* Inventory Table */}
+          <Card className="shadow-sm rounded-xl overflow-hidden">
+            <CardContent className="p-0">
+              {loading ? (
+                <div className="p-4 md:p-6 space-y-3">
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-4">
+                      <Skeleton className="h-4 w-40 rounded" />
+                      <Skeleton className="h-4 w-20 rounded" />
+                      <Skeleton className="h-2 w-24 rounded-full" />
+                      <Skeleton className="h-4 w-12 rounded" />
+                      <Skeleton className="h-4 w-12 rounded" />
+                      <Skeleton className="h-4 w-20 rounded ml-auto" />
+                      <Skeleton className="h-4 w-20 rounded" />
+                      <Skeleton className="h-8 w-20 rounded-lg" />
+                    </div>
+                  ))}
+                </div>
+              ) : items.length === 0 ? (
+                <div className="text-center py-20">
+                  <div className="h-16 w-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
+                    <Package className="h-8 w-8 text-muted-foreground/40" />
                   </div>
-                ) : items.length === 0 ? (
-                  <div className="text-center py-16 text-sm text-muted-foreground">
-                    <Package className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
+                  <p className="text-sm font-medium text-muted-foreground">
                     {t('Không có sản phẩm nào', 'No products found')}
-                  </div>
-                ) : (
+                  </p>
+                  <p className="text-xs text-muted-foreground/60 mt-1">
+                    {t('Sản phẩm sẽ hiển thị khi được thêm vào kho', 'Products appear when added to warehouse')}
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow>
-                        <TableHead>{t('Sản phẩm', 'Product')}</TableHead>
-                        <TableHead>{t('Danh mục', 'Category')}</TableHead>
-                        <TableHead className="text-center">{t('Tồn kho', 'Stock')}</TableHead>
-                        <TableHead className="text-center">{t('Đã đặt', 'Reserved')}</TableHead>
-                        <TableHead className="text-center">{t('Có sẵn', 'Available')}</TableHead>
-                        <TableHead className="text-right">{t('Giá vốn', 'Cost')}</TableHead>
-                        <TableHead className="text-right">{t('Giá bán', 'Sell Price')}</TableHead>
-                        <TableHead className="text-center">{t('Hành động', 'Action')}</TableHead>
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="font-semibold text-xs uppercase tracking-wider">{t('Sản phẩm', 'Product')}</TableHead>
+                        <TableHead className="font-semibold text-xs uppercase tracking-wider">{t('Danh mục', 'Category')}</TableHead>
+                        <TableHead className="font-semibold text-xs uppercase tracking-wider min-w-[140px]">{t('Tồn kho', 'Stock Level')}</TableHead>
+                        <TableHead className="font-semibold text-xs uppercase tracking-wider text-center">{t('Đã đặt', 'Reserved')}</TableHead>
+                        <TableHead className="font-semibold text-xs uppercase tracking-wider text-center">{t('Có sẵn', 'Available')}</TableHead>
+                        <TableHead className="font-semibold text-xs uppercase tracking-wider text-right">{t('Giá vốn', 'Cost')}</TableHead>
+                        <TableHead className="font-semibold text-xs uppercase tracking-wider text-right">{t('Giá bán', 'Sell Price')}</TableHead>
+                        <TableHead className="font-semibold text-xs uppercase tracking-wider text-center">{t('Hành động', 'Action')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {items.map((item: any) => (
-                        <TableRow key={item.id} className={item.isLowStock ? 'bg-red-50/50 dark:bg-red-900/10' : ''}>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">{item.productName}</span>
-                              {item.isLowStock && (
-                                <Badge variant="destructive" className="text-[10px] h-4">
-                                  {t('Thấp', 'Low')}
-                                </Badge>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-xs">{item.category}</TableCell>
-                          <TableCell className={`text-center font-semibold ${item.isLowStock ? 'text-red-600' : ''}`}>
-                            {item.quantity}
-                          </TableCell>
-                          <TableCell className="text-center">{item.reservedQty}</TableCell>
-                          <TableCell className="text-center text-green-600 font-medium">{item.availableQty}</TableCell>
-                          <TableCell className="text-right text-xs">{item.costPrice ? formatVND(item.costPrice) : '-'}</TableCell>
-                          <TableCell className="text-right text-xs">{formatVND(item.basePrice)}</TableCell>
-                          <TableCell className="text-center">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-8 gap-1"
-                              onClick={() => { setSelectedProduct(item); setDialogOpen(true); }}
-                            >
-                              <Plus className="h-3 w-3" /> {t('Nhập kho', 'Stock In')}
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {items.map((item: any) => {
+                        const stockInfo = getStockLevel(item);
+                        return (
+                          <TableRow key={item.id} className={item.isLowStock ? 'bg-red-50/50 dark:bg-red-950/10 hover:bg-red-50/70 dark:hover:bg-red-950/20' : 'hover:bg-muted/50 transition-colors'}>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-sm">{item.productName}</span>
+                                {item.isLowStock && (
+                                  <Badge variant="secondary" className="bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 text-[10px] font-medium rounded-full px-2 h-5">
+                                    {t('Thấp', 'Low')}
+                                  </Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-xs">{item.category}</TableCell>
+                            <TableCell>
+                              <div className="space-y-1.5">
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className={`font-semibold ${item.isLowStock ? 'text-red-600 dark:text-red-400' : ''}`}>
+                                    {item.quantity}
+                                  </span>
+                                  <span className="text-muted-foreground text-[11px]">
+                                    {t('min:', 'min:')} {item.minStockLevel || '-'}
+                                  </span>
+                                </div>
+                                <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                                  <div
+                                    className={`h-full rounded-full transition-all duration-500 ${stockInfo.color}`}
+                                    style={{ width: `${stockInfo.level}%` }}
+                                  />
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-center text-sm">{item.reservedQty}</TableCell>
+                            <TableCell className="text-center">
+                              <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">{item.availableQty}</span>
+                            </TableCell>
+                            <TableCell className="text-right text-xs text-muted-foreground">{item.costPrice ? formatVND(item.costPrice) : '-'}</TableCell>
+                            <TableCell className="text-right text-xs font-medium">{formatVND(item.basePrice)}</TableCell>
+                            <TableCell className="text-center">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 gap-1 rounded-lg"
+                                onClick={() => { setSelectedProduct(item); setDialogOpen(true); }}
+                              >
+                                <Plus className="h-3 w-3" /> {t('Nhập kho', 'Stock In')}
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">
-                  {t(`Trang ${page}/${totalPages}`, `Page ${page}/${totalPages}`)}
-                </p>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
-                    <ChevronLeft className="h-4 w-4 mr-1" /> {t('Trước', 'Prev')}
-                  </Button>
-                  <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
-                    {t('Sau', 'Next')} <ChevronRight className="h-4 w-4 ml-1" />
-                  </Button>
                 </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                {t(`Trang ${page}/${totalPages}`, `Page ${page}/${totalPages}`)}
+              </p>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+                  <ChevronLeft className="h-4 w-4 mr-1" /> {t('Trước', 'Prev')}
+                </Button>
+                <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
+                  {t('Sau', 'Next')} <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
-      </SidebarInset>
+      </div>
 
       {/* Stock In Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{t('Nhập kho', 'Stock In')}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
+                <Plus className="h-4 w-4 text-white" />
+              </div>
+              {t('Nhập kho', 'Stock In')}
+            </DialogTitle>
           </DialogHeader>
           {selectedProduct && (
             <div className="space-y-4">
-              <p className="text-sm font-medium">{selectedProduct.productName}</p>
-              <p className="text-xs text-muted-foreground">
-                {t('Hiện tại', 'Current')}: {selectedProduct.quantity} | {t('Tối thiểu', 'Min')}: {selectedProduct.minStockLevel}
-              </p>
-              <div>
-                <Label className="text-sm">{t('Số lượng', 'Quantity')}</Label>
+              <div className="rounded-lg bg-muted/50 p-3 space-y-1">
+                <p className="text-sm font-medium">{selectedProduct.productName}</p>
+                <div className="flex gap-4 text-xs text-muted-foreground">
+                  <span>{t('Hiện tại', 'Current')}: <span className="font-semibold text-foreground">{selectedProduct.quantity}</span></span>
+                  <span>{t('Tối thiểu', 'Min')}: <span className="font-semibold text-foreground">{selectedProduct.minStockLevel}</span></span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">{t('Số lượng', 'Quantity')}</Label>
                 <Input
                   type="number"
                   min="1"
                   placeholder={t('Nhập số lượng...', 'Enter quantity...')}
+                  className="rounded-lg"
                   value={stockQty}
                   onChange={(e) => setStockQty(e.target.value)}
                 />
               </div>
-              <div>
-                <Label className="text-sm">{t('Ghi chú (tùy chọn)', 'Notes (optional)')}</Label>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">{t('Ghi chú (tùy chọn)', 'Notes (optional)')}</Label>
                 <Textarea
                   placeholder={t('Lý do nhập kho...', 'Reason for stock in...')}
+                  className="rounded-lg resize-none"
                   value={stockReason}
                   onChange={(e) => setStockReason(e.target.value)}
                   rows={2}
@@ -247,14 +371,14 @@ export default function DistributorInventory() {
               </div>
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDialogOpen(false)} className="rounded-lg">
               {t('Hủy', 'Cancel')}
             </Button>
             <Button
               onClick={handleStockIn}
               disabled={submitting || !stockQty || parseInt(stockQty) <= 0}
-              className="bg-yellow-500 hover:bg-yellow-600 text-white"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm"
             >
               {submitting ? t('Đang xử lý...', 'Processing...') : t('Xác nhận nhập kho', 'Confirm Stock In')}
             </Button>

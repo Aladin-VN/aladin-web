@@ -10,9 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { AdminSidebar } from '@/components/layout/admin-sidebar';
 import { AdminHeader } from '@/components/layout/admin-header';
-import { SidebarInset } from '@/components/ui/sidebar';
 
 export default function POSTerminal() {
   const { locale } = useLocale();
@@ -97,8 +95,8 @@ export default function POSTerminal() {
 
   return (
     <>
-      <AdminSidebar /><SidebarInset><AdminHeader />
-        <div className="flex flex-1 flex-col h-[calc(100vh-57px)]">
+      <AdminHeader />
+      <div className="flex flex-1 flex-col h-[calc(100vh-57px)]">
           <div className="flex items-center justify-between px-4 py-3 border-b">
             <h1 className="text-lg font-bold">{t('POS - Bán hàng', 'POS Terminal')}</h1>
             <div className="flex gap-2">
@@ -173,7 +171,6 @@ export default function POSTerminal() {
             </div>
           </div>
         </div>
-      </SidebarInset>
 
       {/* Receipt Dialog */}
       <Dialog open={receiptOpen} onOpenChange={setReceiptOpen}>

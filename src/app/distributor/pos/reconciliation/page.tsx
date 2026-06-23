@@ -7,9 +7,7 @@ import { Download, RefreshCw, Calculator, Banknote, CreditCard, Wallet } from 'l
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AdminSidebar } from '@/components/layout/admin-sidebar';
 import { AdminHeader } from '@/components/layout/admin-header';
-import { SidebarInset } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
@@ -42,8 +40,8 @@ export default function POSReconciliation() {
 
   return (
     <>
-      <AdminSidebar /><SidebarInset><AdminHeader />
-        <div className="flex flex-1 flex-col">
+      <AdminHeader />
+      <div className="flex flex-1 flex-col">
           <div className="flex items-center justify-between px-6 py-4">
             <div><h1 className="text-2xl font-bold tracking-tight">{t('Đối soát ca', 'Shift Reconciliation')}</h1>
               <p className="text-sm text-muted-foreground">{t('Tổng kết ca bán hàng POS', 'POS shift summary')}</p></div>
@@ -80,7 +78,6 @@ export default function POSReconciliation() {
             )}
           </div>
         </div>
-      </SidebarInset>
     </>
   );
 }
