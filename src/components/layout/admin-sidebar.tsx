@@ -28,6 +28,7 @@ import {
   RotateCcw,
   Bell,
   ClipboardList,
+  FileText,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -164,6 +165,13 @@ const navItems: NavItem[] = [
     titleVi: 'Ho so NPP',
     href: '/distributor/profile',
     icon: <User className="h-4 w-4" />,
+    roles: [ROLES.DISTRIBUTOR],
+  },
+  {
+    title: 'Daily Report',
+    titleVi: 'Bao cao ngay',
+    href: '/distributor/daily-report',
+    icon: <FileText className="h-4 w-4" />,
     roles: [ROLES.DISTRIBUTOR],
   },
   {

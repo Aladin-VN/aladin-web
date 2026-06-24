@@ -4,7 +4,7 @@ import { adminFetch } from '@/lib/admin-fetch';
 import { formatVND } from '@/lib/security';
 import { useLocale } from '@/providers/app-provider';
 import { toast } from 'sonner';
-import { DollarSign, AlertTriangle, Clock, Phone, Search, RefreshCw, ChevronLeft, ChevronRight, MessageSquare, Store } from 'lucide-react';
+import { DollarSign, AlertTriangle, Clock, Phone, Search, RefreshCw, ChevronLeft, ChevronRight, MessageSquare, Store, Wallet, Banknote, Building2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,15 +13,52 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AdminHeader } from '@/components/layout/admin-header';
 import { Separator } from '@/components/ui/separator';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+
+interface DebtItem {
+  id: string;
+  orderNumber: string;
+  shopId: string;
+  shopName: string;
+  shopDistrict: string;
+  amount: number;
+  deliveredAt: string | null;
+  agingDays: number;
+  agingBucket: string;
+}
 
 export default function DebtCollection() {
   const { locale } = useLocale();
   const t = (vi: string, en: string) => locale === 'vi' ? vi : en;
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<DebtItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+
+  // Payment dialog state
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<DebtItem | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'BANK_TRANSFER'>('CASH');
+  const [paymentNotes, setPaymentNotes] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const fetchAR = useCallback(async () => {
     setLoading(true);
@@ -39,20 +76,75 @@ export default function DebtCollection() {
   useEffect(() => { fetchAR(); }, [fetchAR]);
 
   const kpis = useMemo(() => {
-    const totalAR = items.reduce((s: number, i: any) => s + i.amount, 0);
-    const overdue7 = items.filter((i: any) => i.agingDays > 7).reduce((s: number, i: any) => s + i.amount, 0);
-    const overdue30 = items.filter((i: any) => i.agingDays > 30).reduce((s: number, i: any) => s + i.amount, 0);
-    const uniqueShops = new Set(items.map((i: any) => i.shopName)).size;
+    const totalAR = items.reduce((s, i) => s + i.amount, 0);
+    const overdue7 = items.filter((i) => i.agingDays > 7).reduce((s, i) => s + i.amount, 0);
+    const overdue30 = items.filter((i) => i.agingDays > 30).reduce((s, i) => s + i.amount, 0);
+    const uniqueShops = new Set(items.map((i) => i.shopName)).size;
     return { totalAR, overdue7, overdue30, uniqueShops };
   }, [items]);
 
-  const sorted = useMemo(() => [...items].sort((a: any, b: any) => (b.agingDays || 0) - (a.agingDays || 0)), [items]);
+  const sorted = useMemo(() => [...items].sort((a, b) => (b.agingDays || 0) - (a.agingDays || 0)), [items]);
 
   const rowClass = (days: number) => {
     if (days > 30) return 'bg-red-50/70 dark:bg-red-950/20 hover:bg-red-50 dark:hover:bg-red-950/30';
     if (days > 14) return 'bg-orange-50/70 dark:bg-orange-950/20 hover:bg-orange-50 dark:hover:bg-orange-950/30';
     if (days > 7) return 'bg-amber-50/70 dark:bg-amber-950/20 hover:bg-amber-50 dark:hover:bg-amber-950/30';
     return 'hover:bg-muted/50';
+  };
+
+  // --- Payment dialog handlers ---
+  const openPaymentDialog = (item: DebtItem) => {
+    setSelectedItem(item);
+    setPaymentAmount(String(item.amount));
+    setPaymentMethod('CASH');
+    setPaymentNotes('');
+    setPaymentDialogOpen(true);
+  };
+
+  const closePaymentDialog = () => {
+    setPaymentDialogOpen(false);
+    setSelectedItem(null);
+    setPaymentAmount('');
+    setPaymentNotes('');
+  };
+
+  const handleSubmitPayment = async () => {
+    if (!selectedItem) return;
+    const amount = parseInt(paymentAmount.replace(/\D/g, ''));
+    if (!amount || amount <= 0) {
+      toast.error(t('Nhập số tiền hợp lệ', 'Enter a valid amount'));
+      return;
+    }
+    if (amount > selectedItem.amount) {
+      toast.error(t('Số tiền vượt quá công nợ', 'Amount exceeds outstanding debt'));
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const res = await adminFetch('/api/distributor/debt-payment', {
+        method: 'POST',
+        body: JSON.stringify({
+          shopId: selectedItem.shopId,
+          amount,
+          paymentMethod,
+          notes: paymentNotes || undefined,
+          orderIds: [selectedItem.id],
+        }),
+      });
+      if (res.success) {
+        toast.success(t('Thu tiền thành công!', 'Payment recorded successfully!'));
+        closePaymentDialog();
+        fetchAR();
+      } else {
+        toast.error(res.error?.message || t('Lỗi ghi nhận thanh toán', 'Failed to record payment'));
+      }
+    } catch (e) {
+      console.error('[PAYMENT ERROR]', e);
+      toast.error(t('Lỗi kết nối', 'Connection error'));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -103,7 +195,7 @@ export default function DebtCollection() {
                     <TableHead className="font-semibold text-xs uppercase tracking-wider text-center">{t('Hành động', 'Action')}</TableHead>
                   </TableRow></TableHeader>
                   <TableBody>
-                    {sorted.map((item: any) => (
+                    {sorted.map((item) => (
                       <TableRow key={item.id} className={`${rowClass(item.agingDays)} transition-colors`}>
                         <TableCell>
                           <div><p className="text-sm font-medium">{item.shopName}</p><p className="text-[11px] text-muted-foreground">{item.shopDistrict}</p></div>
@@ -117,6 +209,14 @@ export default function DebtCollection() {
                         <TableCell className="text-xs text-muted-foreground font-mono">{item.orderNumber}</TableCell>
                         <TableCell className="text-center">
                           <div className="flex items-center justify-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 gap-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/20"
+                              onClick={() => openPaymentDialog(item)}
+                            >
+                              <Wallet className="h-3.5 w-3.5" />{t('Thu tiền', 'Collect')}
+                            </Button>
                             <Button variant="ghost" size="sm" className="h-8 gap-1" onClick={() => toast.info(t(`Gọi ${item.shopName}: SĐT chưa có`, `Call ${item.shopName}`))}>
                               <Phone className="h-3.5 w-3.5" />{t('Gọi', 'Call')}
                             </Button>
@@ -136,6 +236,120 @@ export default function DebtCollection() {
         {totalPages > 1 && <div className="flex items-center justify-between"><p className="text-sm text-muted-foreground">{t(`Trang ${page}/${totalPages}`, `Page ${page}/${totalPages}`)}</p><div className="flex gap-2"><Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}><ChevronLeft className="h-4 w-4 mr-1" />{t('Trước', 'Prev')}</Button><Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>{t('Sau', 'Next')}<ChevronRight className="h-4 w-4 ml-1" /></Button></div></div>}
       </div>
     </div>
+
+    {/* ===== Payment Dialog ===== */}
+    <Dialog open={paymentDialogOpen} onOpenChange={(open) => { if (!open) closePaymentDialog(); }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <div className="h-9 w-9 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
+              <Wallet className="h-4.5 w-4.5 text-emerald-600" />
+            </div>
+            {t('Thu tiền công nợ', 'Collect Debt Payment')}
+          </DialogTitle>
+          <DialogDescription>
+            {selectedItem && (
+              <>
+                {selectedItem.shopName} — {selectedItem.orderNumber}
+                <br />
+                <span className="font-semibold text-foreground">
+                  {t('Công nợ: ', 'Outstanding: ')}{formatVND(selectedItem.amount)}
+                </span>
+              </>
+            )}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-2">
+          {/* Amount */}
+          <div className="space-y-2">
+            <Label htmlFor="payment-amount">{t('Số tiền thu (₫)', 'Payment Amount (₫)')}</Label>
+            <div className="relative">
+              <Input
+                id="payment-amount"
+                type="text"
+                inputMode="numeric"
+                placeholder="500000"
+                value={paymentAmount}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/\D/g, '');
+                  setPaymentAmount(raw ? new Intl.NumberFormat('vi-VN').format(parseInt(raw)) : '');
+                }}
+                className="pr-16 text-lg font-semibold"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground font-medium">₫</span>
+            </div>
+            {selectedItem && (
+              <Button
+                type="button"
+                variant="link"
+                size="sm"
+                className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => {
+                  setPaymentAmount(new Intl.NumberFormat('vi-VN').format(selectedItem.amount));
+                }}
+              >
+                {t('→ Thu toàn bộ ' + formatVND(selectedItem.amount), '→ Collect full ' + formatVND(selectedItem.amount))}
+              </Button>
+            )}
+          </div>
+
+          {/* Payment Method */}
+          <div className="space-y-2">
+            <Label>{t('Phương thức', 'Payment Method')}</Label>
+            <Select value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as 'CASH' | 'BANK_TRANSFER')}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="CASH">
+                  <div className="flex items-center gap-2">
+                    <Banknote className="h-4 w-4 text-emerald-600" />
+                    {t('Tiền mặt', 'Cash')}
+                  </div>
+                </SelectItem>
+                <SelectItem value="BANK_TRANSFER">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-blue-600" />
+                    {t('Chuyển khoản', 'Bank Transfer')}
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Notes */}
+          <div className="space-y-2">
+            <Label htmlFor="payment-notes">{t('Ghi chú', 'Notes')}</Label>
+            <Textarea
+              id="payment-notes"
+              placeholder={t('Ví dụ: Thu tiền hàng ngày 25/6', 'e.g. Collected payment for June 25th order')}
+              value={paymentNotes}
+              onChange={(e) => setPaymentNotes(e.target.value)}
+              rows={2}
+              className="text-sm resize-none"
+            />
+          </div>
+        </div>
+
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" onClick={closePaymentDialog} disabled={submitting}>
+            {t('Hủy', 'Cancel')}
+          </Button>
+          <Button
+            onClick={handleSubmitPayment}
+            disabled={submitting || !paymentAmount.replace(/\D/g, '')}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white min-w-[120px]"
+          >
+            {submitting ? (
+              <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />{t('Đang lưu...', 'Saving...')}</>
+            ) : (
+              <><Wallet className="h-4 w-4 mr-2" />{t('Xác nhận thu', 'Confirm Payment')}</>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     </>
   );
 }

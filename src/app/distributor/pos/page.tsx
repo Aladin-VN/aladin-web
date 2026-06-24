@@ -1,10 +1,10 @@
 'use client';
 import { toast } from 'sonner';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { adminFetch } from '@/lib/admin-fetch';
 import { formatVND } from '@/lib/security';
 import { useLocale } from '@/providers/app-provider';
-import { Search, Plus, Minus, Trash2, ShoppingCart, Banknote, CreditCard, Wallet, CheckCircle, Printer } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, ShoppingCart, Banknote, CreditCard, Wallet, CheckCircle, Printer, ScanBarcode } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,10 @@ export default function POSTerminal() {
   const { locale } = useLocale();
   const t = (vi: string, en: string) => locale === 'vi' ? vi : en;
   const searchRef = useRef<HTMLInputElement>(null);
+  const [barcodeMode, setBarcodeMode] = useState(false);
+  const lastKeystrokeRef = useRef<number>(0);
+  const barcodeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const barcodeScanningRef = useRef(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<any[]>([]);
   const [cart, setCart] = useState<any[]>([]);
@@ -32,7 +36,14 @@ export default function POSTerminal() {
   useEffect(() => { searchRef.current?.focus(); }, []);
 
   useEffect(() => {
-    if (!query.trim()) { setResults([]); return; }
+    if (barcodeMode) {
+      searchRef.current?.focus();
+    }
+  }, [barcodeMode]);
+
+  useEffect(() => {
+    if (barcodeMode) return;
+    if (!query.trim()) { queueMicrotask(() => setResults([])); return; }
     const timer = setTimeout(async () => {
       try {
         const res = await adminFetch(`/api/distributor/pos/products?q=${encodeURIComponent(query)}&limit=15`);
@@ -40,7 +51,7 @@ export default function POSTerminal() {
       } catch (e) { console.error("[FETCH ERROR]", e); }
     }, 200);
     return () => clearTimeout(timer);
-  }, [query]);
+  }, [query, barcodeMode]);
 
   const addToCart = (product: any) => {
     setCart(prev => {
@@ -48,6 +59,66 @@ export default function POSTerminal() {
       if (existing) return prev.map(i => i.productId === product.productId ? { ...i, quantity: i.quantity + 1, subtotal: (i.quantity + 1) * i.price } : i);
       return [...prev, { ...product, quantity: 1, subtotal: product.price }];
     });
+  };
+
+  const handleBarcodeScan = useCallback(async (barcode: string) => {
+    if (barcodeScanningRef.current || !barcode.trim()) return;
+    barcodeScanningRef.current = true;
+    try {
+      const res = await adminFetch(`/api/distributor/pos/products?q=${encodeURIComponent(barcode.trim())}&limit=50`);
+      if (res.success) {
+        const products = res.data;
+        if (products.length === 1) {
+          addToCart(products[0]);
+          toast.success(`${t('Đã thêm', 'Added')}: ${products[0].productName}`);
+          setQuery('');
+          setResults([]);
+        } else if (products.length > 1) {
+          setResults(products);
+          setQuery('');
+        } else {
+          toast.error(t('Không tìm thấy sản phẩm', 'Product not found'));
+          setQuery('');
+          setResults([]);
+        }
+      } else {
+        toast.error(res.error?.message || t('Lỗi quét mã vạch', 'Barcode scan error'));
+        setQuery('');
+      }
+    } catch (e) {
+      console.error('[BARCODE ERROR]', e);
+      toast.error(t('Lỗi quét mã vạch', 'Barcode scan error'));
+      setQuery('');
+    }
+    setTimeout(() => { searchRef.current?.focus(); }, 10);
+    barcodeScanningRef.current = false;
+  }, [t]);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setQuery(value);
+
+    if (barcodeMode) {
+      const now = Date.now();
+      lastKeystrokeRef.current = now;
+      if (barcodeTimerRef.current) clearTimeout(barcodeTimerRef.current);
+      barcodeTimerRef.current = setTimeout(() => {
+        const elapsed = Date.now() - lastKeystrokeRef.current;
+        if (elapsed >= 50 && value.trim().length > 0) {
+          handleBarcodeScan(value);
+        }
+      }, 80);
+    }
+  };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (barcodeMode && e.key === 'Enter') {
+      e.preventDefault();
+      if (barcodeTimerRef.current) clearTimeout(barcodeTimerRef.current);
+      if (query.trim()) {
+        handleBarcodeScan(query);
+      }
+    }
   };
 
   const updateQty = (idx: number, delta: number) => {
@@ -110,9 +181,33 @@ export default function POSTerminal() {
             {/* Left: Products */}
             <div className="flex-1 flex flex-col border-r">
               <div className="p-3 border-b">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input ref={searchRef} placeholder={t('Tìm sản phẩm (tên, SKU, mã vạch)...', 'Search product...')} className="pl-9" value={query} onChange={e => setQuery(e.target.value)} />
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      ref={searchRef}
+                      placeholder={barcodeMode ? t('Quét mã vạch...', 'Scan barcode...') : t('Tìm sản phẩm (tên, SKU, mã vạch)...', 'Search product...')}
+                      className={`pl-9 transition-all duration-200 ${barcodeMode ? 'ring-2 ring-red-500/60 border-red-400 shadow-[0_0_8px_rgba(239,68,68,0.3)]' : ''}`}
+                      value={query}
+                      onChange={handleSearchChange}
+                      onKeyDown={handleSearchKeyDown}
+                    />
+                  </div>
+                  <Button
+                    variant={barcodeMode ? 'destructive' : 'outline'}
+                    size="icon"
+                    className={`h-9 w-9 shrink-0 transition-all ${barcodeMode ? 'shadow-[0_0_12px_rgba(239,68,68,0.4)]' : ''}`}
+                    onClick={() => {
+                      setBarcodeMode(prev => !prev);
+                      if (!barcodeMode) {
+                        setQuery('');
+                        setResults([]);
+                      }
+                    }}
+                    title={barcodeMode ? t('Tắt quét mã vạch', 'Turn off barcode scanner') : t('Bật quét mã vạch', 'Turn on barcode scanner')}
+                  >
+                    <ScanBarcode className={`h-4 w-4 ${barcodeMode ? 'text-white' : ''}`} />
+                  </Button>
                 </div>
               </div>
               <div className="flex-1 overflow-auto p-3 grid grid-cols-2 gap-2 content-start">

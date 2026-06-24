@@ -81,6 +81,7 @@ export async function GET(request: NextRequest) {
       return {
         id: o.id,
         orderNumber: o.orderNumber,
+        shopId: o.shopId,
         shopName: o.shop?.name || 'Unknown',
         shopDistrict: o.shop?.district || '',
         amount: o.totalAmount,
