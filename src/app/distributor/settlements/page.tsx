@@ -55,7 +55,7 @@ export default function DistributorSettlements() {
         setSettlements(res.data.items || []);
         setTotalPages(res.data.pagination?.totalPages || 1);
       }
-    } catch {}
+    } catch (e) { console.error("[FETCH ERROR]", e); }
     setLoading(false);
   }, [page]);
 

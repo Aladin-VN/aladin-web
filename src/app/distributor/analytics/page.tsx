@@ -1,32 +1,44 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { adminFetch } from '@/lib/admin-fetch';
 import { formatVND } from '@/lib/security';
 import { useAuth, useLocale } from '@/providers/app-provider';
-import { BarChart3, TrendingUp, Download, RefreshCw, Package, DollarSign, AlertTriangle, CreditCard } from 'lucide-react';
+import { BarChart3, TrendingUp, Download, RefreshCw, Package, DollarSign, AlertTriangle, CreditCard, CalendarDays } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AdminHeader } from '@/components/layout/admin-header';
 import { Separator } from '@/components/ui/separator';
+import { toast } from 'sonner';
 
 export default function DistributorAnalytics() {
   const { locale } = useLocale();
   const t = (vi: string, en: string) => locale === 'vi' ? vi : en;
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await adminFetch('/api/distributor/analytics');
+      const params = new URLSearchParams();
+      if (dateFrom) params.set('from', dateFrom);
+      if (dateTo) params.set('to', dateTo);
+      const qs = params.toString() ? `?${params.toString()}` : '';
+      const res = await adminFetch(`/api/distributor/analytics${qs}`);
       if (res.success) setData(res.data);
-    } catch {}
+    } catch (e: any) {
+      toast.error(e?.message || t('Lỗi tải dữ liệu', 'Failed to load'));
+    }
     setLoading(false);
-  };
-  useEffect(() => { fetchAnalytics(); }, []);
+  }, [dateFrom, dateTo, locale]);
+
+  useEffect(() => { fetchAnalytics(); }, [fetchAnalytics]);
 
   const kpiCards = data ? [
     { label: t('Doanh thu 30 ngày', '30-Day Revenue'), value: formatVND(data.salesTrend?.reduce((s: number, d: any) => s + d.revenue, 0) || 0), icon: DollarSign, color: 'text-green-600', bg: 'bg-green-50 dark:bg-green-900/20' },
@@ -55,6 +67,23 @@ export default function DistributorAnalytics() {
           </div>
           <Separator />
           <div className="flex-1 px-6 py-4 space-y-6">
+            {/* Date Range Filter */}
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1"><CalendarDays className="h-3 w-3" />{t('Từ ngày', 'From')}</Label>
+                <Input type="date" className="h-9 w-40 text-sm rounded-lg" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs font-medium text-muted-foreground">{t('Đến ngày', 'To')}</Label>
+                <Input type="date" className="h-9 w-40 text-sm rounded-lg" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+              </div>
+              {(dateFrom || dateTo) && (
+                <Button variant="ghost" size="sm" className="h-9 text-xs" onClick={() => { setDateFrom(''); setDateTo(''); }}>
+                  {t('Xóa bộ lọc', 'Clear filter')}
+                </Button>
+              )}
+            </div>
+
             {/* KPI Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {loading ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-xl" />) :

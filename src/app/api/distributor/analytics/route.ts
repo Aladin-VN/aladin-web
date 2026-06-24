@@ -17,9 +17,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(errorResponse('NO_DISTRIBUTOR', 'Tài khoản không liên kết.'), { status: 400 });
     }
 
+    const { searchParams } = new URL(request.url);
+    const fromParam = searchParams.get('from');
+    const toParam = searchParams.get('to');
+
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const thirtyDaysAgo = new Date(today); thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const thirtyDaysAgo = fromParam ? new Date(fromParam) : (() => { const d = new Date(today); d.setDate(d.getDate() - 30); return d; })();
+    const periodEnd = toParam ? new Date(toParam + 'T23:59:59') : now;
     const sevenDaysAgo = new Date(today); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     const lastWeekStart = new Date(sevenDaysAgo); lastWeekStart.setDate(lastWeekStart.getDate() - 7);
     const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -30,30 +35,30 @@ export async function GET(request: NextRequest) {
       thisWeekOrders, lastWeekOrders, thisMonthOrders, lastMonthOrders,
       distributor, inventoryItems, totalInventoryValue
     ] = await Promise.all([
-      // 1. Sales trend (30 days)
+      // 1. Sales trend (date range)
       db.order.findMany({
-        where: { distributorId: distId, status: 'DELIVERED', deliveredAt: { gte: thirtyDaysAgo } },
+        where: { distributorId: distId, status: 'DELIVERED', deliveredAt: { gte: thirtyDaysAgo, lte: periodEnd } },
         select: { deliveredAt: true, totalAmount: true, commissionRate: true },
         orderBy: { deliveredAt: 'asc' },
       }),
-      // 2. Top 10 products by revenue
+      // 2. Top 10 products by revenue (date range)
       db.orderItem.groupBy({
         by: ['productId'],
-        where: { order: { distributorId: distId, status: 'DELIVERED' } },
+        where: { order: { distributorId: distId, status: 'DELIVERED', deliveredAt: { gte: thirtyDaysAgo, lte: periodEnd } } },
         _sum: { totalPrice: true, quantity: true },
         orderBy: { _sum: { totalPrice: 'desc' } },
         take: 10,
       }),
-      // 3. Top 10 shops
+      // 3. Top 10 shops (date range)
       db.order.groupBy({
         by: ['shopId'],
-        where: { distributorId: distId, status: 'DELIVERED' },
+        where: { distributorId: distId, status: 'DELIVERED', deliveredAt: { gte: thirtyDaysAgo, lte: periodEnd } },
         _sum: { totalAmount: true },
         _count: true,
         orderBy: { _sum: { totalAmount: 'desc' } },
         take: 10,
       }),
-      // 4. Category breakdown
+      // 4. Category breakdown (date range)
       db.$queryRaw`
         SELECT c."name" as category, COALESCE(SUM(oi."totalPrice"), 0) as revenue, COUNT(DISTINCT o.id) as orders
         FROM "OrderItem" oi
@@ -61,6 +66,8 @@ export async function GET(request: NextRequest) {
         JOIN "Product" p ON oi."productId" = p.id
         JOIN "Category" c ON p."categoryId" = c.id
         WHERE o."distributorId" = ${distId} AND o."status" = 'DELIVERED'
+          AND o."deliveredAt" >= ${thirtyDaysAgo.toISOString()}::timestamptz
+          AND o."deliveredAt" <= ${periodEnd.toISOString()}::timestamptz
         GROUP BY c."name"
         ORDER BY revenue DESC
       `,

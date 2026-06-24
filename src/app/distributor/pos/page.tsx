@@ -1,4 +1,5 @@
 'use client';
+import { toast } from 'sonner';
 import { useState, useEffect, useRef } from 'react';
 import { adminFetch } from '@/lib/admin-fetch';
 import { formatVND } from '@/lib/security';
@@ -36,7 +37,7 @@ export default function POSTerminal() {
       try {
         const res = await adminFetch(`/api/distributor/pos/products?q=${encodeURIComponent(query)}&limit=15`);
         if (res.success) setResults(res.data);
-      } catch {}
+      } catch (e) { console.error("[FETCH ERROR]", e); }
     }, 200);
     return () => clearTimeout(timer);
   }, [query]);
@@ -80,9 +81,9 @@ export default function POSTerminal() {
         setCustomerPhone('');
         setQuery('');
       } else {
-        alert(res.error?.message || t('Lỗi', 'Error'));
+        toast.error(res.error?.message || t("Lỗi", "Error"));
       }
-    } catch {}
+    } catch (e) { console.error("[FETCH ERROR]", e); }
     setSubmitting(false);
   };
 
@@ -90,7 +91,7 @@ export default function POSTerminal() {
     try {
       const res = await adminFetch('/api/distributor/pos/reconciliation');
       if (res.success) setRecentSales(res.data.transactions || []);
-    } catch {}
+    } catch (e) { console.error("[FETCH ERROR]", e); }
   };
 
   return (

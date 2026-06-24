@@ -24,6 +24,10 @@ import {
   Monitor,
   Calculator,
   Brain,
+  DollarSign,
+  RotateCcw,
+  Bell,
+  ClipboardList,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -86,6 +90,13 @@ const navItems: NavItem[] = [
     roles: [ROLES.DISTRIBUTOR],
   },
   {
+    title: 'Deliveries',
+    titleVi: 'Giao hang',
+    href: '/distributor/deliveries',
+    icon: <Truck className="h-4 w-4" />,
+    roles: [ROLES.DISTRIBUTOR],
+  },
+  {
     title: 'Inventory',
     titleVi: 'Kho hang',
     href: '/distributor/inventory',
@@ -93,10 +104,17 @@ const navItems: NavItem[] = [
     roles: [ROLES.DISTRIBUTOR],
   },
   {
-    title: 'Analytics',
-    titleVi: 'Phan tich',
-    href: '/distributor/analytics',
-    icon: <BarChart3 className="h-4 w-4" />,
+    title: 'Stock Movements',
+    titleVi: 'Lich su nhap xuat',
+    href: '/distributor/inventory/movements',
+    icon: <ClipboardList className="h-4 w-4" />,
+    roles: [ROLES.DISTRIBUTOR],
+  },
+  {
+    title: 'Price List',
+    titleVi: 'Bang gia',
+    href: '/distributor/price-list',
+    icon: <Tag className="h-4 w-4" />,
     roles: [ROLES.DISTRIBUTOR],
   },
   {
@@ -107,10 +125,45 @@ const navItems: NavItem[] = [
     roles: [ROLES.DISTRIBUTOR],
   },
   {
+    title: 'Notifications',
+    titleVi: 'Thong bao',
+    href: '/distributor/notifications',
+    icon: <Bell className="h-4 w-4" />,
+    roles: [ROLES.DISTRIBUTOR],
+  },
+  {
+    title: 'Debt Collection',
+    titleVi: 'Thu hoi cong no',
+    href: '/distributor/debt-collection',
+    icon: <DollarSign className="h-4 w-4" />,
+    roles: [ROLES.DISTRIBUTOR],
+  },
+  {
+    title: 'Analytics',
+    titleVi: 'Phan tich',
+    href: '/distributor/analytics',
+    icon: <BarChart3 className="h-4 w-4" />,
+    roles: [ROLES.DISTRIBUTOR],
+  },
+  {
     title: 'POS Terminal',
     titleVi: 'Ban hang',
     href: '/distributor/pos',
     icon: <Monitor className="h-4 w-4" />,
+    roles: [ROLES.DISTRIBUTOR],
+  },
+  {
+    title: 'Returns',
+    titleVi: 'Tra hang',
+    href: '/distributor/returns',
+    icon: <RotateCcw className="h-4 w-4" />,
+    roles: [ROLES.DISTRIBUTOR],
+  },
+  {
+    title: 'Profile',
+    titleVi: 'Ho so NPP',
+    href: '/distributor/profile',
+    icon: <User className="h-4 w-4" />,
     roles: [ROLES.DISTRIBUTOR],
   },
   {

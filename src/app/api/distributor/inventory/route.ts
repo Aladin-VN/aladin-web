@@ -91,11 +91,44 @@ export async function POST(request: NextRequest) {
     if (!productId || !type || !quantity || quantity <= 0) {
       return NextResponse.json(errorResponse('INVALID_INPUT', 'Thiếu thông tin bắt buộc.'), { status: 400 });
     }
-    if (!['RECEIPT', 'ADJUSTMENT'].includes(type)) {
+    if (!['RECEIPT', 'ADJUSTMENT', 'DAMAGE'].includes(type)) {
       return NextResponse.json(errorResponse('INVALID_TYPE', 'Loại điều chỉnh không hợp lệ.'), { status: 400 });
     }
 
-    // Upsert inventory
+    // For DAMAGE: decrement stock
+    if (type === 'DAMAGE') {
+      const inv = await db.distributorInventory.findUnique({
+        where: { distributorId_productId: { distributorId: distId, productId } },
+      });
+      if (!inv || inv.quantity < quantity) {
+        return NextResponse.json(errorResponse('INSUFFICIENT_STOCK', 'Tồn kho không đủ.'), { status: 400 });
+      }
+      const updated = await db.distributorInventory.update({
+        where: { distributorId_productId: { distributorId: distId, productId } },
+        data: { quantity: { decrement: quantity } },
+      });
+
+      await db.inventoryMovement.create({
+        data: {
+          distributorId: distId,
+          productId,
+          type: 'DAMAGE',
+          quantity: -quantity,
+          previousQty: inv.quantity,
+          newQty: updated.quantity,
+          reason: sanitizeInput(reason || `Hư hỏng -${quantity}`),
+          performedBy: user.userId,
+        },
+      });
+
+      return NextResponse.json(successResponse({
+        id: updated.id,
+        quantity: updated.quantity,
+        availableQty: updated.quantity - updated.reservedQty,
+      }));
+    }
+
+    // Upsert inventory (RECEIPT / ADJUSTMENT)
     const inv = await db.distributorInventory.upsert({
       where: { distributorId_productId: { distributorId: distId, productId } },
       create: {

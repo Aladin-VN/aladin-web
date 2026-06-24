@@ -45,7 +45,7 @@ export default function DistributorARLedger() {
         setSummary(res.data.summary);
         setTotalPages(res.data.pagination.totalPages);
       }
-    } catch {}
+    } catch (e) { console.error("[FETCH ERROR]", e); }
     setLoading(false);
   }, [aging, page]);
 

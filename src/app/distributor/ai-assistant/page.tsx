@@ -31,7 +31,7 @@ export default function AIAssistant() {
     try {
       const res = await adminFetch('/api/ai/order-parse', { method: 'POST', body: JSON.stringify({ text: orderText }) });
       if (res.success) setParsed(res.data);
-    } catch {}
+    } catch (e) { console.error("[FETCH ERROR]", e); }
     setParsing(false);
   };
 
@@ -39,14 +39,14 @@ export default function AIAssistant() {
     try {
       const res = await adminFetch('/api/ai/reorder-suggestions');
       if (res.success) setReorder(res.data.suggestions || []);
-    } catch {}
+    } catch (e) { console.error("[FETCH ERROR]", e); }
   };
 
   const fetchForecast = async () => {
     try {
       const res = await adminFetch('/api/ai/forecast?days=14');
       if (res.success) setForecast(res.data.forecast || []);
-    } catch {}
+    } catch (e) { console.error("[FETCH ERROR]", e); }
   };
 
   useEffect(() => { fetchSuggestions(); fetchForecast(); }, []);

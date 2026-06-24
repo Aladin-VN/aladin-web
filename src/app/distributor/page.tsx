@@ -320,15 +320,15 @@ export default function DistributorDashboard() {
     try {
       const res = await adminFetch('/api/distributor/dashboard');
       if (res.success) setData(res.data);
-    } catch {}
+    } catch (e) { console.error("[FETCH ERROR]", e); }
     try {
       const res = await adminFetch('/api/distributor/orders?limit=5');
       if (res.success) setRecentOrders(res.data.items || []);
-    } catch {}
+    } catch (e) { console.error("[FETCH ERROR]", e); }
     try {
       const res = await adminFetch('/api/distributor/analytics');
       if (res.success) setAnalytics(res.data);
-    } catch {}
+    } catch (e) { console.error("[FETCH ERROR]", e); }
     setLoading(false);
   }, []);
 

@@ -1,4 +1,5 @@
 'use client';
+import { toast } from 'sonner';
 
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
@@ -50,7 +51,7 @@ export default function DistributorOrderDetail({ params }: { params: Promise<{ i
     try {
       const res = await adminFetch(`/api/orders/${id}`);
       if (res.success) setOrder(res.data);
-    } catch {}
+    } catch (e) { console.error("[FETCH ERROR]", e); }
     setLoading(false);
   };
 
@@ -66,10 +67,10 @@ export default function DistributorOrderDetail({ params }: { params: Promise<{ i
       if (res.success) {
         fetchOrder();
       } else {
-        alert(res.error?.message || t('Lỗi không xác định', 'Unknown error'));
+        toast.error(res.error?.message || t("Lỗi không xác định", "Unknown error"));
       }
     } catch (e: any) {
-      alert(e.message || t('Lỗi mạng', 'Network error'));
+      toast.error(e.message || t("Lỗi mạng", "Network error"));
     }
     setActionLoading(false);
   };

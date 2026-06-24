@@ -1,4 +1,5 @@
 'use client';
+import { toast } from 'sonner';
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { adminFetch } from '@/lib/admin-fetch';
@@ -6,7 +7,7 @@ import { formatVND } from '@/lib/security';
 import { useLocale } from '@/providers/app-provider';
 import {
   Search, AlertTriangle, Plus, RefreshCw, ChevronLeft, ChevronRight, Package,
-  Warehouse, BarChart3, DollarSign,
+  Warehouse, BarChart3, DollarSign, Minus,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +17,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from '@/components/ui/dialog';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -34,6 +35,7 @@ export default function DistributorInventory() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [writeDownOpen, setWriteDownOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [stockQty, setStockQty] = useState('');
   const [stockReason, setStockReason] = useState('');
@@ -50,7 +52,7 @@ export default function DistributorInventory() {
         setItems(res.data.items || []);
         setTotalPages(res.data.pagination?.totalPages || 1);
       }
-    } catch {}
+    } catch (e) { console.error("[FETCH ERROR]", e); }
     setLoading(false);
   }, [search, lowStockOnly, page]);
 
@@ -75,11 +77,45 @@ export default function DistributorInventory() {
         setStockReason('');
         setSelectedProduct(null);
         fetchInventory();
+        toast.success(t('Đã nhập kho thành công!', 'Stock added successfully!'));
       } else {
-        alert(res.error?.message || t('Lỗi', 'Error'));
+        toast.error(res.error?.message || t('Lỗi', 'Error'));
       }
     } catch (e: any) {
-      alert(e.message || t('Lỗi mạng', 'Network error'));
+      toast.error(e.message || t('Lỗi mạng', 'Network error'));
+    }
+    setSubmitting(false);
+  };
+
+  const handleWriteDown = async () => {
+    if (!selectedProduct || !stockQty || parseInt(stockQty) <= 0) return;
+    if (parseInt(stockQty) > selectedProduct.quantity) {
+      toast.error(t('Số lượng vượt quá tồn kho', 'Quantity exceeds stock'));
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await adminFetch('/api/distributor/inventory', {
+        method: 'POST',
+        body: JSON.stringify({
+          productId: selectedProduct.productId,
+          type: 'DAMAGE',
+          quantity: parseInt(stockQty),
+          reason: stockReason || undefined,
+        }),
+      });
+      if (res.success) {
+        setWriteDownOpen(false);
+        setStockQty('');
+        setStockReason('');
+        setSelectedProduct(null);
+        fetchInventory();
+        toast.success(t('Đã ghi nhận hư hỏng/hao hụt!', 'Write-down recorded!'));
+      } else {
+        toast.error(res.error?.message || t('Lỗi', 'Error'));
+      }
+    } catch (e: any) {
+      toast.error(e.message || t('Lỗi mạng', 'Network error'));
     }
     setSubmitting(false);
   };
@@ -290,14 +326,24 @@ export default function DistributorInventory() {
                             <TableCell className="text-right text-xs text-muted-foreground">{item.costPrice ? formatVND(item.costPrice) : '-'}</TableCell>
                             <TableCell className="text-right text-xs font-medium">{formatVND(item.basePrice)}</TableCell>
                             <TableCell className="text-center">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-8 gap-1 rounded-lg"
-                                onClick={() => { setSelectedProduct(item); setDialogOpen(true); }}
-                              >
-                                <Plus className="h-3 w-3" /> {t('Nhập kho', 'Stock In')}
-                              </Button>
+                              <div className="flex items-center justify-center gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-8 gap-1 rounded-lg"
+                                  onClick={() => { setSelectedProduct(item); setDialogOpen(true); setStockQty(''); setStockReason(''); }}
+                                >
+                                  <Plus className="h-3 w-3" /> {t('Nhập', 'In')}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-8 gap-1 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  onClick={() => { setSelectedProduct(item); setWriteDownOpen(true); setStockQty(''); setStockReason(''); }}
+                                >
+                                  <Minus className="h-3 w-3" /> {t('Xuất', 'Out')}
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         );
@@ -381,6 +427,71 @@ export default function DistributorInventory() {
               className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm"
             >
               {submitting ? t('Đang xử lý...', 'Processing...') : t('Xác nhận nhập kho', 'Confirm Stock In')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Write-Down / Damage Dialog */}
+      <Dialog open={writeDownOpen} onOpenChange={setWriteDownOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center">
+                <Minus className="h-4 w-4 text-white" />
+              </div>
+              {t('Xuất kho / Hao hụt', 'Write-Down / Damage')}
+            </DialogTitle>
+            <DialogDescription>
+              {t('Ghi nhận hàng hư hỏng, hao hụt, hoặc xuất kho', 'Record damaged, lost, or removed stock')}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedProduct && (
+            <div className="space-y-4">
+              <div className="rounded-lg bg-muted/50 p-3 space-y-1">
+                <p className="text-sm font-medium">{selectedProduct.productName}</p>
+                <div className="flex gap-4 text-xs text-muted-foreground">
+                  <span>{t('Hiện tại', 'Current')}: <span className="font-semibold text-foreground">{selectedProduct.quantity}</span></span>
+                  <span>{t('Tối thiểu', 'Min')}: <span className="font-semibold text-foreground">{selectedProduct.minStockLevel}</span></span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">{t('Số lượng xuất', 'Quantity to remove')}</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  max={selectedProduct.quantity}
+                  placeholder={t('Nhập số lượng...', 'Enter quantity...')}
+                  className="rounded-lg"
+                  value={stockQty}
+                  onChange={(e) => setStockQty(e.target.value)}
+                />
+                {stockQty && parseInt(stockQty) > selectedProduct.quantity && (
+                  <p className="text-xs text-red-600">{t('Vượt quá tồn kho hiện tại!', 'Exceeds current stock!')}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">{t('Lý do', 'Reason')}</Label>
+                <Textarea
+                  placeholder={t('VD: Hàng hỏng, hết hạn sử dụng...', 'e.g. Damaged, expired...')}
+                  className="rounded-lg resize-none"
+                  value={stockReason}
+                  onChange={(e) => setStockReason(e.target.value)}
+                  rows={2}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setWriteDownOpen(false)} className="rounded-lg">
+              {t('Hủy', 'Cancel')}
+            </Button>
+            <Button
+              onClick={handleWriteDown}
+              disabled={submitting || !stockQty || parseInt(stockQty) <= 0 || parseInt(stockQty) > (selectedProduct?.quantity || 0)}
+              className="bg-red-600 hover:bg-red-700 text-white rounded-lg shadow-sm"
+            >
+              {submitting ? t('Đang xử lý...', 'Processing...') : t('Xác nhận xuất kho', 'Confirm Write-Down')}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -17,28 +17,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(errorResponse('NO_DISTRIBUTOR', 'Tài khoản không liên kết nhà phân phối.'), { status: 400 });
     }
 
-    const body = (await request.json()) as { saleId?: string; shiftId?: string; saleSequence?: number };
-    const { shiftId, saleSequence } = body;
+    const body = (await request.json()) as { orderId?: string; orderNumber?: string };
+    const { orderId, orderNumber } = body;
 
-    if (!shiftId || !saleSequence) {
+    if (!orderId && !orderNumber) {
       return NextResponse.json(errorResponse('INVALID_INPUT', 'Thiếu thông tin hóa đơn.'), { status: 400 });
     }
 
-    // Get all items for this sale
-    const saleItems = await db.posSaleItem.findMany({
+    // Find the order — POS orders are stored as regular Orders with orderNumber starting with 'POS-'
+    const order = await db.order.findFirst({
       where: {
-        posShiftId: shiftId,
-        saleSequence,
+        id: orderId || undefined,
+        orderNumber: orderNumber || undefined,
+        distributorId: distId,
+      },
+      include: {
+        items: true,
+        shop: { select: { name: true, address: true, district: true, province: true } },
       },
     });
 
-    if (saleItems.length === 0) {
+    if (!order) {
       return NextResponse.json(errorResponse('NOT_FOUND', 'Không tìm thấy hóa đơn.'), { status: 404 });
-    }
-
-    // Verify ownership
-    if (saleItems[0].distributorId !== distId) {
-      return NextResponse.json(errorResponse('FORBIDDEN', 'Không có quyền xem hóa đơn này.'), { status: 403 });
     }
 
     // Get distributor info
@@ -47,24 +47,35 @@ export async function POST(request: NextRequest) {
       select: { name: true, address: true, contactPhone: true, taxId: true },
     });
 
+    // Parse shop snapshot for walk-in customer info
+    let customerName: string | undefined;
+    let customerPhone: string | undefined;
+    try {
+      const snapshot = typeof order.shopSnapshot === 'string' ? JSON.parse(order.shopSnapshot) : order.shopSnapshot;
+      customerName = snapshot?.customerName;
+      customerPhone = snapshot?.customerPhone;
+    } catch { /* ignore parse errors */ }
+
     return NextResponse.json(
       successResponse({
         receipt: {
-          shiftId,
-          saleSequence,
-          saleDate: saleItems[0].createdAt,
-          paymentMethod: saleItems[0].paymentMethod,
-          customerName: saleItems[0].customerName,
-          customerPhone: saleItems[0].customerPhone,
-          items: saleItems.map((si) => ({
-            productName: si.productName,
-            productSku: si.productSku,
-            unitPrice: si.unitPrice,
-            quantity: si.quantity,
-            totalPrice: si.totalPrice,
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          saleDate: order.createdAt,
+          paymentMethod: order.paymentMethod,
+          paymentStatus: order.paymentStatus,
+          customerName: customerName || order.shop?.name || '',
+          customerPhone: customerPhone || '',
+          shopAddress: order.shop?.address || '',
+          items: order.items.map((item) => ({
+            productName: item.productName,
+            productSku: item.productSku,
+            unitPrice: item.unitPrice,
+            quantity: item.quantity,
+            totalPrice: item.totalPrice,
           })),
-          subtotal: saleItems.reduce((sum, si) => sum + si.totalPrice, 0),
-          total: saleItems[0].saleTotal,
+          subtotal: order.subtotalAmount,
+          total: order.totalAmount,
           distributor: {
             name: distributor?.name || '',
             address: distributor?.address || '',

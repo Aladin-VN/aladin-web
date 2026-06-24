@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, getDistributorId } from '@/lib/get-auth-user';
 import { ROLES, successResponse, errorResponse } from '@/lib/security';
 import { db } from '@/lib/db';
+import { Prisma } from '@prisma/client';
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,12 +19,20 @@ export async function GET(request: NextRequest) {
 
     // Get daily order quantities for last 30 days (all distributors if admin)
     const thirtyDaysAgo = new Date(); thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    // Use Prisma.sql template for parameterized query — prevents SQL injection
+    const conditions: Prisma.Sql[] = [
+      Prisma.sql`o."status" = 'DELIVERED' AND o."createdAt" >= ${thirtyDaysAgo.toISOString()}::timestamptz`,
+    ];
+    if (distId) {
+      conditions.unshift(Prisma.sql`o."distributorId" = ${distId} AND`);
+    }
+
     const dailyData: any[] = await db.$queryRaw`
       SELECT DATE(o."createdAt")::date as day, COALESCE(SUM(oi.quantity), 0)::int as qty
       FROM "Order" o
       JOIN "OrderItem" oi ON oi."orderId" = o.id
-      ${distId ? `WHERE o."distributorId" = '${distId}' AND` : 'WHERE'}
-        o."status" = 'DELIVERED' AND o."createdAt" >= ${thirtyDaysAgo.toISOString()}
+      ${Prisma.join(conditions, Prisma.raw(' '))}
       GROUP BY DATE(o."createdAt")::date
       ORDER BY day
     `;
