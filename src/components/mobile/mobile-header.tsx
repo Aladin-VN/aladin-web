@@ -143,6 +143,20 @@ function getAutoTitle(pathname: string, locale: string): string | null {
     '/m/merchandising': { vi: 'Trung bay', en: 'Merchandising' },
     '/m/login': { vi: 'Đăng nhập', en: 'Login' },
     '/m/register': { vi: 'Đăng ký', en: 'Register' },
+    '/m/sales-rep': { vi: 'Sales Rep', en: 'Sales Rep' },
+    '/m/sales-rep/route': { vi: 'Tuyến hôm nay', en: "Today's Route" },
+    '/m/sales-rep/visit': { vi: 'Thăm khách hàng', en: 'Visit Shop' },
+    '/m/sales-rep/history': { vi: 'Lịch sử thăm', en: 'Visit History' },
+    '/m/sales-rep/performance': { vi: 'Hiệu suất', en: 'Performance' },
+    '/m/driver': { vi: 'Tài xế', en: 'Driver' },
+    '/m/driver/deliveries': { vi: 'Giao hàng', en: 'Deliveries' },
+    '/m/driver/earnings': { vi: 'Doanh thu', en: 'Earnings' },
+    '/m/distributor': { vi: 'Kho hàng', en: 'Warehouse' },
+    '/m/distributor/customers': { vi: 'Khách hàng', en: 'Customers' },
+    '/m/distributor/group-buy': { vi: 'Mua chung', en: 'Group Buy' },
+    '/m/distributor/margins': { vi: 'Phân tích GVM', en: 'GVM Analytics' },
+    '/m/distributor/price-tiers': { vi: 'Bảng giá', en: 'Price Tiers' },
+    '/m/distributor/daily-report': { vi: 'Báo cáo ngày', en: 'Daily Report' },
   };
   const t = titles[pathname];
   return t ? (locale === 'vi' ? t.vi : t.en) : null;

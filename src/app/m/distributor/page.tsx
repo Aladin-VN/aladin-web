@@ -7,7 +7,7 @@ import { formatVND } from '@/lib/security';
 import { useAuthStore } from '@/stores/auth.store';
 import {
   ShoppingCart, DollarSign, Wallet, AlertTriangle, Package, CheckCircle,
-  ArrowRight, RefreshCw, BarChart3, CreditCard,
+  ArrowRight, RefreshCw, BarChart3, CreditCard, Users, Layers, TrendingUp, Tag, FileText,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -130,29 +130,49 @@ export default function DistributorDashboard() {
         </div>
       )}
 
-      {/* Quick Actions */}
+      {/* Quick Actions - Row 1: Core Operations */}
       <div className="grid grid-cols-2 gap-2 mb-2">
         <Button variant="outline" className="h-auto py-3 flex-col gap-1 text-xs" onClick={() => router.push('/m/distributor/orders')}>
           <ShoppingCart className="h-5 w-5 text-yellow-600" />
-          Nhận đơn hàng
+          Đơn hàng
         </Button>
         <Button variant="outline" className="h-auto py-3 flex-col gap-1 text-xs" onClick={() => router.push('/m/distributor/inventory')}>
           <Package className="h-5 w-5 text-purple-600" />
-          Kiểm tra kho
+          Tồn kho
         </Button>
       </div>
-      <div className="grid grid-cols-3 gap-2 mb-6">
-        <Button variant="outline" className="h-auto py-3 flex-col gap-1 text-xs" onClick={() => router.push('/m/distributor/settlements')}>
-          <Wallet className="h-5 w-5 text-blue-600" />
-          Quyết toán
-        </Button>
-        <Button variant="outline" className="h-auto py-3 flex-col gap-1 text-xs" onClick={() => router.push('/m/distributor/analytics')}>
-          <BarChart3 className="h-5 w-5 text-emerald-600" />
-          Phân tích
+      {/* Quick Actions - Row 2: CRM & Finance */}
+      <div className="grid grid-cols-3 gap-2 mb-2">
+        <Button variant="outline" className="h-auto py-3 flex-col gap-1 text-xs" onClick={() => router.push('/m/distributor/customers')}>
+          <Users className="h-5 w-5 text-blue-600" />
+          Khách hàng
         </Button>
         <Button variant="outline" className="h-auto py-3 flex-col gap-1 text-xs" onClick={() => router.push('/m/distributor/ar-ledger')}>
           <CreditCard className="h-5 w-5 text-red-600" />
           Công nợ
+        </Button>
+        <Button variant="outline" className="h-auto py-3 flex-col gap-1 text-xs" onClick={() => router.push('/m/distributor/settlements')}>
+          <Wallet className="h-5 w-5 text-green-600" />
+          Quyết toán
+        </Button>
+      </div>
+      {/* Quick Actions - Row 3: Analytics & Operations */}
+      <div className="grid grid-cols-4 gap-2 mb-6">
+        <Button variant="outline" className="h-auto py-3 flex-col gap-1 text-xs" onClick={() => router.push('/m/distributor/margins')}>
+          <TrendingUp className="h-5 w-5 text-emerald-600" />
+          GVM
+        </Button>
+        <Button variant="outline" className="h-auto py-3 flex-col gap-1 text-xs" onClick={() => router.push('/m/distributor/group-buy')}>
+          <Layers className="h-5 w-5 text-indigo-600" />
+          Mua chung
+        </Button>
+        <Button variant="outline" className="h-auto py-3 flex-col gap-1 text-xs" onClick={() => router.push('/m/distributor/price-tiers')}>
+          <Tag className="h-5 w-5 text-orange-600" />
+          Bảng giá
+        </Button>
+        <Button variant="outline" className="h-auto py-3 flex-col gap-1 text-xs" onClick={() => router.push('/m/distributor/daily-report')}>
+          <FileText className="h-5 w-5 text-slate-600" />
+          Báo cáo
         </Button>
       </div>
 

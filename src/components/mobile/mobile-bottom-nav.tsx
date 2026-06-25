@@ -10,6 +10,8 @@ import {
   Truck,
   HandCoins,
   Warehouse,
+  MapPin,
+  Route,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useCartStore } from '@/stores/cart.store';
@@ -64,7 +66,21 @@ const tabs: NavTab[] = [
     labelVi: 'Vận chuyển',
     labelEn: 'Shipments',
     icon: <Truck className="h-5 w-5" />,
-    roles: [ROLES.ADMIN, ROLES.DRIVER],
+    roles: [ROLES.ADMIN, ROLES.SHOP_OWNER, ROLES.BROKER],
+  },
+  {
+    href: '/m/sales-rep',
+    labelVi: 'Tuyến bán',
+    labelEn: 'Routes',
+    icon: <Route className="h-5 w-5" />,
+    roles: [ROLES.SALES_REP],
+  },
+  {
+    href: '/m/driver',
+    labelVi: 'Giao hàng',
+    labelEn: 'Deliveries',
+    icon: <Truck className="h-5 w-5" />,
+    roles: [ROLES.DRIVER],
   },
   {
     href: '/m/distributor',
@@ -72,6 +88,13 @@ const tabs: NavTab[] = [
     labelEn: 'Warehouse',
     icon: <Warehouse className="h-5 w-5" />,
     roles: [ROLES.ADMIN, ROLES.DISTRIBUTOR],
+    badge: () => {
+      // Show pending orders count for distributors (read from localStorage as fallback)
+      try {
+        const cached = localStorage.getItem('aladin-dist-pending');
+        return cached ? parseInt(cached, 10) || null : null;
+      } catch { return null; }
+    },
   },
   {
     href: '/m/broker',
@@ -109,17 +132,29 @@ export function MobileBottomNav({ locale = 'vi' }: MobileBottomNavProps) {
     ? tabs.filter((tab) => !tab.roles || tab.roles.includes(userRole))
     : tabs; // Show all during hydration
 
-  // Exact or child route match
+  // Exact or child route match — also match /m/driver/deliveries under /m/driver
   const isActive = (href: string) => {
     if (href === '/m') return pathname === '/m';
     return pathname.startsWith(href);
   };
 
+  // Active check with cross-tab awareness (driver/deliveries → driver tab)
+  const getActiveHref = () => {
+    for (const tab of visibleTabs) {
+      if (isActive(tab.href)) return tab.href;
+    }
+    // Fallback: check if path belongs to a tab's subtree
+    if (pathname.startsWith('/m/driver')) return '/m/driver';
+    if (pathname.startsWith('/m/sales-rep')) return '/m/sales-rep';
+    return null;
+  };
+  const activeHref = getActiveHref();
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-t border-border safe-area-bottom">
       <div className="flex items-center justify-around h-16 max-w-lg mx-auto">
         {visibleTabs.map((tab) => {
-          const active = isActive(tab.href);
+          const active = activeHref === tab.href;
           const badgeCount = tab.badge?.() || null;
           // Show cart count on orders tab if items exist
           const showBadge = tab.href === '/m/orders' && cartItemCount > 0;
