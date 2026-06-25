@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { adminFetch } from '@/lib/admin-fetch';
 import { formatVND } from '@/lib/security';
 import { useLocale } from '@/providers/app-provider';
-import { Search, Plus, Minus, Trash2, ShoppingCart, Banknote, CreditCard, Wallet, CheckCircle, Printer, ScanBarcode } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, ShoppingCart, Banknote, CreditCard, Wallet, CheckCircle, Printer, ScanBarcode, Camera, CameraOff } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +32,8 @@ export default function POSTerminal() {
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [recentSales, setRecentSales] = useState<any[]>([]);
   const [showRecent, setShowRecent] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const scannerRef = useRef<any>(null);
 
   useEffect(() => { searchRef.current?.focus(); }, []);
 
@@ -165,6 +167,65 @@ export default function POSTerminal() {
     } catch (e) { console.error("[FETCH ERROR]", e); }
   };
 
+  // Camera barcode scanner
+  const startCameraScanner = useCallback(async () => {
+    setCameraOpen(true);
+    // Dynamic import to avoid SSR issues
+    try {
+      const { Html5QrcodeScanner } = await import('html5-qrcode');
+      await new Promise(resolve => setTimeout(resolve, 100));
+      const scannerId = 'barcode-scanner';
+      if (!document.getElementById(scannerId)) return;
+      const scanner = new Html5QrcodeScanner(scannerId, {
+        fps: 10,
+        qrbox: { width: 280, height: 120 },
+        formatsToSupport: [
+          0, // QR_CODE
+          2, // EAN_13
+          1, // EAN_8
+          3, // UPC_A
+          4, // UPC_E
+          6, // CODE_128
+          7, // CODE_39
+        ],
+      }, false);
+      scannerRef.current = scanner;
+      scanner.render(async (decodedText: string) => {
+        try {
+          scanner.stop();
+          setCameraOpen(false);
+          await handleBarcodeScan(decodedText);
+        } catch (e) {
+          console.error('[CAMERA SCAN ERROR]', e);
+        }
+      }, (errorMessage: string) => {
+        // Silently ignore scan failures (normal for continuous scanning)
+      });
+    } catch (e) {
+      console.error('[CAMERA INIT ERROR]', e);
+      toast.error(t('Không thể khởi tạo camera', 'Cannot initialize camera'));
+      setCameraOpen(false);
+    }
+  }, [handleBarcodeScan, t]);
+
+  const stopCameraScanner = useCallback(async () => {
+    if (scannerRef.current) {
+      try {
+        await scannerRef.current.stop();
+      } catch (e) { /* ignore */ }
+      scannerRef.current = null;
+    }
+    setCameraOpen(false);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (scannerRef.current) {
+        try { scannerRef.current.stop(); } catch (e) { /* ignore */ }
+      }
+    };
+  }, []);
+
   return (
     <>
       <AdminHeader />
@@ -172,6 +233,9 @@ export default function POSTerminal() {
           <div className="flex items-center justify-between px-4 py-3 border-b">
             <h1 className="text-lg font-bold">{t('POS - Bán hàng', 'POS Terminal')}</h1>
             <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={startCameraScanner}>
+                <Camera className="h-4 w-4 mr-1" /> {t('Quét camera', 'Camera Scan')}
+              </Button>
               <Button variant="outline" size="sm" onClick={() => { setShowRecent(!showRecent); if (!showRecent) fetchRecent(); }}>
                 <ShoppingCart className="h-4 w-4 mr-1" /> {t('Gần đây', 'Recent')} ({recentSales.length})
               </Button>
@@ -285,6 +349,30 @@ export default function POSTerminal() {
               <Button variant="outline" className="w-full" onClick={() => window.print()}><Printer className="h-4 w-4 mr-1" />{t('In', 'Print')}</Button>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Camera Barcode Scanner Dialog */}
+      <Dialog open={cameraOpen} onOpenChange={(open) => { if (!open) stopCameraScanner(); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Camera className="h-5 w-5" />
+              {t('Quét mã vạch bằng camera', 'Camera Barcode Scanner')}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              {t('Hướng camera vào mã vạch hoặc mã QR. Tự động nhận diện khi quét thành công.', 'Point camera at barcode or QR code. Auto-detects on successful scan.')}
+            </p>
+            <div id="barcode-scanner" className="w-full overflow-hidden rounded-lg" />
+            <div className="flex justify-center">
+              <Button variant="outline" onClick={stopCameraScanner}>
+                <CameraOff className="h-4 w-4 mr-1" />
+                {t('Đóng camera', 'Close Camera')}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 

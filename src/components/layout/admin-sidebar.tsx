@@ -29,6 +29,9 @@ import {
   Bell,
   ClipboardList,
   FileText,
+  Layers,
+  TrendingUp,
+  UsersRound,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -158,6 +161,34 @@ const navItems: NavItem[] = [
     titleVi: 'Tra hang',
     href: '/distributor/returns',
     icon: <RotateCcw className="h-4 w-4" />,
+    roles: [ROLES.DISTRIBUTOR],
+  },
+  {
+    title: 'Customers',
+    titleVi: 'Khach hang',
+    href: '/distributor/customers',
+    icon: <UsersRound className="h-4 w-4" />,
+    roles: [ROLES.DISTRIBUTOR],
+  },
+  {
+    title: 'Group Buy',
+    titleVi: 'Mua chung',
+    href: '/distributor/group-buy',
+    icon: <Layers className="h-4 w-4" />,
+    roles: [ROLES.DISTRIBUTOR],
+  },
+  {
+    title: 'GVM Margins',
+    titleVi: 'Bien GVM',
+    href: '/distributor/analytics/margins',
+    icon: <TrendingUp className="h-4 w-4" />,
+    roles: [ROLES.DISTRIBUTOR],
+  },
+  {
+    title: 'Price Tiers',
+    titleVi: 'Gia phan tang',
+    href: '/distributor/price-tiers',
+    icon: <Tag className="h-4 w-4" />,
     roles: [ROLES.DISTRIBUTOR],
   },
   {

@@ -218,6 +218,7 @@ model Product {
   groupDeals      GroupDeal[]
   inventory       DistributorInventory[]
   inventoryMovements InventoryMovement[]
+  priceTierItems  PriceTierItem[] @relation("PriceTierProduct")
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -290,6 +291,9 @@ model Distributor {
   orders        Order[]
   posShifts     PosShift[]    @relation("DistributorPosShifts")
   posSaleItems  PosSaleItem[] @relation("DistributorPosSales")
+  customers     DistributorCustomer[]
+  loyaltyTransactions LoyaltyTransaction[]
+  priceTiers    PriceTier[]
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -982,4 +986,131 @@ model PosSaleItem {
   @@index([distributorId])
   @@index([createdAt])
   @@index([paymentMethod])
+}
+
+// ============================================================
+// DISTRIBUTOR CRM: Customer management & Loyalty Points
+// Inspired by Odoo CRM + MISA customer tracking
+// Vietnamese distributors sell to 50-200 recurring shop owners.
+// This module tracks their own customer base (separate from platform shops).
+// ============================================================
+
+model DistributorCustomer {
+  id              String   @id @default(cuid())
+  distributorId   String
+
+  // Identity
+  code            String                               // Customer code: "KH-001"
+  name            String                               // Shop/customer name
+  phone           String                               // Contact phone
+  address         String?
+  district        String?
+  province        String   @default("Binh Duong")
+
+  // Business info
+  shopType        String?                              // TAPHOA, CONVENIENCE, RESTAURANT, FACTORY
+  taxId           String?                              // MST (tax ID for invoicing)
+  note            String?
+
+  // Loyalty points (append-only via LoyaltyTransaction)
+  loyaltyPoints   Int      @default(0)                 // Current point balance (denormalized)
+  loyaltyTier     String   @default("BRONZE")          // BRONZE, SILVER, GOLD, PLATINUM
+  totalSpend      Int      @default(0)                 // Cumulative spend for tier calc (VND)
+  totalOrders     Int      @default(0)                 // Total order count
+
+  // Credit terms (distributor-specific, separate from platform credit)
+  creditLimit     Int      @default(0)                 // 0 = COD only (VND)
+  creditBalance   Int      @default(0)                 // Outstanding debt (VND)
+  creditStatus    String   @default("ACTIVE")          // ACTIVE, LOCKED, OVERDUE
+  paymentTermsDays Int     @default(0)                 // 0 = COD, 7/14/30 days
+
+  // Status
+  isActive        Boolean  @default(true)
+
+  // Relations
+  distributor     Distributor @relation(fields: [distributorId], references: [id], onDelete: Cascade)
+  loyaltyTransactions LoyaltyTransaction[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([distributorId, code])
+  @@unique([distributorId, phone])
+  @@index([distributorId])
+  @@index([loyaltyTier])
+  @@index([creditStatus])
+  @@index([name])
+}
+
+model LoyaltyTransaction {
+  id              String   @id @default(cuid())
+  customerId      String
+  distributorId   String
+
+  type            String                               // EARN, REDEEM, ADJUST, EXPIRE
+  points          Int                                  // Positive = earn, Negative = redeem
+  balance         Int                                  // Points balance after this tx
+  description     String?
+
+  // Source
+  orderId         String?                              // If earned from an order
+  reference       String?                              // External reference
+
+  createdAt       DateTime @default(now())
+
+  // Relations
+  customer        DistributorCustomer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  distributor     Distributor @relation(fields: [distributorId], references: [id])
+
+  @@index([customerId])
+  @@index([distributorId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+// ============================================================
+// PRICE TIERS: Multi-tier pricing (Odoo Pricelists concept)
+// Different prices for different customer segments or volume levels.
+// Helps distributors improve GVM by offering volume incentives
+// while maintaining margins on small orders.
+// ============================================================
+
+model PriceTier {
+  id              String   @id @default(cuid())
+  distributorId   String
+
+  name            String                               // "Gia si", "Gia VIP", "Gia dai ly"
+  nameEn          String?
+  tierType        String   @default("CUSTOM")           // LOYALTY_BASED, VOLUME_BASED, CUSTOM
+  discountPercent Float   @default(0)                   // % discount from base price
+  minOrderValue   Int?                                 // Minimum order value to qualify (VND)
+  loyaltyTier     String?                              // Which loyalty tier this applies to
+
+  isActive        Boolean  @default(true)
+
+  // Relations
+  distributor     Distributor @relation(fields: [distributorId], references: [id], onDelete: Cascade)
+  items           PriceTierItem[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([distributorId])
+}
+
+model PriceTierItem {
+  id              String   @id @default(cuid())
+  priceTierId     String
+  productId       String
+
+  price           Int                                  // Price at this tier (VND per unit)
+
+  // Relations
+  priceTier       PriceTier @relation(fields: [priceTierId], references: [id], onDelete: Cascade)
+  product         Product   @relation("PriceTierProduct", fields: [productId], references: [id])
+
+  createdAt       DateTime @default(now())
+
+  @@unique([priceTierId, productId])
+  @@index([productId])
 }
