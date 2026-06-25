@@ -157,6 +157,10 @@ function getAutoTitle(pathname: string, locale: string): string | null {
     '/m/distributor/margins': { vi: 'Phân tích GVM', en: 'GVM Analytics' },
     '/m/distributor/price-tiers': { vi: 'Bảng giá', en: 'Price Tiers' },
     '/m/distributor/daily-report': { vi: 'Báo cáo ngày', en: 'Daily Report' },
+    '/m/distributor/debt-collection': { vi: 'Thu công nợ', en: 'Debt Collection' },
+    '/m/distributor/returns': { vi: 'Trả hàng', en: 'Returns' },
+    '/m/broker/me': { vi: 'Đại lý', en: 'Broker Portal' },
+    '/m/broker/me/commissions': { vi: 'Hoa hồng', en: 'Commissions' },
   };
   const t = titles[pathname];
   return t ? (locale === 'vi' ? t.vi : t.en) : null;

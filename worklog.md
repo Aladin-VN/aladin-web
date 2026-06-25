@@ -254,3 +254,34 @@ Stage Summary:
 - 3 existing files updated (bottom-nav, distributor dashboard, mobile-header)
 - Total: 32 files created/modified in Wave 1
 - Build: SUCCESS — all 203 pages compile cleanly
+
+---
+Task ID: wave-2-revenue-ops
+Agent: Main Agent + 4 parallel subagents
+Task: Wave 2 — Revenue Operations, Notification Triggers, Broker Self-Service
+
+Work Log:
+- Gap audit identified 10 remaining gaps across all roles, ranked by priority
+- Fixed 3 CRITICAL notification gaps:
+  - Shipment status API (/api/shipments/[id]/status): added notifyShipmentStatus + notifyOrderStatus on delivery
+  - Driver delivery status API (/api/driver/deliveries/[id]/status): added notifyShipmentStatus + notifyOrderStatus
+  - Debt payment API (/api/distributor/debt-payment): added notifyDebtPayment to shop owner
+- Added 3 new notification functions to lib/notifications.ts: notifyShipmentStatus, notifyDebtPayment, notifyDriverIssue
+- Created 5 new mobile PWA pages via parallel agents:
+  - /m/distributor/debt-collection — KPIs, shop debt cards with aging, payment dialog (CASH/BANK_TRANSFER), click-to-call
+  - /m/distributor/returns — KPIs, return creation with photo capture, reason selection, return history
+  - /m/broker/me — Broker self-service portal with profile, KPIs, commission summary, referred shops, quick actions
+  - /m/broker/me/commissions — Commission history with period selector, CSS bar chart, breakdown list
+  - /m/distributor/settlements/[id] — Settlement detail with financial summary, order breakdown, timeline
+- Updated distributor dashboard: added "Thu công nợ" and "Trả hàng" quick actions (Row 4)
+- Updated settlements list: cards now tappable → navigate to settlement detail
+- Updated broker bottom nav: tab now points to /m/broker/me (self-service) instead of /m/broker (admin)
+- Updated mobile header: added 5 new auto-titles
+- Build: SUCCESS — 210 total pages (up from 203), 0 errors
+
+Stage Summary:
+- 3 notification trigger gaps fixed (shipment, driver, debt payment)
+- 5 new mobile pages created
+- 5 existing files updated
+- Total: 13 files created/modified in Wave 2
+- Build: SUCCESS — all 210 pages compile cleanly

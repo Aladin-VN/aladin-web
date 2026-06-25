@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { extractBearerToken, verifyAccessToken, hasRole } from '@/lib/auth';
 import { successResponse, errorResponse, SHIPMENT_STATUS } from '@/lib/security';
+import { notifyOrderStatus, notifyShipmentStatus } from '@/lib/notifications';
 
 // Valid status transitions
 const STATUS_TRANSITIONS: Record<string, string[]> = {
@@ -87,10 +88,29 @@ export async function PATCH(
       where: { id },
       data: updateData,
       include: {
-        order: { select: { orderNumber: true, status: true } },
+        order: { select: { id: true, orderNumber: true, status: true, shopId: true, shop: { select: { userId: true } } } },
         assignedDriver: { select: { id: true, name: true, phone: true } },
       },
     });
+
+    // Send notification to shop owner on shipment status change (non-blocking)
+    if (updatedShipment.order?.shop?.userId) {
+      notifyShipmentStatus(
+        id,
+        status,
+        updatedShipment.order.shop.userId,
+        updatedShipment.order.orderNumber || undefined
+      ).catch((err: unknown) => console.error('[SHIPMENT STATUS] Notification error (non-blocking):', err));
+
+      // When delivered, also notify order status change
+      if (status === SHIPMENT_STATUS.DELIVERED) {
+        notifyOrderStatus(
+          shipment.orderId,
+          'DELIVERED',
+          updatedShipment.order.shop.userId
+        ).catch((err: unknown) => console.error('[SHIPMENT STATUS] Order notification error (non-blocking):', err));
+      }
+    }
 
     return NextResponse.json(successResponse({
       shipment: updatedShipment,

@@ -1,14 +1,17 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { adminFetch } from '@/lib/admin-fetch';
 import { formatVND } from '@/lib/security';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Wallet } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default function DistributorSettlements() {
+  const router = useRouter();
   const [settlements, setSettlements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -58,7 +61,7 @@ export default function DistributorSettlements() {
       ) : (
         <div className="space-y-3">
           {settlements.map((s: any) => (
-            <Card key={s.id}>
+            <Card key={s.id} className={cn('cursor-pointer hover:bg-accent/30 transition-colors')} onClick={() => router.push(`/m/distributor/settlements/${s.id}`)}>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-sm font-bold">{s.settlementNumber}</p>

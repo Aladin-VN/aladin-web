@@ -8,6 +8,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import {
   ShoppingCart, DollarSign, Wallet, AlertTriangle, Package, CheckCircle,
   ArrowRight, RefreshCw, BarChart3, CreditCard, Users, Layers, TrendingUp, Tag, FileText,
+  RotateCcw, HandCoins,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -157,7 +158,7 @@ export default function DistributorDashboard() {
         </Button>
       </div>
       {/* Quick Actions - Row 3: Analytics & Operations */}
-      <div className="grid grid-cols-4 gap-2 mb-6">
+      <div className="grid grid-cols-4 gap-2 mb-2">
         <Button variant="outline" className="h-auto py-3 flex-col gap-1 text-xs" onClick={() => router.push('/m/distributor/margins')}>
           <TrendingUp className="h-5 w-5 text-emerald-600" />
           GVM
@@ -173,6 +174,17 @@ export default function DistributorDashboard() {
         <Button variant="outline" className="h-auto py-3 flex-col gap-1 text-xs" onClick={() => router.push('/m/distributor/daily-report')}>
           <FileText className="h-5 w-5 text-slate-600" />
           Báo cáo
+        </Button>
+      </div>
+      {/* Quick Actions - Row 4: Field Operations */}
+      <div className="grid grid-cols-2 gap-2 mb-6">
+        <Button variant="outline" className="h-auto py-3 flex-col gap-1 text-xs" onClick={() => router.push('/m/distributor/debt-collection')}>
+          <HandCoins className="h-5 w-5 text-red-600" />
+          Thu công nợ
+        </Button>
+        <Button variant="outline" className="h-auto py-3 flex-col gap-1 text-xs" onClick={() => router.push('/m/distributor/returns')}>
+          <RotateCcw className="h-5 w-5 text-amber-600" />
+          Trả hàng
         </Button>
       </div>
 

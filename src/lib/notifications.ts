@@ -66,3 +66,46 @@ export async function notifySettlement(userId: string, settlementId: string, amo
     { settlementId, amount }
   );
 }
+
+export async function notifyShipmentStatus(shipmentId: string, newStatus: string, shopUserId: string, orderNumber?: string) {
+  const statusLabels: Record<string, string> = {
+    PICKED_UP: 'Đã lấy hàng từ kho',
+    IN_TRANSIT: 'Đang trên đường giao',
+    DELIVERED: 'Đã giao thành công',
+    FAILED: 'Giao hàng thất bại',
+  };
+  const title = `Cập nhật vận chuyển`;
+  const message = orderNumber
+    ? `${orderNumber}: ${statusLabels[newStatus] || newStatus}`
+    : (statusLabels[newStatus] || `Trạng thái: ${newStatus}`);
+
+  await createNotification(shopUserId, 'SHIPMENT', title, message, { shipmentId, status: newStatus });
+}
+
+export async function notifyDebtPayment(shopUserId: string, amount: number, paymentMethod: string) {
+  const methodLabel = paymentMethod === 'CASH' ? 'tiền mặt' : 'chuyển khoản';
+  await createNotification(
+    shopUserId,
+    'CREDIT',
+    'Thu hồi công nợ',
+    `Đã ghi nhận thanh toán ${amount.toLocaleString('vi-VN')} ₫ (${methodLabel}). Cảm ơn bạn!`,
+    { amount, paymentMethod }
+  );
+}
+
+export async function notifyDriverIssue(shipmentId: string, issueType: string, description: string, adminUserIds: string[]) {
+  const typeLabels: Record<string, string> = {
+    WRONG_ADDRESS: 'Sai địa chỉ',
+    CUSTOMER_ABSENT: 'Khách vắng mặt',
+    DAMAGED_GOODS: 'Hàng hóa hỏng',
+    SHORTAGE: 'Thiếu hàng',
+    OTHER: 'Khác',
+  };
+  const title = 'Báo cáo giao hàng';
+  const message = `${typeLabels[issueType] || issueType}: ${description || 'Không có mô tả'}`;
+  await Promise.all(
+    adminUserIds.map(adminId =>
+      createNotification(adminId, 'DELIVERY_ISSUE', title, message, { shipmentId, issueType })
+    )
+  );
+}

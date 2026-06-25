@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, getDistributorId } from '@/lib/get-auth-user';
 import { ROLES, successResponse, errorResponse, sanitizeInput, isValidVNDAmount } from '@/lib/security';
 import { db } from '@/lib/db';
+import { notifyDebtPayment } from '@/lib/notifications';
 
 const VALID_PAYMENT_METHODS = ['CASH', 'BANK_TRANSFER'] as const;
 
@@ -177,6 +178,17 @@ export async function POST(request: NextRequest) {
       where: { id: shopId },
       data: shopUpdateData,
     });
+
+    // Notify shop owner about debt payment (non-blocking)
+    const shopOwner = await db.shop.findUnique({
+      where: { id: shopId },
+      select: { userId: true },
+    });
+    if (shopOwner?.userId) {
+      notifyDebtPayment(shopOwner.userId, amount, paymentMethod).catch(
+        (err: unknown) => console.error('[DEBT PAYMENT] Notification error (non-blocking):', err)
+      );
+    }
 
     return NextResponse.json(successResponse({
       transaction: {

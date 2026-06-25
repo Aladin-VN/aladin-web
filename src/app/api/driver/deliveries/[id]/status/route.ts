@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getAuthUser } from '@/lib/get-auth-user';
 import { successResponse, errorResponse, ROLES, SHIPMENT_STATUS, rateLimit } from '@/lib/security';
+import { notifyShipmentStatus, notifyOrderStatus } from '@/lib/notifications';
 
 // Valid status transitions for driver
 const VALID_TRANSITIONS: Record<string, string[]> = {
@@ -74,7 +75,7 @@ export async function PUT(
     const shipment = await db.shipment.findUnique({
       where: { id },
       include: {
-        order: { select: { id: true, orderNumber: true, status: true } },
+        order: { select: { id: true, orderNumber: true, status: true, shopId: true, shop: { select: { userId: true } } } },
       },
     });
 
@@ -152,6 +153,24 @@ export async function PUT(
         userAgent: request.headers.get('user-agent') || undefined,
       },
     });
+
+    // Send notification to shop owner (non-blocking)
+    if (shipment.order?.shop?.userId) {
+      notifyShipmentStatus(
+        id,
+        status,
+        shipment.order.shop.userId,
+        shipment.order.orderNumber || undefined
+      ).catch((err: unknown) => console.error('[DRIVER STATUS] Notification error (non-blocking):', err));
+
+      if (status === 'DELIVERED') {
+        notifyOrderStatus(
+          shipment.orderId,
+          'DELIVERED',
+          shipment.order.shop.userId
+        ).catch((err: unknown) => console.error('[DRIVER STATUS] Order notification error (non-blocking):', err));
+      }
+    }
 
     return NextResponse.json(
       successResponse({

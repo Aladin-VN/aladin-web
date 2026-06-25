@@ -97,7 +97,7 @@ const tabs: NavTab[] = [
     },
   },
   {
-    href: '/m/broker',
+    href: '/m/broker/me',
     labelVi: 'Hoa hồng',
     labelEn: 'Commission',
     icon: <HandCoins className="h-5 w-5" />,
