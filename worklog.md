@@ -285,3 +285,71 @@ Stage Summary:
 - 5 existing files updated
 - Total: 13 files created/modified in Wave 2
 - Build: SUCCESS — all 210 pages compile cleanly
+---
+Task ID: Wave-3
+Agent: Main Agent
+Task: Wave 3 — Admin Mobile Dashboard, Broker Territory/Referral, Shop Order Templates, Notification API, Page Consistency Fixes
+
+Work Log:
+- Analyzed full codebase state: 67 mobile pages, 123 API routes, 34 Prisma models
+- Identified gaps: 0 admin mobile pages, 2 inconsistent shop pages (analytics/reorder used adminFetch, no i18n, no MobileHeader), no broker territory/referral pages, no order templates
+- Rewrote /m/shop/analytics/page.tsx: replaced adminFetch with api client, added MobileHeader, i18n, TypeScript types, error states, loading skeletons
+- Rewrote /m/shop/reorder/page.tsx: same modernization pattern
+- Created /api/admin/mobile-dashboard/route.ts: GET endpoint with KPIs, revenue trend, top shops, pending orders, user distribution, low stock alerts, platform health
+- Created /m/admin/page.tsx: Admin mobile dashboard with 2x3 KPI grid, platform health, CSS bar chart, quick actions, top shops horizontal scroll
+- Created /m/admin/shops/page.tsx: Shop management with search, district filter, loyalty tier badges, credit status
+- Created /m/admin/orders/page.tsx: Order management with status filter tabs, color-coded badges
+- Created /api/brokers/my-territory/route.ts: GET endpoint for broker's assigned ward, shops, nearby opportunities, rank
+- Created /m/broker/me/territory/page.tsx: Territory view with ward header, performance card, shop list, expansion opportunities
+- Created /m/broker/me/referral/page.tsx: Shop referral tracking with stats strip, commission tiers, referred shops list, how-to guide
+- Created /api/shops/order-templates/route.ts: GET endpoint for recent order templates + frequent products
+- Created /m/shop/templates/page.tsx: 3-tab order templates page (Recent/Frequent/Quick) with cart integration
+- Created /api/notifications/create/route.ts: POST endpoint for programmatic notification creation (admin can target by role or userId)
+- Updated mobile-bottom-nav.tsx: Added Shield icon import, Admin tab (ADMIN-only), improved sub-route matching for admin/broker/me/distributor/shop
+- Updated mobile-header.tsx: Added 7 new auto-title entries for all new routes
+- Updated /m/shop/page.tsx: Added FileText icon, "Mẫu đặt hàng" (Templates) quick action card, expanded grid to 3x2
+- Updated /m/broker/me/page.tsx: Replaced placeholder "Refer Shop" dialog with navigation to /m/broker/me/referral, added Territory quick action, added Overview action
+
+Stage Summary:
+- 14 files created/modified: 4 new API routes, 7 new mobile pages, 3 updated navigation/existing pages
+- Build: 217 pages, 0 errors
+- Key patterns: All new pages use `api` from `@/lib/mobile/api` (not adminFetch), MobileHeader, bilingual i18n, TypeScript interfaces, loading/error/empty states
+- Admin now has mobile presence: dashboard + shop management + order management
+- Brokers gained territory management and shop referral tracking
+- Shop owners gained order templates for quick reordering
+- Notification system now supports programmatic creation by role
+---
+Task ID: w4
+Agent: Main Agent
+Task: Wave 4 — Zalo deep integration, real-time WebSocket notifications, offline-first PWA enhancements
+
+Work Log:
+- Created standalone WebSocket server (server/ws-server.ts) on port 3004 with JWT auth, room-based broadcasting, heartbeat/ping-pong, HTTP bridge API, health check, stats endpoint
+- Created ws-bridge.ts — server-side HTTP client for API routes to push events through WS server
+- Rewrote notifications.ts — all 7+ notification helpers now broadcast via WS bridge AND create DB notifications (dual delivery)
+- Enhanced use-realtime.ts — syncs WS events to Zustand store, updates notification bell in real-time, subscribes to notification/role rooms, throttle per-event-type toasts
+- Updated NotificationBell component — accepts wsConnected + serverUnreadCount, shows max of WS-pushed vs server-polled counts, connection status dot
+- Created push-sender.ts — web-push integration with VAPID, sends push notifications to browser, auto-cleans stale subscriptions
+- Created /api/push/subscribe — POST to register, DELETE to unregister push subscriptions (upserts PushSubscription model)
+- Created use-push-notifications.ts hook — handles permission request, VAPID subscription, server registration/unregistration
+- Created offline-queue.ts — IndexedDB-based request queue with priority, retry limits, product cache, sync manager
+- Created offline-fetch.ts — offline-aware fetch wrapper that queues mutations when offline, returns cached data for GETs
+- Rewrote sw.js (v3) — added push notification handler, notification click → app navigation, Background Sync API, periodic sync, SW-side queue processing, message handlers for queue count/sync registration
+- Created notification-preferences.ts — server-side multi-channel delivery engine with quiet hours (Vietnam timezone), per-type and per-channel enforcement
+- Created /api/notifications/preferences — GET (auto-create) and PUT (update) notification preferences
+- Added PushSubscription and NotificationPreference models to Prisma schema with User relations
+- Created zalo/realtime-bridge.ts — bridges Zalo chatbot events (order created, payment completed, credit repayment) into in-app WS + DB notifications
+- Created ConnectionStatus component — compact dot or full indicator showing online/offline/ws/ws-disconnected/syncing states with offline queue count badge
+- Rewrote mobile-shell.tsx — integrates useRealtime + useOfflineSync, shows sync-complete banner, offline queue count in offline banner
+- Updated mobile-header.tsx — imports useRealtime + useOfflineSync, shows ConnectionStatus compact indicator before notification bell
+- Rewrote /m/settings/notifications/page.tsx — full server-synced notification preferences page with channels (in-app/push/Zalo), per-type toggles, quiet hours with time pickers, real-time connection status
+- Added `put` method and body support to `delete` in mobile API client
+
+Stage Summary:
+- 248 routes total, 0 build errors
+- 15 new files created, 8 existing files modified
+- Complete real-time notification pipeline: event → DB + WS bridge → client hook → Zustand → UI bell + toast
+- Multi-channel delivery: in-app (DB + WS) + browser push + Zalo OA, all governed by NotificationPreference model
+- Offline-first PWA: IndexedDB queue for mutations, Background Sync API, auto-sync on reconnect, stale-while-revalidate cache
+- WebSocket server with JWT auth, room broadcasting, heartbeat, HTTP bridge for Next.js integration
+

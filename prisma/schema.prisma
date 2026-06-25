@@ -77,7 +77,9 @@ model User {
   broker        Broker?
   distributor   DistributorUser?
   shipments     Shipment[]  @relation("DriverAssignments")
-  notifications Notification[]
+  notifications        Notification[]
+  pushSubscriptions    PushSubscription[]
+  notificationPrefs    NotificationPreference?
 
   // Metadata
   createdAt     DateTime @default(now())
@@ -1113,4 +1115,57 @@ model PriceTierItem {
 
   @@unique([priceTierId, productId])
   @@index([productId])
+}
+
+// ============================================================
+// PUSH NOTIFICATIONS: Web push subscription management
+// Wave 4 — Real-time push notifications
+// ============================================================
+
+model PushSubscription {
+  id              String   @id @default(cuid())
+  userId          String
+  endpoint        String                                       // Push service endpoint URL
+  p256dhKey       String                                       // ECDH public key
+  authKey         String                                       // Auth secret
+  userAgent       String   @default("")                        // Browser/device info
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, endpoint])
+  @@index([userId])
+}
+
+// ============================================================
+// NOTIFICATION PREFERENCES: Per-user notification channel settings
+// Wave 4 — Granular notification control
+// ============================================================
+
+model NotificationPreference {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+
+  // Channel toggles
+  inAppEnabled    Boolean  @default(true)                      // In-app notifications
+  pushEnabled     Boolean  @default(true)                      // Browser push notifications
+  zaloEnabled     Boolean  @default(true)                      // Zalo OA messages
+
+  // Per-type toggles (in-app)
+  orderUpdates    Boolean  @default(true)                      // ORDER_STATUS
+  shipmentUpdates Boolean  @default(true)                      // SHIPMENT
+  creditAlerts    Boolean  @default(true)                      // CREDIT, debt reminders
+  promotions      Boolean  @default(true)                      // PROMOTION
+  systemAlerts    Boolean  @default(true)                      // SYSTEM, INVENTORY
+
+  // Quiet hours (Vietnam timezone, stored as HH:MM strings)
+  quietHoursEnabled Boolean @default(false)
+  quietHoursStart   String @default("22:00")                   // 10PM
+  quietHoursEnd     String @default("07:00")                   // 7AM
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

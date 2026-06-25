@@ -7,6 +7,9 @@ import { Bell, Search, ArrowLeft, Menu } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ConnectionStatus } from './connection-status';
+import { useRealtime } from '@/hooks/use-realtime';
+import { useOfflineSync } from '@/hooks/use-offline-sync';
 
 // ============================================
 // Mobile Header Component
@@ -40,6 +43,11 @@ export function MobileHeader({
   const user = useAuthStore((s) => s.user);
   const unreadCount = useAppStore((s) => s.unreadCount());
   const locale = useAppStore((s) => s.locale);
+  const isOnline = useAppStore((s) => s.isOnline);
+
+  // Real-time + offline sync state
+  const { connected: wsConnected } = useRealtime();
+  const { queueCount } = useOfflineSync();
 
   // Auto-title from pathname
   const autoTitle = !title ? getAutoTitle(pathname, locale) : null;
@@ -87,6 +95,16 @@ export function MobileHeader({
             <Search className="h-5 w-5" />
           </Button>
         )}
+
+        {/* Connection status indicator */}
+        <div className="px-0.5">
+          <ConnectionStatus
+            wsConnected={wsConnected}
+            isOnline={isOnline}
+            offlineQueueCount={queueCount}
+            compact
+          />
+        </div>
 
         {showNotifications && (
           <Button
@@ -161,6 +179,14 @@ function getAutoTitle(pathname: string, locale: string): string | null {
     '/m/distributor/returns': { vi: 'Trả hàng', en: 'Returns' },
     '/m/broker/me': { vi: 'Đại lý', en: 'Broker Portal' },
     '/m/broker/me/commissions': { vi: 'Hoa hồng', en: 'Commissions' },
+    '/m/broker/me/territory': { vi: 'Lãnh thổ', en: 'My Territory' },
+    '/m/broker/me/referral': { vi: 'Giới thiệu', en: 'Referrals' },
+    '/m/admin': { vi: 'Quản trị', en: 'Admin' },
+    '/m/admin/shops': { vi: 'Quản lý CH', en: 'Shop Mgmt' },
+    '/m/admin/orders': { vi: 'Quản lý ĐH', en: 'Order Mgmt' },
+    '/m/shop/analytics': { vi: 'Phân tích', en: 'Analytics' },
+    '/m/shop/reorder': { vi: 'Gợi ý đặt hàng', en: 'Reorder' },
+    '/m/shop/templates': { vi: 'Mẫu đặt hàng', en: 'Order Templates' },
   };
   const t = titles[pathname];
   return t ? (locale === 'vi' ? t.vi : t.en) : null;

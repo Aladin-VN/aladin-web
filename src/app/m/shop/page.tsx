@@ -17,6 +17,7 @@ import {
   Award,
   Package,
   BarChart3,
+  FileText,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -452,6 +453,21 @@ export default function MobileShopProfilePage() {
                 <div className="min-w-0">
                   <p className="text-xs font-semibold truncate">{t('Benchmark', 'So sánh')}</p>
                   <p className="text-[10px] text-muted-foreground truncate">{t('You vs average', 'Bạn vs trung bình')}</p>
+                </div>
+              </div>
+            </Card>
+
+            <Card
+              className="p-3 cursor-pointer hover:bg-muted/50 transition-colors active:scale-[0.98]"
+              onClick={() => router.push('/m/shop/templates')}
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="h-9 w-9 rounded-lg bg-cyan-100 dark:bg-cyan-900/30 flex items-center justify-center shrink-0">
+                  <FileText className="h-4.5 w-4.5 text-cyan-600 dark:text-cyan-400" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold truncate">{t('Templates', 'Mẫu đặt hàng')}</p>
+                  <p className="text-[10px] text-muted-foreground truncate">{t('Quick reorder', 'Đặt lại nhanh')}</p>
                 </div>
               </div>
             </Card>

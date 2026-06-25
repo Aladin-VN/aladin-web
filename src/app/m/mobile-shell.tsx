@@ -4,11 +4,16 @@ import { useEffect, useRef, useSyncExternalStore, useState } from 'react';
 import { useAppStore } from '@/stores/app.store';
 import { useAuthStore } from '@/stores/auth.store';
 import { useServiceWorker } from '@/hooks/useServiceWorker';
-import { X, WifiOff, Download, RefreshCw } from 'lucide-react';
+import { useRealtime } from '@/hooks/use-realtime';
+import { useOfflineSync } from '@/hooks/use-offline-sync';
+import { X, WifiOff, Download, RefreshCw, CloudOff, CheckCircle2, Radio } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ConnectionStatus } from '@/components/mobile/connection-status';
+import { PushPermissionPrompt } from '@/components/mobile/push-permission-prompt';
 
 // ============================================
-// Mobile Shell — Network status, install prompt, hydration, SW registration
+// Mobile Shell — Network status, install prompt, hydration, SW registration,
+//               real-time WS, offline sync, push notifications
 // ============================================
 
 export function MobileShell() {
@@ -21,6 +26,16 @@ export function MobileShell() {
   const locale = useAppStore((s) => s.locale);
   const { registerSW } = useServiceWorker();
   const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [syncBanner, setSyncBanner] = useState<{ synced: number; failed: number } | null>(null);
+
+  // Real-time WebSocket connection
+  const { connected: wsConnected } = useRealtime();
+
+  // Offline sync
+  const { queueCount, syncing, lastSyncResult, syncNow } = useOfflineSync();
+
+  // Auth state for conditional push prompt
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   // Client-only rendering via useSyncExternalStore
   const mounted = useSyncExternalStore(
@@ -28,6 +43,15 @@ export function MobileShell() {
     () => true,
     () => false
   );
+
+  // Show sync result banner
+  useEffect(() => {
+    if (lastSyncResult && lastSyncResult.synced > 0) {
+      setSyncBanner({ synced: lastSyncResult.synced, failed: lastSyncResult.failed });
+      const timer = setTimeout(() => setSyncBanner(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [lastSyncResult]);
 
   useEffect(() => {
     if (initialized.current) return;
@@ -74,11 +98,31 @@ export function MobileShell() {
         <div className="fixed top-0 left-0 right-0 z-[100] bg-amber-500 text-white text-center py-2 px-4 text-xs font-medium flex items-center justify-center gap-2">
           <WifiOff className="h-3.5 w-3.5" />
           {locale === 'vi' ? 'Mất kết nối mạng' : 'No internet connection'}
+          {queueCount > 0 && (
+            <span className="inline-flex items-center gap-1 ml-2 px-2 py-0.5 rounded-full bg-white/20">
+              <CloudOff className="h-3 w-3" />
+              {queueCount} {locale === 'vi' ? 'chờ gửi' : 'pending'}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Sync complete banner */}
+      {syncBanner && isOnline && (
+        <div className="fixed top-0 left-0 right-0 z-[100] bg-emerald-600 text-white text-center py-2 px-4 text-xs font-medium flex items-center justify-center gap-2 animate-in slide-in-from-top-2">
+          <CheckCircle2 className="h-3.5 w-3.5" />
+          {locale === 'vi'
+            ? `Đã đồng bộ ${syncBanner.synced} mục${syncBanner.failed > 0 ? `, ${syncBanner.failed} lỗi` : ''}`
+            : `Synced ${syncBanner.synced} items${syncBanner.failed > 0 ? `, ${syncBanner.failed} failed` : ''}`
+          }
+          <button onClick={() => setSyncBanner(null)} className="ml-2">
+            <X className="h-3 w-3" />
+          </button>
         </div>
       )}
 
       {/* Update available banner */}
-      {updateAvailable && (
+      {updateAvailable && !syncBanner && (
         <div className="fixed top-0 left-0 right-0 z-[100] bg-red-600 text-white text-center py-2 px-4 text-xs font-medium flex items-center justify-center gap-2">
           <RefreshCw className="h-3.5 w-3.5" />
           {locale === 'vi' ? 'Cập nhật mới sẵn sàng' : 'Update available'}
@@ -93,6 +137,34 @@ export function MobileShell() {
           </button>
         </div>
       )}
+
+      {/* Connection status indicator in offline banner */}
+      {!isOnline && (
+        <div className="fixed top-8 left-2 z-[101]">
+          <ConnectionStatus
+            wsConnected={false}
+            isOnline={false}
+            offlineQueueCount={queueCount}
+            syncing={syncing}
+            compact
+          />
+        </div>
+      )}
+
+      {/* WS reconnection indicator when online but WS disconnected */}
+      {isOnline && !wsConnected && (
+        <div className="fixed top-2 right-2 z-[95]">
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800">
+            <Radio className="h-3 w-3 text-amber-500 animate-pulse" />
+            <span className="text-[10px] text-amber-600 dark:text-amber-400">
+              {locale === 'vi' ? 'Đang kết nối...' : 'Reconnecting...'}
+            </span>
+          </span>
+        </div>
+      )}
+
+      {/* Push notification permission prompt (auto-shows after 8s for authenticated users) */}
+      {isAuthenticated && <PushPermissionPrompt delaySeconds={8} />}
 
       {/* PWA install prompt */}
       {showInstallPrompt && (

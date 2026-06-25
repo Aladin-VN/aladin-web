@@ -176,11 +176,14 @@ export const api = {
   post: <T = unknown>(endpoint: string, body?: unknown) =>
     apiFetch<T>(endpoint, { method: 'POST', body: body ? JSON.stringify(body) : undefined }),
 
+  put: <T = unknown>(endpoint: string, body?: unknown) =>
+    apiFetch<T>(endpoint, { method: 'PUT', body: body ? JSON.stringify(body) : undefined }),
+
   patch: <T = unknown>(endpoint: string, body?: unknown) =>
     apiFetch<T>(endpoint, { method: 'PATCH', body: body ? JSON.stringify(body) : undefined }),
 
-  delete: <T = unknown>(endpoint: string) =>
-    apiFetch<T>(endpoint, { method: 'DELETE' }),
+  delete: <T = unknown>(endpoint: string, body?: unknown) =>
+    apiFetch<T>(endpoint, { method: 'DELETE', body: body ? JSON.stringify(body) : undefined }),
 };
 
 export type { ApiResponse };

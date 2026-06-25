@@ -555,16 +555,10 @@ export default function BrokerSelfServicePage() {
             {t('Thao tác nhanh', 'Quick Actions')}
           </h3>
           <div className="grid grid-cols-2 gap-3">
-            {/* Refer Shop */}
+            {/* Refer Shop — now navigates to referral page */}
             <Card
               className="rounded-xl cursor-pointer hover:border-primary/50 transition-colors active:scale-[0.98]"
-              onClick={() => handleQuickAction(
-                t('Giới thiệu cửa hàng', 'Refer a Shop'),
-                t(
-                  'Tính năng giới thiệu cửa hàng mới đang được phát triển. Bạn có thể liên hệ quản lý để được hỗ trợ.',
-                  'Shop referral feature is coming soon. Contact your manager for assistance.'
-                )
-              )}
+              onClick={() => router.push('/m/broker/me/referral')}
             >
               <CardContent className="p-3.5 flex items-center gap-3">
                 <div className="h-10 w-10 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
@@ -596,6 +590,26 @@ export default function BrokerSelfServicePage() {
                   </p>
                   <p className="text-[10px] text-muted-foreground">
                     {t('Chi tiết hoa hồng', 'Commission details')}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* My Territory */}
+            <Card
+              className="rounded-xl cursor-pointer hover:border-primary/50 transition-colors active:scale-[0.98]"
+              onClick={() => router.push('/m/broker/me/territory')}
+            >
+              <CardContent className="p-3.5 flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-indigo-100 flex items-center justify-center shrink-0">
+                  <MapPin className="h-5 w-5 text-indigo-600" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold truncate">
+                    {t('Lãnh thổ', 'Territory')}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {t('Khu vực phụ trách', 'My area')}
                   </p>
                 </div>
               </CardContent>
@@ -648,6 +662,26 @@ export default function BrokerSelfServicePage() {
                   </p>
                   <p className="text-[10px] text-muted-foreground">
                     {t('Hướng dẫn sử dụng', 'How to use')}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Broker Dashboard (admin view) */}
+            <Card
+              className="rounded-xl cursor-pointer hover:border-primary/50 transition-colors active:scale-[0.98]"
+              onClick={() => router.push('/m/broker')}
+            >
+              <CardContent className="p-3.5 flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-rose-100 flex items-center justify-center shrink-0">
+                  <TrendingUp className="h-5 w-5 text-rose-600" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold truncate">
+                    {t('Tổng quan', 'Overview')}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {t('Toàn hệ thống đại lý', 'All brokers')}
                   </p>
                 </div>
               </CardContent>

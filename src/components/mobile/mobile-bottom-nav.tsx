@@ -12,6 +12,7 @@ import {
   Warehouse,
   MapPin,
   Route,
+  Shield,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useCartStore } from '@/stores/cart.store';
@@ -104,6 +105,13 @@ const tabs: NavTab[] = [
     roles: [ROLES.ADMIN, ROLES.BROKER],
   },
   {
+    href: '/m/admin',
+    labelVi: 'Quản trị',
+    labelEn: 'Admin',
+    icon: <Shield className="h-5 w-5" />,
+    roles: [ROLES.ADMIN],
+  },
+  {
     href: '/m/profile',
     labelVi: 'Tài khoản',
     labelEn: 'Account',
@@ -146,6 +154,10 @@ export function MobileBottomNav({ locale = 'vi' }: MobileBottomNavProps) {
     // Fallback: check if path belongs to a tab's subtree
     if (pathname.startsWith('/m/driver')) return '/m/driver';
     if (pathname.startsWith('/m/sales-rep')) return '/m/sales-rep';
+    if (pathname.startsWith('/m/admin')) return '/m/admin';
+    if (pathname.startsWith('/m/broker/me')) return '/m/broker/me';
+    if (pathname.startsWith('/m/distributor')) return '/m/distributor';
+    if (pathname.startsWith('/m/shop')) return '/m/shop';
     return null;
   };
   const activeHref = getActiveHref();
