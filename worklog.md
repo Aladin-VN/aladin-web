@@ -353,3 +353,25 @@ Stage Summary:
 - Offline-first PWA: IndexedDB queue for mutations, Background Sync API, auto-sync on reconnect, stale-while-revalidate cache
 - WebSocket server with JWT auth, room broadcasting, heartbeat, HTTP bridge for Next.js integration
 
+---
+Task ID: 7
+Agent: Main Agent
+Task: Wave 4 final verification — notification settings page, MobileHeader connection status, MobileShell overlays, build verification
+
+Work Log:
+- Verified `/m/settings/notifications/page.tsx` already fully enhanced with all Wave 4 features:
+  - Push notification toggle with permission status icons (CheckCircle2/XCircle), request/unsubscribe flow
+  - Zalo OA toggle with linked/unlinked status
+  - Quiet hours toggle + time picker UI (start/end `<input type="time">`)
+  - Per-type notification toggles (orderUpdates, shipmentUpdates, creditAlerts, promotions, systemAlerts)
+  - Real-time connection status card (WebSocket connected/reconnecting indicator)
+  - Server-synced preferences via `/api/notifications/preferences` GET/PUT
+- Verified `MobileHeader` has `ConnectionStatus` compact indicator integrated at line 100-107
+- Verified `MobileShell` has all Wave 4 overlays: offline banner, sync banner, update banner, WS reconnection indicator (amber pulsing dot), PushPermissionPrompt (auto-shows after 8s for authenticated users)
+- Ran final `next build`: **Compiled successfully in 12.1s**, 219/219 static pages generated, zero errors
+
+Stage Summary:
+- All Wave 4 UI components verified and properly integrated
+- Build passes cleanly — Wave 4 implementation is complete
+- Key files: `/m/settings/notifications/page.tsx`, `mobile-header.tsx`, `mobile-shell.tsx`, `push-permission-prompt.tsx`, `connection-status.tsx`
+
